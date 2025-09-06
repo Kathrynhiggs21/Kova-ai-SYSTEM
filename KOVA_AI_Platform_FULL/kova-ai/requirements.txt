@@ -6,3 +6,5 @@ psycopg2-binary
 python-dotenv
 prometheus-client
 httpx
+redis
+aioredis
