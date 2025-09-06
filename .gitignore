@@ -1,2 +1,22 @@
-*
-!.gitignore
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+
+# Env
+.env
+*.env
+
+# Local data/secrets
+credentials/
+data/
+logs/
+
+# OS/IDE
+.DS_Store
+.vscode/
+.idea/
