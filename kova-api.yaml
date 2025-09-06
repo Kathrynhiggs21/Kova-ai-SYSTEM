@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: kova-api }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: kova-api } }
+  template:
+    metadata: { labels: { app: kova-api } }
+    spec:
+      containers:
+        - name: api
+          image: your-registry/kova-api:latest
+          ports: [ { containerPort: 8000 } ]
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: kova-secrets, key: database-url } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: kova-api-svc }
+spec:
+  selector: { app: kova-api }
+  ports: [ { port: 80, targetPort: 8000 } ]
+  type: ClusterIP
