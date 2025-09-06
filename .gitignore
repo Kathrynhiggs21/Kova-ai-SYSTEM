@@ -1,2 +1,12 @@
 *
 !.gitignore
+!*.py
+!*.md
+!*.txt
+!*.yml
+!*.yaml
+!*.json
+!*.sh
+!*.sql
+!*.conf
+!Dockerfile
