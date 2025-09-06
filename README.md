@@ -19,38 +19,40 @@ Kova AI is a comprehensive, production-ready system that automatically detects a
 ## 🎯 Quick Start
 
 ```bash
-# 1. Download all files to a new directory
-mkdir kova-ai-system && cd kova-ai-system
+# 1. Clone the repository
+git clone https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM.git
+cd Kova-ai-SYSTEM
 
 # 2. Run the setup script
 chmod +x setup_kova_system.sh
 ./setup_kova_system.sh
 
-# 3. Add your API keys when prompted
+# 3. Edit your API keys in kova-ai/.env
 
 # 4. Access the system at http://localhost:8000
 ```
 
-## 📦 Files to Download
+## 📦 Complete Platform Structure
 
-Save these files in your project directory:
+All required files are included in this repository and organized as follows:
 
-### Essential Files (Save These First!)
+### Essential Files (All Included!)
 
-1. **`setup_kova_system.sh`** - Main installation script
-2. **`docker-compose.yml`** - Docker services configuration
-3. **`Dockerfile`** - Container configuration
-4. **`requirements.txt`** - Python dependencies
-5. **`.env.example`** - Environment configuration template
-6. **`app/main.py`** - Main application file
-7. **`scripts/init.sql`** - Database initialization
-8. **`appsheet_config.json`** - AppSheet dashboard configuration
+1. **`setup_kova_system.sh`** - Main installation script ✅
+2. **`docker-compose.yml`** - Docker services configuration ✅
+3. **`Dockerfile`** - Container configuration ✅
+4. **`requirements.txt`** - Python dependencies ✅
+5. **`.env.example`** - Environment configuration template ✅
+6. **`app/main.py`** - Main application file ✅
+7. **`scripts/init.sql`** - Database initialization ✅
+8. **`appsheet_config.json`** - AppSheet dashboard configuration ✅
 
-### Directory Structure to Create
+### Current Repository Structure
 
 ```
-kova-ai-system/
+Kova-ai-SYSTEM/
 ├── setup_kova_system.sh
+├── verify_platform.sh
 ├── kova-ai/
 │   ├── docker-compose.yml
 │   ├── Dockerfile
@@ -58,14 +60,22 @@ kova-ai-system/
 │   ├── .env.example
 │   ├── app/
 │   │   ├── main.py
-│   │   └── (other Python files)
+│   │   ├── api/
+│   │   │   ├── health.py
+│   │   │   ├── ai_endpoints.py
+│   │   │   └── webhooks.py
+│   │   ├── database/
+│   │   │   ├── session.py
+│   │   │   └── models.py
+│   │   └── (other modules)
 │   ├── scripts/
 │   │   └── init.sql
 │   ├── monitoring/
 │   │   ├── prometheus/
 │   │   └── grafana/
 │   ├── deployment/
-│   │   └── nginx/
+│   │   ├── nginx/
+│   │   └── kubernetes/
 │   └── appsheet_config.json
 ```
 
@@ -102,22 +112,30 @@ You'll need to obtain these API keys:
 
 ## 📝 Installation Steps
 
-### Step 1: Prepare Your Environment
+### Step 1: Clone Repository
 
 ```bash
-# Create project directory
-mkdir kova-ai-system
-cd kova-ai-system
+# Clone the repository
+git clone https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM.git
+cd Kova-ai-SYSTEM
 
-# Download the setup script (copy from artifact above)
-# Save as: setup_kova_system.sh
+# Verify platform completeness (optional)
+chmod +x verify_platform.sh
+./verify_platform.sh
 ```
 
-### Step 2: Create Core Files
+### Step 2: Configure Environment
 
-Create `kova-ai` directory and save these files:
+```bash
+# Copy environment template
+cd kova-ai
+cp .env.example .env
 
-#### `kova-ai/.env` (copy from .env.example and fill in)
+# Edit .env with your actual API keys
+nano .env  # or your preferred editor
+```
+
+#### `kova-ai/.env` (fill in your actual values)
 ```bash
 # MUST FILL THESE:
 OPENAI_API_KEY=sk-your-actual-key-here
@@ -129,8 +147,13 @@ PINECONE_API_KEY=your-actual-key-here
 ### Step 3: Run Installation
 
 ```bash
-# Make script executable
+# Return to root directory
+cd ..
+
+# Make script executable and run
 chmod +x setup_kova_system.sh
+./setup_kova_system.sh
+```
 
 # Run installation
 ./setup_kova_system.sh
