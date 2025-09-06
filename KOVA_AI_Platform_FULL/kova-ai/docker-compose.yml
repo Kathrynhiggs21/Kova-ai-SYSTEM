@@ -10,6 +10,7 @@ services:
       - .:/app
     depends_on:
       - db
+      - redis
   db:
     image: postgres:15
     environment:
@@ -20,5 +21,13 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+      - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 volumes:
   db_data:
+  redis_data:
