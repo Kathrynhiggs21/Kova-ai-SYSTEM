@@ -2,7 +2,7 @@
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./KOVA_AI_Platform_FULL",
+        ".",
         "-p",
         "*test.py"
     ],
