@@ -6,7 +6,7 @@ import logging, os, time
 from datetime import datetime
 from prometheus_client import Counter, Histogram, generate_latest
 try:
-    from app.api import health, webhooks, ai_endpoints
+    from app.api import health, webhooks, ai_endpoints, unzip
     from app.database.session import engine, Base
     IMPORTS_AVAILABLE = True
 except Exception as e:
@@ -65,6 +65,7 @@ if IMPORTS_AVAILABLE:
     app.include_router(health.router, tags=["health"])
     app.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
     app.include_router(ai_endpoints.router, prefix="/ai", tags=["ai"])
+    app.include_router(unzip.router, prefix="/api", tags=["unzip"])
 
 @app.get("/", tags=["root"])
 async def root():
