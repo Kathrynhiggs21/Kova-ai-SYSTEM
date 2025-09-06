@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kova-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kova-api
+  template:
+    metadata:
+      labels:
+        app: kova-api
+    spec:
+      containers:
+      - name: kova-api
+        image: kova-ai:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: POSTGRES_DB
+          value: "kova"
+        - name: POSTGRES_USER
+          value: "kova"
+        - name: POSTGRES_PASSWORD
+          value: "kova_pass"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kova-api
+spec:
+  selector:
+    app: kova-api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
