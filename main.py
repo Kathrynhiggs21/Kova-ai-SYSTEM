@@ -7,7 +7,7 @@ from datetime import datetime
 from prometheus_client import Counter, Histogram, generate_latest
 try:
     from app.api import health, webhooks, ai_endpoints, unzip
-    from app.database.session import engine, Base
+    from app.database.session import engine, Base, ASYNC_DB
     IMPORTS_AVAILABLE = True
 except Exception as e:
     IMPORTS_AVAILABLE = False
@@ -23,14 +23,18 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Kova AI System...")
     try:
         if IMPORTS_AVAILABLE:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("DB initialized")
+            if ASYNC_DB:
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+                logger.info("DB initialized (async)")
+            else:
+                Base.metadata.create_all(bind=engine)
+                logger.info("DB initialized (sync)")
     except Exception as e:
         logger.error(f"Startup error: {e}")
         raise
     yield
-    if IMPORTS_AVAILABLE:
+    if IMPORTS_AVAILABLE and ASYNC_DB:
         await engine.dispose()
     logger.info("🛑 Shutdown complete")
 

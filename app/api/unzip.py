@@ -30,7 +30,7 @@ async def unzip_to_git(zip_file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Invalid ZIP file.")
 
     # Detect repo root (assumes this file is in app/api/)
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
     # Copy extracted files into repo, overwriting existing ones
     def copytree_overwrite(src, dst):
