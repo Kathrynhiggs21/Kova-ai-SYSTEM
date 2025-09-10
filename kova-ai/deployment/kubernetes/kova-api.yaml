@@ -11,15 +11,28 @@ spec:
     metadata:
       labels:
         app: kova-api
-      spec:
-        containers:
-        - name: kova-api
-          image: kova-ai:latest
-          ports:
-            - containerPort: 8000
-          envFrom:
-            - secretRef:
-                name: kova-db-secrets
+    spec:
+      containers:
+      - name: kova-api
+        image: kova-ai:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: kova-db-secrets
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: kova-db-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: kova-db-secrets
+              key: POSTGRES_PASSWORD
 ---
 apiVersion: v1
 kind: Service
