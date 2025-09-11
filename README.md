@@ -166,7 +166,7 @@ chmod +x setup_kova_system.sh
 docker-compose ps
 
 # Test the API
-curl http://localhost:8000/health
+curl http://localhost:8000/api/health
 
 # View logs
 docker-compose logs -f api
@@ -195,7 +195,7 @@ ADMIN_EMAIL=...                 # Admin email
 
 1. Go to your repository settings on GitHub
 2. Add webhook:
-   - URL: `http://your-domain:8000/webhooks/github`
+   - URL: `http://your-domain:8000/api/webhooks/github`
    - Content type: `application/json`
    - Secret: (same as GITHUB_WEBHOOK_SECRET in .env)
    - Events: Push, Pull Request, Issues
@@ -204,12 +204,12 @@ ADMIN_EMAIL=...                 # Admin email
 
 ### Basic Health Check
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8000/api/health
 ```
 
 ### Test AI Command
 ```bash
-curl -X POST http://localhost:8000/ai/command \
+curl -X POST http://localhost:8000/api/ai/command \
   -H "Content-Type: application/json" \
   -d '{"command": "create a REST API for user management"}'
 ```
@@ -356,11 +356,11 @@ Once running, access interactive API docs at:
 
 ### Key Endpoints
 
-- `POST /ai/command` - Execute AI command
+- `POST /api/ai/command` - Execute AI command
 - `POST /api/scan` - Scan repository
-- `POST /webhooks/github` - GitHub webhook
-- `GET /health` - Health check
-- `GET /metrics` - Prometheus metrics
+- `POST /api/webhooks/github` - GitHub webhook
+- `GET /api/health` - Health check
+- `GET /api/metrics` - Prometheus metrics
 
 ## 🔒 Security Notes
 
@@ -385,7 +385,7 @@ For production deployment:
 
 - **Documentation**: Check `/docs` endpoint
 - **Logs**: `docker-compose logs -f`
-- **Health Check**: `curl http://localhost:8000/health`
+- **Health Check**: `curl http://localhost:8000/api/health`
 
 ## 🎉 Success!
 
