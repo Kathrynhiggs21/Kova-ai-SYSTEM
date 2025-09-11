@@ -26,6 +26,7 @@ cd Kova-ai-SYSTEM
 # 2. Copy and configure environment variables
 cp .env.example .env
 #    Update DATABASE_URL, POSTGRES_* and API keys in .env
+#    Docker Compose loads variables from this root .env
 
 # 3. Run the setup script
 chmod +x setup_kova_system.sh
