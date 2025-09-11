@@ -25,7 +25,8 @@ cd Kova-ai-SYSTEM
 
 # 2. Copy and configure environment variables
 cp .env.example .env
-#    Update DATABASE_URL, POSTGRES_* and API keys in .env
+#    Update DATABASE_URL, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, \
+#    POSTGRES_HOST, POSTGRES_PORT and API keys in .env
 #    Docker Compose loads variables from this root .env
 
 # 3. Run the setup script
@@ -186,6 +187,8 @@ DATABASE_URL=postgresql+asyncpg://user:password@db:5432/db_name  # Database URL
 POSTGRES_DB=db_name                # Database name
 POSTGRES_USER=user                 # Database username
 POSTGRES_PASSWORD=password         # Database password
+POSTGRES_HOST=db                   # Database host
+POSTGRES_PORT=5432                 # Database port
 OPENAI_API_KEY=sk-your-openai-key  # Your OpenAI key
 ANTHROPIC_API_KEY=sk-your-anthropic-key # Your Anthropic key
 GITHUB_TOKEN=ghp_your-token        # Your GitHub token
