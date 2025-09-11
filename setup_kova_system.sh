@@ -29,16 +29,16 @@ fi
 
 echo "✅ Docker and Docker Compose are available"
 
-# Change to kova-ai directory
-cd kova-ai
-
-# Check if .env exists, if not copy from .env.example
+# Ensure root .env exists, copy from example if missing
 if [ ! -f .env ]; then
     echo "📋 Creating .env file from .env.example..."
     cp .env.example .env
     echo "⚠️  Please edit .env file with your actual API keys before running the system!"
     echo "   Required keys: OPENAI_API_KEY, ANTHROPIC_API_KEY, GITHUB_TOKEN, PINECONE_API_KEY"
 fi
+
+# Change to kova-ai directory
+cd kova-ai
 
 # Build and start services
 echo "🔨 Building and starting Kova AI services..."
@@ -91,3 +91,4 @@ echo "📝 Don't forget to:"
 echo "   1. Edit .env with your actual API keys"
 echo "   2. Configure your AppSheet dashboard using appsheet_config.json"
 echo "   3. Set up monitoring if needed (Prometheus/Grafana configs are included)"
+
