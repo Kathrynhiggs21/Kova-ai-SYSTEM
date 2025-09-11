@@ -164,7 +164,6 @@ chmod +x setup_kova_system.sh
 ### Step 4: Verify Installation
 
 ```bash
-cd kova-ai
 # Check if services are running
 docker-compose ps
 
