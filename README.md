@@ -305,7 +305,7 @@ docker-compose up -d
 docker-compose logs postgres
 
 # Reinitialize database
-docker-compose exec postgres psql -U kova_user -d kova_db < scripts/init.sql
+docker-compose exec postgres psql -U kova -d kova < scripts/init.sql
 ```
 
 #### API key errors
