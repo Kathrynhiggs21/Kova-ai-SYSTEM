@@ -23,11 +23,13 @@ Kova AI is a comprehensive, production-ready system that automatically detects a
 git clone https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM.git
 cd Kova-ai-SYSTEM
 
-# 2. Run the setup script
+# 2. Copy and configure environment variables
+cp .env.example .env
+#    Update DATABASE_URL, POSTGRES_* and API keys in .env
+
+# 3. Run the setup script
 chmod +x setup_kova_system.sh
 ./setup_kova_system.sh
-
-# 3. Edit your API keys in kova-ai/.env
 
 # 4. Access the system at http://localhost:8000
 ```
@@ -51,13 +53,13 @@ All required files are included in this repository and organized as follows:
 
 ```
 Kova-ai-SYSTEM/
+├── .env.example
 ├── setup_kova_system.sh
 ├── verify_platform.sh
 ├── kova-ai/
 │   ├── docker-compose.yml
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── .env.example
 │   ├── app/
 │   │   ├── main.py
 │   │   ├── api/
@@ -128,40 +130,39 @@ chmod +x verify_platform.sh
 
 ```bash
 # Copy environment template
-cd kova-ai
 cp .env.example .env
 
-# Edit .env with your actual API keys
+# Edit .env with your database credentials and API keys
 nano .env  # or your preferred editor
 ```
 
-#### `kova-ai/.env` (fill in your actual values)
+#### `.env` (fill in your actual values)
 ```bash
 # MUST FILL THESE:
-OPENAI_API_KEY=sk-your-actual-key-here
-ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
-GITHUB_TOKEN=ghp_your-actual-token-here
-PINECONE_API_KEY=your-actual-key-here
+DATABASE_URL=postgresql+asyncpg://user:password@db:5432/db_name
+POSTGRES_DB=db_name
+POSTGRES_USER=user
+POSTGRES_PASSWORD=password
+OPENAI_API_KEY=sk-your-actual-openai-key
+ANTHROPIC_API_KEY=sk-your-actual-anthropic-key
+GITHUB_TOKEN=ghp_your-actual-token
+PINECONE_API_KEY=your-actual-pinecone-key
+SECRET_KEY=change_me
+ADMIN_EMAIL=admin@example.com
 ```
 
 ### Step 3: Run Installation
 
 ```bash
-# Return to root directory
-cd ..
-
 # Make script executable and run
 chmod +x setup_kova_system.sh
-./setup_kova_system.sh
-```
-
-# Run installation
 ./setup_kova_system.sh
 ```
 
 ### Step 4: Verify Installation
 
 ```bash
+cd kova-ai
 # Check if services are running
 docker-compose ps
 
@@ -180,15 +181,18 @@ Edit `.env` file with your actual values:
 
 ```bash
 # Essential (MUST configure)
-OPENAI_API_KEY=sk-...          # Your OpenAI key
-ANTHROPIC_API_KEY=sk-ant-...   # Your Anthropic key
-GITHUB_TOKEN=ghp_...            # Your GitHub token
-PINECONE_API_KEY=...            # Your Pinecone key
+DATABASE_URL=postgresql+asyncpg://user:password@db:5432/db_name  # Database URL
+POSTGRES_DB=db_name                # Database name
+POSTGRES_USER=user                 # Database username
+POSTGRES_PASSWORD=password         # Database password
+OPENAI_API_KEY=sk-your-openai-key  # Your OpenAI key
+ANTHROPIC_API_KEY=sk-your-anthropic-key # Your Anthropic key
+GITHUB_TOKEN=ghp_your-token        # Your GitHub token
+PINECONE_API_KEY=your-pinecone-key # Your Pinecone key
 
 # Optional (can use defaults)
-POSTGRES_PASSWORD=...           # Database password
-SECRET_KEY=...                  # JWT secret key
-ADMIN_EMAIL=...                 # Admin email
+SECRET_KEY=change_me            # JWT secret key
+ADMIN_EMAIL=admin@example.com   # Admin email
 ```
 
 ### GitHub Webhook Setup
@@ -311,7 +315,7 @@ docker-compose exec postgres psql -U kova_user -d kova_db < scripts/init.sql
 #### API key errors
 ```bash
 # Verify .env file
-cat kova-ai/.env | grep API_KEY
+cat .env | grep API_KEY
 
 # Restart services after changing .env
 docker-compose restart

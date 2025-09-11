@@ -11,7 +11,7 @@ required_files=(
     "kova-ai/docker-compose.yml"
     "kova-ai/Dockerfile"
     "kova-ai/requirements.txt"
-    "kova-ai/.env.example"
+    ".env.example"
     "kova-ai/app/main.py"
     "kova-ai/scripts/init.sql"
     "kova-ai/monitoring/prometheus/prometheus.yml"
@@ -126,7 +126,7 @@ if [ ${#missing_files[@]} -eq 0 ]; then
     echo "Next steps:"
     echo "1. Run: chmod +x setup_kova_system.sh"
     echo "2. Run: ./setup_kova_system.sh"
-    echo "3. Edit kova-ai/.env with your API keys"
+    echo "3. Edit .env with your API keys"
     echo "4. Access the API at http://localhost:8000"
 else
     echo "❌ Missing files or issues found:"
