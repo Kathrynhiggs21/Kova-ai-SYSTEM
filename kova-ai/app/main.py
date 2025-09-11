@@ -22,4 +22,4 @@ app.include_router(webhooks.router)
 app.include_router(scan.router)
 
 # Metrics
-app.mount("/metrics", make_asgi_app())
+app.mount("/api/metrics", make_asgi_app())
