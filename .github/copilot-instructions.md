@@ -205,7 +205,7 @@ Database schema is defined in `kova-ai/scripts/init.sql`:
 
 For schema changes:
 1. Modify `init.sql`
-2. Reset database: `docker compose down -v && ./setup_kova_system.sh`
+2. Reset database: `docker compose down -v && (cd .. && ./setup_kova_system.sh)`
 3. Verify schema changes with database client
 
 ## Troubleshooting
