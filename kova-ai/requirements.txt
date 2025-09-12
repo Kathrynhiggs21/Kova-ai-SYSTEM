@@ -1,8 +1,8 @@
-fastapi
-uvicorn[standard]
-asyncpg
-sqlalchemy
-psycopg2-binary
-python-dotenv
-prometheus-client
-httpx
+asyncpg==0.30.0
+fastapi==0.110.0
+httpx==0.28.1
+prometheus-client==0.22.1
+psycopg2-binary==2.9.10
+python-dotenv==1.0.1
+sqlalchemy==2.0.30
+uvicorn[standard]==0.29.0
