@@ -1,0 +1,3 @@
+queue_rules:
+  - autoqueue: true
+    name: "Mergify "
