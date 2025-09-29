@@ -1,5 +1,4 @@
-git pull origin main --rebase
-git push origin main
+
 pull_request_rules:
   - name: automatic merge on CI success
     conditions:
