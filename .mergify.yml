@@ -1,3 +1,10 @@
-queue_rules:
-  - autoqueue: true
-    name: "Mergify "
+
+pull_request_rules:
+  - name: automatic merge on CI success
+    conditions:
+      - "status-success=ci/circleci: build"
+      - "label=ready-to-merge"
+    actions:
+      merge:
+        method: squash
+        strict: false
