@@ -2,7 +2,26 @@
 
 **Always follow these instructions first and fallback to additional search and context gathering only if the information in these instructions is incomplete or found to be in error.**
 
+## Project Overview
+
 The Kova AI System is a comprehensive AI-powered development automation platform built with FastAPI, PostgreSQL, Docker, and monitoring tools. It provides automatic error detection, AI integrations, and real-time monitoring capabilities.
+
+### Technology Stack
+- **Backend**: FastAPI (Python 3.11+)
+- **Database**: PostgreSQL 15
+- **Cache/Queue**: Redis
+- **Containerization**: Docker & Docker Compose
+- **Monitoring**: Prometheus & Grafana
+- **AI Integration**: OpenAI GPT-4, Anthropic Claude
+- **Version Control**: Git with GitHub webhooks
+- **Deployment**: Kubernetes-ready with Nginx
+
+### Architecture Principles
+- **Microservices**: Containerized services with clear separation of concerns
+- **API-First**: RESTful API with comprehensive OpenAPI documentation
+- **Event-Driven**: GitHub webhooks trigger automated workflows
+- **Observability**: Built-in metrics, logging, and health checks
+- **Security**: Environment-based configuration, API key management
 
 ## Working Effectively
 
@@ -146,6 +165,87 @@ After making any changes to the codebase:
 ### No Automated Testing Infrastructure
 **IMPORTANT**: This repository does not have pytest, flake8, or black configured. Manual testing is required.
 
+## Development Workflows
+
+### Making Code Changes
+1. **Start Development Environment**:
+   ```bash
+   cd /path/to/Kova-ai-SYSTEM
+   ./setup_kova_system.sh  # Initial setup
+   cd kova-ai
+   docker compose up -d    # Start services
+   ```
+
+2. **Code Development Cycle**:
+   - Make changes to Python files in `kova-ai/app/`
+   - Container auto-reloads on file changes (volume mounting)
+   - Test immediately: `curl http://localhost:8000/health`
+   - Check logs: `docker compose logs -f api`
+
+3. **Adding New Features**:
+   - Follow the file organization in `app/` directory
+   - Add routers to appropriate `api/` files
+   - Update main.py to include new routers
+   - Test endpoints via `/docs` Swagger UI
+
+4. **Database Changes**:
+   - Modify `scripts/init.sql` for schema changes
+   - Reset database: `docker compose down -v && ../setup_kova_system.sh`
+   - Verify changes in database client or API responses
+
+5. **Configuration Updates**:
+   - Modify `.env` file for environment variables
+   - Restart services: `docker compose restart`
+   - Verify changes take effect through API calls
+
+### Debugging Workflows
+1. **API Issues**:
+   ```bash
+   # Check API logs
+   docker compose logs -f api
+   
+   # Test specific endpoints
+   curl -v http://localhost:8000/health
+   curl -X POST http://localhost:8000/ai/command -H "Content-Type: application/json" -d '{"command": "test"}'
+   ```
+
+2. **Database Issues**:
+   ```bash
+   # Check database logs
+   docker compose logs -f db
+   
+   # Connect to database
+   docker compose exec db psql -U kova -d kova
+   ```
+
+3. **Container Issues**:
+   ```bash
+   # Check container status
+   docker compose ps
+   
+   # Restart specific service
+   docker compose restart api
+   
+   # Reset everything
+   docker compose down -v && ../setup_kova_system.sh
+   ```
+
+### Integration Testing
+1. **GitHub Webhooks**:
+   - Configure webhook in repository settings
+   - URL: `http://your-domain:8000/webhooks/github`
+   - Test with repository events (push, PR, issues)
+
+2. **AI Endpoints**:
+   - Ensure API keys are configured in `.env`
+   - Test AI command processing
+   - Verify responses are properly formatted
+
+3. **Monitoring**:
+   - Access Prometheus: http://localhost:9090
+   - Access Grafana: http://localhost:3000
+   - Verify metrics collection at `/metrics`
+
 ## Common Development Tasks
 
 ### Key Project Files and Directories
@@ -279,6 +379,88 @@ curl http://localhost:8000/health
 - **Service startup**: Set timeout to 60 seconds minimum
 - **Health checks**: Set timeout to 30 seconds minimum
 
+## Environment Management
+
+### Development Environment Setup
+```bash
+# Always start from repository root
+cd /path/to/Kova-ai-SYSTEM
+
+# Verify platform before starting
+./verify_platform.sh
+
+# Setup environment (creates .env from .env.example)
+./setup_kova_system.sh
+
+# Edit API keys (REQUIRED for full functionality)
+cd kova-ai && nano .env
+```
+
+### Required Environment Variables
+Essential variables that MUST be configured:
+```bash
+# AI Service Keys (REQUIRED)
+OPENAI_API_KEY=sk-...              # OpenAI GPT-4 integration
+ANTHROPIC_API_KEY=sk-ant-...       # Anthropic Claude integration
+GITHUB_TOKEN=ghp_...               # GitHub API access
+PINECONE_API_KEY=...               # Vector database for AI
+
+# Database (defaults work for development)
+POSTGRES_DB=kova
+POSTGRES_USER=kova
+POSTGRES_PASSWORD=kova_pass
+
+# Security (generate secure values for production)
+SECRET_KEY=your-secret-key-here
+GITHUB_WEBHOOK_SECRET=webhook-secret
+```
+
+### API Key Validation
+Test API keys are working:
+```bash
+# Test OpenAI integration
+curl -X POST http://localhost:8000/ai/command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "test openai connection"}'
+
+# Test GitHub integration
+curl -X POST http://localhost:8000/webhooks/github \
+  -H "Content-Type: application/json" \
+  -H "X-GitHub-Event: ping" \
+  -d '{"zen": "Design for failure."}'
+```
+
+## Container Management Best Practices
+
+### Service Dependencies
+Services start in this order:
+1. **Database (PostgreSQL)**: Must be ready before API
+2. **API (FastAPI)**: Depends on database connection
+3. **Monitoring**: Independent services (Prometheus, Grafana)
+
+### Volume Management
+```bash
+# Persistent data volumes
+db_data:/var/lib/postgresql/data    # Database storage
+.:/app                              # Code volume (live reload)
+
+# Reset persistent data
+docker compose down -v              # Removes volumes
+rm -rf postgres_data redis_data     # Clean local data
+```
+
+### Log Management
+```bash
+# Real-time monitoring
+docker compose logs -f              # All services
+docker compose logs -f api          # API only
+docker compose logs -f db           # Database only
+
+# Log analysis
+docker compose logs api | grep ERROR
+docker compose logs db | grep -i "ready to accept"
+```
+
 ## Production Deployment Notes
 
 ### Security Checklist
@@ -293,6 +475,86 @@ The system includes Prometheus metrics at `/metrics` endpoint. Configure externa
 - `http://your-domain:8000/metrics`
 
 Grafana dashboards are available in `monitoring/grafana/` directory.
+
+## Coding Standards and Best Practices
+
+### Python Code Style
+- **Follow PEP 8**: Use standard Python style conventions
+- **Type Hints**: Always include type hints for function parameters and returns
+- **Docstrings**: Use Google-style docstrings for all functions and classes
+- **Error Handling**: Use proper exception handling with specific exception types
+- **Async/Await**: Use async/await for I/O operations (database, API calls)
+
+### FastAPI Conventions
+- **Router Organization**: Group related endpoints in separate router files
+- **Dependency Injection**: Use FastAPI's dependency system for database sessions, authentication
+- **Pydantic Models**: Define request/response models using Pydantic BaseModel
+- **Status Codes**: Use appropriate HTTP status codes (200, 201, 400, 401, 404, 500)
+- **OpenAPI Tags**: Tag endpoints for better documentation organization
+
+### Database Patterns
+- **SQLAlchemy ORM**: Use SQLAlchemy models for database operations
+- **Connection Pooling**: Database sessions managed through dependency injection
+- **Migrations**: Schema changes should be documented in `scripts/init.sql`
+- **Transactions**: Use database transactions for multi-step operations
+
+### API Design
+- **RESTful URLs**: Follow REST conventions for endpoint naming
+- **Consistent Responses**: All endpoints return JSON with consistent structure
+- **Error Responses**: Use standard error format with `detail` field
+- **Pagination**: Implement offset/limit pagination for list endpoints
+- **Filtering**: Support query parameters for filtering results
+
+### Security Practices
+- **Environment Variables**: Never hardcode secrets, use `.env` files
+- **API Keys**: Validate API keys in headers or query parameters
+- **Input Validation**: Validate all inputs using Pydantic models
+- **CORS**: Configure CORS appropriately for production
+- **Rate Limiting**: Implement rate limiting for public endpoints
+
+### Testing Approach
+- **Manual Testing**: Use curl commands for API endpoint testing
+- **Health Checks**: Always verify `/health` endpoint first
+- **Docker Testing**: Test in containerized environment matching production
+- **Integration Testing**: Test complete workflows including database operations
+- **API Documentation**: Verify changes appear correctly in `/docs` Swagger UI
+
+### File Organization
+```
+app/
+├── main.py              # FastAPI app initialization, CORS, middleware
+├── api/                 # API endpoints grouped by functionality
+│   ├── __init__.py
+│   ├── health.py        # Health check endpoints
+│   ├── ai_endpoints.py  # AI command processing endpoints
+│   └── webhooks.py      # GitHub webhook handlers
+├── database/            # Database models and sessions
+│   ├── __init__.py
+│   ├── models.py        # SQLAlchemy models
+│   └── session.py       # Database session management
+├── core/                # Core business logic
+├── security/            # Authentication and security utilities
+├── tasks/               # Background task definitions
+├── utils/               # Shared utility functions
+└── integrations/        # External service integrations
+```
+
+### Common Patterns
+1. **Adding New Endpoints**:
+   - Create router in appropriate `api/` file
+   - Define Pydantic request/response models
+   - Add router to `main.py`
+   - Test with curl and verify in `/docs`
+
+2. **Database Operations**:
+   - Use dependency injection for database sessions
+   - Define SQLAlchemy models in `database/models.py`
+   - Use proper exception handling for database errors
+
+3. **External API Calls**:
+   - Use async HTTP clients (httpx)
+   - Implement proper timeout and retry logic
+   - Handle API key authentication in headers
 
 ## Additional Information
 
@@ -312,3 +574,63 @@ Always run `./verify_platform.sh` before reporting issues. This script checks:
 - **GitHub Webhooks**: Configure webhooks to point to `/webhooks/github`
 - **AppSheet**: Configuration in `appsheet_config.json`
 - **External APIs**: OpenAI, Anthropic, Pinecone integrations via environment variables
+
+## Quick Reference
+
+### Essential Commands
+```bash
+# Initial Setup
+./verify_platform.sh                    # Verify system completeness
+./setup_kova_system.sh                  # One-time setup and build
+cd kova-ai && nano .env                 # Configure API keys
+
+# Daily Development
+docker compose up -d                    # Start services
+docker compose logs -f api              # Monitor API logs
+curl http://localhost:8000/health       # Test API health
+docker compose down                     # Stop services
+
+# Troubleshooting
+docker compose ps                       # Check service status
+docker compose restart api             # Restart API service
+docker compose down -v && ../setup_kova_system.sh  # Reset everything
+```
+
+### Key URLs (when running)
+- **API Health**: http://localhost:8000/health
+- **API Docs**: http://localhost:8000/docs
+- **Metrics**: http://localhost:8000/metrics
+- **Grafana**: http://localhost:3000 (admin/admin)
+- **Prometheus**: http://localhost:9090
+
+### File Locations
+- **API Code**: `kova-ai/app/`
+- **Environment**: `kova-ai/.env`
+- **Database Schema**: `kova-ai/scripts/init.sql`
+- **Docker Config**: `kova-ai/docker-compose.yml`
+- **Setup Script**: `setup_kova_system.sh`
+
+### Common Test Commands
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Test AI endpoint
+curl -X POST http://localhost:8000/ai/command \
+  -H "Content-Type: application/json" \
+  -d '{"command": "test"}'
+
+# Test webhook
+curl -X POST http://localhost:8000/webhooks/github \
+  -H "Content-Type: application/json" \
+  -H "X-GitHub-Event: ping" \
+  -d '{"zen": "test"}'
+```
+
+### Development Workflow Summary
+1. **Setup**: Run `./setup_kova_system.sh` once
+2. **Configure**: Edit `kova-ai/.env` with API keys
+3. **Develop**: Make changes in `kova-ai/app/` (auto-reload enabled)
+4. **Test**: Use curl commands or visit `/docs`
+5. **Debug**: Check logs with `docker compose logs -f api`
+6. **Reset**: Use `docker compose down -v && ../setup_kova_system.sh` if needed
