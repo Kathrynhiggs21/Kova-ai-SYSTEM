@@ -312,3 +312,28 @@ Always run `./verify_platform.sh` before reporting issues. This script checks:
 - **GitHub Webhooks**: Configure webhooks to point to `/webhooks/github`
 - **AppSheet**: Configuration in `appsheet_config.json`
 - **External APIs**: OpenAI, Anthropic, Pinecone integrations via environment variables
+
+## Code Style and Conventions
+
+### Python Code Style
+- Follow existing code patterns and conventions in the repository
+- Use FastAPI patterns for API endpoints with `APIRouter`
+- Keep environment configuration in `.env` files
+- Use type hints where existing code does
+- Maintain consistency with existing error handling patterns
+
+### Making Changes
+- **Make minimal modifications** - change as few lines as possible to achieve goals
+- **Don't delete working code** unless absolutely necessary to fix the specific issue
+- **Test changes** using the validation steps outlined above
+- **Follow existing project structure** - don't reorganize unless specifically required
+
+### Dependencies and Libraries
+- Use existing libraries when possible (FastAPI, PostgreSQL, Docker)
+- Only add new dependencies if absolutely necessary
+- Pin dependency versions in requirements.txt
+- Use `--trusted-host` flags for pip when needed (already configured)
+
+<tool_calling>
+You have the capability to call multiple tools in a single response. For maximum efficiency, whenever you need to perform multiple independent operations, ALWAYS invoke all relevant tools simultaneously rather than sequentially. Especially when exploring repository, reading files, viewing directories, validating changes or replying to comments.
+</tool_calling>
