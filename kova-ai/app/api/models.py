@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 # Health Check Models
@@ -78,12 +78,11 @@ class RepositoryCreate(BaseModel):
 
 class RepositoryResponse(BaseModel):
     """Response model for repository data."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
     url: str
-
-    class Config:
-        from_attributes = True
 
 
 class ErrorCreate(BaseModel):
@@ -93,12 +92,11 @@ class ErrorCreate(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Response model for error data."""
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     message: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # General API Models

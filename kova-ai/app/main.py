@@ -5,10 +5,15 @@ from prometheus_client import make_asgi_app
 import uvicorn
 from datetime import datetime
 
-from app.api import health, ai_endpoints, webhooks
+from app.api import health, ai_endpoints, webhooks, database_endpoints
 from app.core.config import settings
 from app.utils.logger import setup_logger, log_error
 from app.api.models import ErrorResponseModel
+from app.security.middleware import (
+    SecurityHeadersMiddleware, 
+    RequestLoggingMiddleware, 
+    RateLimitMiddleware
+)
 
 # Setup logging
 logger = setup_logger(__name__)
@@ -17,10 +22,25 @@ logger = setup_logger(__name__)
 app = FastAPI(
     title=settings.app_name,
     version=settings.api_version,
-    description="Kova AI System - AI-powered development automation platform",
+    description="Kova AI System - AI-powered development automation platform with comprehensive API",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    contact={
+        "name": "Kova AI System",
+        "url": "https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM",
+    },
+    license_info={
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT",
+    },
 )
+
+# Add security middleware
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
+
+# Add rate limiting (100 requests per minute by default)
+app.add_middleware(RateLimitMiddleware, calls=100, period=60)
 
 # CORS middleware
 app.add_middleware(
@@ -35,6 +55,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["Health"])
 app.include_router(ai_endpoints.router, tags=["AI Services"])
 app.include_router(webhooks.router, tags=["Webhooks"])
+app.include_router(database_endpoints.router, tags=["Database Operations"])
 
 # Mount Prometheus metrics
 app.mount("/metrics", make_asgi_app())
@@ -83,6 +104,14 @@ async def startup_event():
     else:
         logger.warning("⚠️  Some API keys are missing - functionality may be limited")
     
+    # Initialize database tables if needed
+    try:
+        from app.database.session import create_tables
+        await create_tables()
+        logger.info("✅ Database tables initialized")
+    except Exception as e:
+        logger.warning(f"⚠️  Database table initialization failed: {str(e)}")
+    
     logger.info(f"🚀 {settings.app_name} startup complete")
 
 
@@ -101,6 +130,51 @@ async def root():
         "docs": "/docs",
         "health": "/health",
         "status": "running",
+        "features": [
+            "AI-powered command processing",
+            "GitHub webhook integration", 
+            "Database operations",
+            "Real-time monitoring",
+            "Security & rate limiting"
+        ],
+        "timestamp": datetime.utcnow()
+    }
+
+
+@app.get("/info", tags=["System"])
+async def system_info():
+    """Get system information and capabilities."""
+    return {
+        "system": settings.app_name,
+        "version": settings.api_version,
+        "capabilities": {
+            "ai_services": {
+                "openai": bool(settings.openai_api_key),
+                "anthropic": bool(settings.anthropic_api_key)
+            },
+            "integrations": {
+                "github": bool(settings.github_token),
+                "pinecone": bool(settings.pinecone_api_key)
+            },
+            "features": [
+                "Health monitoring",
+                "Database operations",
+                "Webhook processing",
+                "AI command processing",
+                "Rate limiting",
+                "Security headers",
+                "Request logging",
+                "Prometheus metrics"
+            ]
+        },
+        "endpoints": {
+            "health": "/health",
+            "ai": "/ai/*",
+            "webhooks": "/webhooks/*",
+            "data": "/data/*",
+            "docs": "/docs",
+            "metrics": "/metrics"
+        },
         "timestamp": datetime.utcnow()
     }
 
