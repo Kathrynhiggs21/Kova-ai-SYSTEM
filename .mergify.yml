@@ -1,11 +1,13 @@
-# Mergify config revalidation
-
+# Mergify configuration for automatic PR merging
 pull_request_rules:
   - name: automatic merge on CI success
     conditions:
-      - "status-success=ci/circleci: build"
+      - "status-success=ci/circleci: say-hello-workflow"
       - "label=ready-to-merge"
+      - "approved-reviews-by>=1"
     actions:
       merge:
         method: squash
-        strict: false
+        commit_message: title+body
+        strict: true
+        strict_method: merge
