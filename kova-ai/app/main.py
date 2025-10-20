@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-from app.api import health, ai_endpoints, webhooks
+from app.api import health, ai_endpoints, webhooks, repositories
 
 app = FastAPI()
 
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(ai_endpoints.router)
 app.include_router(webhooks.router)
+app.include_router(repositories.router)
 
 # Metrics
 app.mount("/metrics", make_asgi_app())
