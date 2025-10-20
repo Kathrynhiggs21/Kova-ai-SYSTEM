@@ -18,17 +18,20 @@ if ! command -v gh &> /dev/null; then
     exit 1
 fi
 
-# Create the label
-gh label create "ready-to-merge" \
-    --description "Ready for automatic merge by Mergify" \
-    --color "0e8a16" \
-    2>/dev/null
-
-if [ $? -eq 0 ]; then
-    echo "✅ Label 'ready-to-merge' created successfully!"
+# Check if the label already exists
+if gh label list | grep -q "^ready-to-merge\b"; then
+    echo "ℹ️  Label 'ready-to-merge' already exists. Skipping creation."
 else
-    echo "ℹ️  Label 'ready-to-merge' may already exist or there was an issue creating it."
-    echo "📋 You can check existing labels with: gh label list"
+    # Create the label
+    if gh label create "ready-to-merge" \
+        --description "Ready for automatic merge by Mergify" \
+        --color "0e8a16"; then
+        echo "✅ Label 'ready-to-merge' created successfully!"
+    else
+        echo "❌ Failed to create label 'ready-to-merge'."
+        echo "📋 You can check existing labels with: gh label list"
+        exit 1
+    fi
 fi
 
 echo ""
