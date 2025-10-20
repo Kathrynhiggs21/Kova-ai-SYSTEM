@@ -1,10 +1,24 @@
 # Mergify config revalidation
 
 pull_request_rules:
-  - name: automatic merge on CI success
+  - name: automatic merge when ready and CI passes
     conditions:
-      - "status-success=ci/circleci: build"
       - "label=ready-to-merge"
+      - "check-success=verify-platform"
+      - "#approved-reviews-by>=1"
+      - "-draft"
+      - "base=main"
+    actions:
+      merge:
+        method: squash
+        strict: false
+        
+  - name: automatic merge for dependabot when CI passes
+    conditions:
+      - "label=ready-to-merge"
+      - "author=dependabot[bot]"
+      - "check-success=verify-platform"
+      - "base=main"
     actions:
       merge:
         method: squash

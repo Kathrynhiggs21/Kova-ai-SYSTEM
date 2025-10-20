@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify-platform:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Make scripts executable
+      run: |
+        chmod +x verify_platform.sh
+        chmod +x setup_kova_system.sh
+    
+    - name: Verify platform structure
+      run: ./verify_platform.sh
+    
+    - name: Check Python syntax in main files
+      run: |
+        python3 -m py_compile kova-ai/app/main.py
+        python3 -m py_compile kova-ai/app/api/health.py
+        python3 -m py_compile kova-ai/app/api/ai_endpoints.py
+        python3 -m py_compile kova-ai/app/api/webhooks.py
+    
+    - name: Validate Docker configuration
+      run: |
+        cd kova-ai
+        # Try docker-compose first, then docker compose
+        if command -v docker-compose &> /dev/null; then
+          docker-compose config
+        else
+          docker compose config
+        fi
