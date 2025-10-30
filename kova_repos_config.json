@@ -1,0 +1,103 @@
+{
+  "github_owner": "Kathrynhiggs21",
+  "repositories": [
+    {
+      "name": "Kova-ai-SYSTEM",
+      "full_name": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "description": "Main Kova AI system - Complete setup and orchestration",
+      "type": "core",
+      "enabled": true,
+      "sync_priority": 1,
+      "features": [
+        "orchestration",
+        "docker-compose",
+        "monitoring",
+        "deployment"
+      ]
+    },
+    {
+      "name": "kova-ai",
+      "full_name": "Kathrynhiggs21/kova-ai",
+      "description": "Core Kova AI backend service",
+      "type": "core",
+      "enabled": true,
+      "sync_priority": 2,
+      "features": [
+        "fastapi",
+        "database",
+        "ai-integration",
+        "webhooks"
+      ]
+    },
+    {
+      "name": "kova-ai-site",
+      "full_name": "Kathrynhiggs21/kova-ai-site",
+      "description": "Kova AI website and documentation",
+      "type": "frontend",
+      "enabled": true,
+      "sync_priority": 3,
+      "features": [
+        "website",
+        "documentation",
+        "user-interface"
+      ]
+    },
+    {
+      "name": "kova-ai-mem0",
+      "full_name": "Kathrynhiggs21/kova-ai-mem0",
+      "description": "Kova AI memory and persistence system",
+      "type": "service",
+      "enabled": true,
+      "sync_priority": 2,
+      "features": [
+        "memory",
+        "persistence",
+        "context-management"
+      ]
+    },
+    {
+      "name": "kova-ai-docengine",
+      "full_name": "Kathrynhiggs21/kova-ai-docengine",
+      "description": "Kova AI document processing and generation engine",
+      "type": "service",
+      "enabled": true,
+      "sync_priority": 2,
+      "features": [
+        "document-processing",
+        "pdf-generation",
+        "template-engine"
+      ]
+    },
+    {
+      "name": "Kova-AI-Scribbles",
+      "full_name": "Kathrynhiggs21/Kova-AI-Scribbles",
+      "description": "Kova AI experimental features and notes",
+      "type": "experimental",
+      "enabled": true,
+      "sync_priority": 5,
+      "features": [
+        "experiments",
+        "prototypes",
+        "research"
+      ]
+    }
+  ],
+  "sync_settings": {
+    "auto_sync_enabled": true,
+    "sync_interval_minutes": 30,
+    "sync_on_push": true,
+    "sync_on_pr": true,
+    "cross_repo_notifications": true
+  },
+  "discovery_settings": {
+    "auto_discover_new_repos": true,
+    "repo_name_pattern": "kova-ai-*",
+    "watch_for_new_repos": true
+  },
+  "integration_settings": {
+    "claude_api_enabled": true,
+    "github_webhooks_enabled": true,
+    "cross_repo_prs": true,
+    "unified_changelog": true
+  }
+}

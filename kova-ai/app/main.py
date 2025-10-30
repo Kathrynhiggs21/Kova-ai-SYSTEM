@@ -6,9 +6,13 @@ import sys
 from pathlib import Path
 
 
-from app.api import health, ai_endpoints, webhooks
+from app.api import health, ai_endpoints, webhooks, multi_repo_endpoints
 
-app = FastAPI()
+app = FastAPI(
+    title="Kova AI System API",
+    description="Multi-repository AI-powered development automation platform",
+    version="2.0.0"
+)
 
 # CORS
 app.add_middleware(
@@ -23,6 +27,7 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(ai_endpoints.router)
 app.include_router(webhooks.router)
+app.include_router(multi_repo_endpoints.router)
 
 # Metrics
 app.mount("/metrics", make_asgi_app())

@@ -7,14 +7,15 @@ Kova AI is a comprehensive, production-ready system that automatically detects a
 ## 📋 Table of Contents
 
 1. [Quick Start](#-quick-start)
-2. [Files to Download](#-files-to-download)
-3. [System Requirements](#-system-requirements)
-4. [Installation Steps](#-installation-steps)
-5. [Configuration](#-configuration)
-6. [Testing the System](#-testing-the-system)
-7. [AppSheet Setup](#-appsheet-setup)
-8. [Features](#-features)
-9. [Troubleshooting](#-troubleshooting)
+2. [Multi-Repository Management](#-multi-repository-management) 🆕
+3. [Files to Download](#-files-to-download)
+4. [System Requirements](#-system-requirements)
+5. [Installation Steps](#-installation-steps)
+6. [Configuration](#-configuration)
+7. [Testing the System](#-testing-the-system)
+8. [AppSheet Setup](#-appsheet-setup)
+9. [Features](#-features)
+10. [Troubleshooting](#-troubleshooting)
 
 ## 🎯 Quick Start
 
@@ -31,6 +32,51 @@ chmod +x setup_kova_system.sh
 
 # 4. Access the system at http://localhost:8000
 ```
+
+## 🔗 Multi-Repository Management
+
+**NEW**: The Kova AI System now manages multiple repositories from one central hub!
+
+### Managed Repositories
+
+This system coordinates these Kova AI repositories:
+
+- **Kova-ai-SYSTEM** - Main orchestration hub (this repo)
+- **kova-ai** - Core backend API service
+- **kova-ai-site** - Website and documentation
+- **kova-ai-mem0** - Memory and persistence system
+- **kova-ai-docengine** - Document processing engine
+- **Kova-AI-Scribbles** - Experimental features
+
+### Key Features
+
+✅ **Auto-Discovery** - Automatically finds new Kova AI repos
+✅ **Cross-Repo Sync** - Coordinate updates across all repos
+✅ **Claude Integration** - AI analyzes all repos together
+✅ **Dynamic Configuration** - Add new repos without code changes
+✅ **Centralized Control** - Manage everything from one place
+
+### Quick Multi-Repo Commands
+
+```bash
+# Check status of all repos
+curl http://localhost:8000/multi-repo/status
+
+# Sync all repos with Claude AI
+curl -X POST http://localhost:8000/multi-repo/sync \
+  -H "Content-Type: application/json" \
+  -d '{"include_claude": true}'
+
+# Discover new repos
+curl http://localhost:8000/multi-repo/discover
+
+# Add a new repo
+curl -X POST http://localhost:8000/multi-repo/add \
+  -H "Content-Type: application/json" \
+  -d '{"repo_full_name": "Kathrynhiggs21/kova-ai-newrepo"}'
+```
+
+📚 **[Read the Complete Multi-Repo Guide →](MULTI_REPO_GUIDE.md)**
 
 ## 📦 Complete Platform Structure
 
