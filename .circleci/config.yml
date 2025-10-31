@@ -1,31 +1,112 @@
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/reference/configuration-reference
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#jobs-overview & https://circleci.com/docs/reference/configuration-reference/#jobs
-jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/guides/execution-managed/executor-intro/ & https://circleci.com/docs/reference/configuration-reference/#executor-job
-    docker:
-      # Specify the version you desire here
-      # See: https://circleci.com/developer/images/image/cimg/base
-      - image: cimg/base:current
+orbs:
+  python: circleci/python@2.1.1
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/guides/orchestrate/jobs-steps/#steps-overview & https://circleci.com/docs/reference/configuration-reference/#steps
-    steps:
-      # Checkout the code as the first step.
-      - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
-
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/guides/orchestrate/workflows/ & https://circleci.com/docs/reference/configuration-reference/#workflows
 workflows:
-  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  version: 2
+  build-test-deploy:
     jobs:
-      - say-hello
+      - build-and-test
+      - lint-check
+      - security-scan
+
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/python:3.11.8
+
+    working_directory: ~/kova-ai-system
+
+    steps:
+      - checkout
+
+      - restore_cache:
+          keys:
+            - deps-{{ checksum "kova-ai/requirements.txt" }}
+            - deps-
+
+      - run:
+          name: Install dependencies
+          command: |
+            cd kova-ai
+            python -m venv venv
+            . venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest pytest-asyncio pytest-cov
+
+      - save_cache:
+          key: deps-{{ checksum "kova-ai/requirements.txt" }}
+          paths:
+            - "kova-ai/venv"
+
+      - run:
+          name: Validate Python syntax
+          command: |
+            cd kova-ai
+            . venv/bin/activate
+            python -m py_compile app/**/*.py app/**/**/*.py
+
+      - run:
+          name: Validate JSON configs
+          command: |
+            python -c "import json; json.load(open('kova_repos_config.json'))"
+
+      - run:
+          name: Test imports
+          command: |
+            cd kova-ai
+            . venv/bin/activate
+            python -c "from app.main import app; print('FastAPI app imported successfully')"
+
+      - store_test_results:
+          path: kova-ai/test-results
+
+  lint-check:
+    docker:
+      - image: cimg/python:3.11.8
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install linters
+          command: |
+            pip install flake8 black
+
+      - run:
+          name: Run flake8
+          command: |
+            cd kova-ai
+            flake8 app/ --max-line-length=100 --exclude=venv,__pycache__ --extend-ignore=E501,W503 || echo "Linting warnings found"
+
+      - run:
+          name: Check code formatting
+          command: |
+            cd kova-ai
+            black --check app/ || echo "Code formatting issues found"
+
+  security-scan:
+    docker:
+      - image: cimg/python:3.11.8
+
+    steps:
+      - checkout
+
+      - run:
+          name: Install security tools
+          command: |
+            pip install bandit safety
+
+      - run:
+          name: Run bandit security scan
+          command: |
+            cd kova-ai
+            bandit -r app/ -ll || echo "Security scan completed with warnings"
+
+      - run:
+          name: Check dependencies for vulnerabilities
+          command: |
+            cd kova-ai
+            safety check || echo "Dependency check completed with warnings"

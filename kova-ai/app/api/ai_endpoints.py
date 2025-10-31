@@ -151,24 +151,63 @@ async def get_user_repositories(username: str, github_token: str) -> Dict[str, A
         return repos_response.json() if repos_response.status_code == 200 else []
 
 async def get_kova_repositories(github_token: str) -> Dict[str, Any]:
-    """Get Kova-specific repositories"""
+    """Get Kova-specific repositories - dynamically loaded from config"""
     headers = {"Authorization": f"token {github_token}"}
-    kova_repos = [
-        "Kathrynhiggs21/Kova-ai-SYSTEM",
-        "Kathrynhiggs21/kova-ai",
-        "Kathrynhiggs21/kova-ai-site",
-        "Kathrynhiggs21/kova-ai-mem0",
-        "Kathrynhiggs21/Kova-AI-Scribbles"
-    ]
-    
+
+    # Load repositories from config file
+    kova_repos = await load_kova_repos_from_config()
+
     repo_data = {}
     async with httpx.AsyncClient() as client:
         for repo in kova_repos:
             response = await client.get(f"https://api.github.com/repos/{repo}", headers=headers)
             if response.status_code == 200:
                 repo_data[repo] = response.json()
-    
+            else:
+                # Log repo that might not exist yet
+                repo_data[repo] = {
+                    "status": "not_found",
+                    "message": f"Repository {repo} not found or not accessible",
+                    "planned": True
+                }
+
     return repo_data
+
+async def load_kova_repos_from_config() -> list:
+    """Load Kova repository list from configuration file"""
+    import os
+    config_path = os.path.join(os.path.dirname(__file__), "../../../kova_repos_config.json")
+
+    try:
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+                # Extract enabled repositories
+                return [
+                    repo["full_name"]
+                    for repo in config.get("repositories", [])
+                    if repo.get("enabled", True)
+                ]
+        else:
+            # Fallback to hardcoded list if config doesn't exist
+            return [
+                "Kathrynhiggs21/Kova-ai-SYSTEM",
+                "Kathrynhiggs21/kova-ai",
+                "Kathrynhiggs21/kova-ai-site",
+                "Kathrynhiggs21/kova-ai-mem0",
+                "Kathrynhiggs21/kova-ai-docengine",
+                "Kathrynhiggs21/Kova-AI-Scribbles"
+            ]
+    except Exception as e:
+        # Fallback list on error
+        return [
+            "Kathrynhiggs21/Kova-ai-SYSTEM",
+            "Kathrynhiggs21/kova-ai",
+            "Kathrynhiggs21/kova-ai-site",
+            "Kathrynhiggs21/kova-ai-mem0",
+            "Kathrynhiggs21/kova-ai-docengine",
+            "Kathrynhiggs21/Kova-AI-Scribbles"
+        ]
 
 async def get_latest_activity(username: str, github_token: str) -> Dict[str, Any]:
     """Get latest user activity"""
