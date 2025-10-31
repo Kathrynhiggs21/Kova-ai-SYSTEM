@@ -136,7 +136,7 @@ git push origin main
 
 # Method 2: Reset to previous commit
 git reset --hard <commit-before-merge>
-git push --force origin main  # Use with caution!
+git push --force-with-lease origin main  # Safer than --force
 
 # Method 3: Create recovery branch
 git checkout -b recovery <commit-before-merge>
