@@ -13,9 +13,39 @@ import httpx
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
+from functools import wraps
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def retry_on_rate_limit(max_retries: int = 3, base_delay: float = 2.0):
+    """Decorator to retry on rate limit with exponential backoff"""
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code == 403:  # Rate limit
+                        if attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt)
+                            logger.warning(f"Rate limit hit, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})")
+                            await asyncio.sleep(delay)
+                            continue
+                    raise
+                except httpx.RequestError as e:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        logger.warning(f"Request error: {e}, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})")
+                        await asyncio.sleep(delay)
+                        continue
+                    raise
+            return await func(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 class MultiRepoSyncService:
@@ -92,8 +122,9 @@ class MultiRepoSyncService:
         logger.info("Multi-repo sync completed")
         return results
 
+    @retry_on_rate_limit(max_retries=4, base_delay=2.0)
     async def _sync_single_repo(self, client: httpx.AsyncClient, repo_full_name: str) -> Dict[str, Any]:
-        """Sync a single repository"""
+        """Sync a single repository with retry logic"""
         # Get repo info
         repo_response = await client.get(
             f"{self.base_url}/repos/{repo_full_name}",
@@ -235,8 +266,8 @@ class MultiRepoSyncService:
             return {"error": "Claude API key not configured"}
 
         headers = {
-            "Authorization": f"Bearer {self.claude_api_key}",
-            "Content-Type": "application/json",
+            "x-api-key": self.claude_api_key,
+            "content-type": "application/json",
             "anthropic-version": "2023-06-01"
         }
 
