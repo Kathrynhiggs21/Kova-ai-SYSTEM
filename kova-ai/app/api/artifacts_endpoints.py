@@ -8,12 +8,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from enum import Enum
-import sys
-from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent))
-
-from services.claude_connector import ClaudeConnector, ArtifactType
+from app.services.claude_connector import ClaudeConnector, ArtifactType
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 
