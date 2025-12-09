@@ -10,7 +10,6 @@ import hashlib
 import json
 import os
 import logging
-from datetime import datetime
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -31,9 +30,7 @@ def verify_github_signature(payload_body: bytes, signature_header: str) -> bool:
     algorithm = hashlib.sha256 if hash_algorithm == "sha256" else hashlib.sha1
 
     expected_signature = hmac.new(
-        GITHUB_WEBHOOK_SECRET.encode(),
-        msg=payload_body,
-        digestmod=algorithm
+        GITHUB_WEBHOOK_SECRET.encode(), msg=payload_body, digestmod=algorithm
     ).hexdigest()
 
     return hmac.compare_digest(expected_signature, github_signature)
@@ -83,7 +80,7 @@ async def handle_push_event(payload: dict):
         "repository": repo_name,
         "branch": ref,
         "commits": len(commits),
-        "commit_messages": [c.get("message") for c in commits[:5]]
+        "commit_messages": [c.get("message") for c in commits[:5]],
     }
 
     await forward_to_claude(analysis_data)
@@ -105,7 +102,7 @@ async def handle_pull_request_event(payload: dict):
         "title": pr.get("title"),
         "body": pr.get("body"),
         "base_branch": pr.get("base", {}).get("ref"),
-        "head_branch": pr.get("head", {}).get("ref")
+        "head_branch": pr.get("head", {}).get("ref"),
     }
 
     await forward_to_claude(analysis_data)
@@ -117,7 +114,9 @@ async def handle_issues_event(payload: dict):
     issue = payload.get("issue", {})
     repo_name = payload.get("repository", {}).get("full_name")
 
-    logger.info(f"Issue {action} in {repo_name}: #{issue.get('number')} - {issue.get('title')}")
+    logger.info(
+        f"Issue {action} in {repo_name}: #{issue.get('number')} - {issue.get('title')}"
+    )
 
     analysis_data = {
         "event": "issues",
@@ -126,7 +125,7 @@ async def handle_issues_event(payload: dict):
         "issue_number": issue.get("number"),
         "title": issue.get("title"),
         "body": issue.get("body"),
-        "labels": [label.get("name") for label in issue.get("labels", [])]
+        "labels": [label.get("name") for label in issue.get("labels", [])],
     }
 
     await forward_to_claude(analysis_data)
@@ -146,7 +145,7 @@ async def handle_issue_comment_event(payload: dict):
         "action": action,
         "repository": repo_name,
         "issue_number": issue.get("number"),
-        "comment_body": comment.get("body")
+        "comment_body": comment.get("body"),
     }
 
     await forward_to_claude(analysis_data)
@@ -167,7 +166,7 @@ async def handle_workflow_run_event(payload: dict):
         "workflow_name": workflow_run.get("name"),
         "status": status,
         "conclusion": conclusion,
-        "run_number": workflow_run.get("run_number")
+        "run_number": workflow_run.get("run_number"),
     }
 
     await forward_to_claude(analysis_data)
@@ -186,7 +185,7 @@ async def forward_to_claude(data: dict):
         headers = {
             "Authorization": f"Bearer {claude_api_key}",
             "Content-Type": "application/json",
-            "anthropic-version": "2023-06-01"
+            "anthropic-version": "2023-06-01",
         }
 
         prompt = f"""Analyze this GitHub webhook event:
@@ -202,17 +201,12 @@ Provide insights about:
         payload = {
             "model": "claude-3-sonnet-20240229",
             "max_tokens": 2000,
-            "messages": [{
-                "role": "user",
-                "content": prompt
-            }]
+            "messages": [{"role": "user", "content": prompt}],
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers=headers,
-                json=payload
+                "https://api.anthropic.com/v1/messages", headers=headers, json=payload
             )
 
             if response.status_code == 200:
@@ -233,7 +227,7 @@ async def github_webhook(
     background_tasks: BackgroundTasks,
     x_github_event: Optional[str] = Header(None),
     x_github_delivery: Optional[str] = Header(None),
-    x_hub_signature_256: Optional[str] = Header(None)
+    x_hub_signature_256: Optional[str] = Header(None),
 ):
     """
     GitHub webhook endpoint
@@ -256,16 +250,13 @@ async def github_webhook(
 
         # Process in background
         background_tasks.add_task(
-            process_webhook_background,
-            x_github_event,
-            payload,
-            x_github_delivery
+            process_webhook_background, x_github_event, payload, x_github_delivery
         )
 
         return {
             "status": "accepted",
             "event": x_github_event,
-            "delivery_id": x_github_delivery
+            "delivery_id": x_github_delivery,
         }
 
     except json.JSONDecodeError:
@@ -288,6 +279,6 @@ async def webhook_status():
             "pull_request",
             "issues",
             "issue_comment",
-            "workflow_run"
-        ]
+            "workflow_run",
+        ],
     }
