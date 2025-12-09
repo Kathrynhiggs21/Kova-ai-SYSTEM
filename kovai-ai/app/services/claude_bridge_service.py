@@ -103,13 +103,49 @@ async def manual_sync():
         await sync_repo(repo)
 
 async def communicate_with_claude_api(data):
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            'https://api.anthropic.com/v1/claude', 
-            headers={'Authorization': f'Bearer {CLAUDE_API_KEY}'},
-            json=data
-        )
-        return response.json()
+    """Communicate with Claude API using correct Anthropic endpoint"""
+    if not CLAUDE_API_KEY:
+        logger.warning("Claude API key not configured - skipping Claude sync")
+        return {"status": "skipped", "reason": "no_api_key"}
+
+    headers = {
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json"
+    }
+
+    payload = {
+        "model": "claude-3-sonnet-20240229",
+        "max_tokens": 1024,
+        "messages": [{
+            "role": "user",
+            "content": f"Analyze this Kova AI repository sync data:\n\n{json.dumps(data, indent=2)}\n\nProvide a brief summary of the repository status."
+        }]
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                'https://api.anthropic.com/v1/messages',
+                headers=headers,
+                json=payload
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return {
+                    "status": "success",
+                    "analysis": result.get("content", [{}])[0].get("text", "No response")
+                }
+            else:
+                logger.error(f"Claude API error: {response.status_code} - {response.text}")
+                return {
+                    "status": "error",
+                    "error": f"API returned {response.status_code}"
+                }
+    except Exception as e:
+        logger.error(f"Failed to communicate with Claude API: {e}")
+        return {"status": "error", "error": str(e)}
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
