@@ -11,10 +11,9 @@ import logging
 import asyncio
 import httpx
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from pathlib import Path
 from functools import wraps
-import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 def retry_on_rate_limit(max_retries: int = 3, base_delay: float = 2.0):
     """Decorator to retry on rate limit with exponential backoff"""
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -31,20 +31,26 @@ def retry_on_rate_limit(max_retries: int = 3, base_delay: float = 2.0):
                 except httpx.HTTPStatusError as e:
                     if e.response.status_code == 403:  # Rate limit
                         if attempt < max_retries - 1:
-                            delay = base_delay * (2 ** attempt)
-                            logger.warning(f"Rate limit hit, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})")
+                            delay = base_delay * (2**attempt)
+                            logger.warning(
+                                f"Rate limit hit, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})"
+                            )
                             await asyncio.sleep(delay)
                             continue
                     raise
                 except httpx.RequestError as e:
                     if attempt < max_retries - 1:
-                        delay = base_delay * (2 ** attempt)
-                        logger.warning(f"Request error: {e}, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})")
+                        delay = base_delay * (2**attempt)
+                        logger.warning(
+                            f"Request error: {e}, retrying in {delay}s... (attempt {attempt + 1}/{max_retries})"
+                        )
                         await asyncio.sleep(delay)
                         continue
                     raise
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 
@@ -58,15 +64,17 @@ class MultiRepoSyncService:
         self.base_url = "https://api.github.com"
         self.headers = {
             "Authorization": f"token {self.github_token}",
-            "Accept": "application/vnd.github.v3+json"
+            "Accept": "application/vnd.github.v3+json",
         }
 
     def _load_config(self) -> Dict[str, Any]:
         """Load multi-repo configuration"""
-        config_path = Path(__file__).parent.parent.parent.parent / "kova_repos_config.json"
+        config_path = (
+            Path(__file__).parent.parent.parent.parent / "kova_repos_config.json"
+        )
 
         try:
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Failed to load config: {e}")
@@ -82,8 +90,8 @@ class MultiRepoSyncService:
                 {"full_name": "Kathrynhiggs21/kova-ai-site", "enabled": True},
                 {"full_name": "Kathrynhiggs21/kova-ai-mem0", "enabled": True},
                 {"full_name": "Kathrynhiggs21/kova-ai-docengine", "enabled": True},
-                {"full_name": "Kathrynhiggs21/Kova-AI-Scribbles", "enabled": True}
-            ]
+                {"full_name": "Kathrynhiggs21/Kova-AI-Scribbles", "enabled": True},
+            ],
         }
 
     def get_enabled_repos(self) -> List[str]:
@@ -109,32 +117,33 @@ class MultiRepoSyncService:
                     results[repo_full_name] = {
                         "status": "success",
                         "data": repo_data,
-                        "synced_at": datetime.now().isoformat()
+                        "synced_at": datetime.now().isoformat(),
                     }
                 except Exception as e:
                     logger.error(f"Failed to sync {repo_full_name}: {e}")
                     results[repo_full_name] = {
                         "status": "error",
                         "error": str(e),
-                        "synced_at": datetime.now().isoformat()
+                        "synced_at": datetime.now().isoformat(),
                     }
 
         logger.info("Multi-repo sync completed")
         return results
 
     @retry_on_rate_limit(max_retries=4, base_delay=2.0)
-    async def _sync_single_repo(self, client: httpx.AsyncClient, repo_full_name: str) -> Dict[str, Any]:
+    async def _sync_single_repo(
+        self, client: httpx.AsyncClient, repo_full_name: str
+    ) -> Dict[str, Any]:
         """Sync a single repository with retry logic"""
         # Get repo info
         repo_response = await client.get(
-            f"{self.base_url}/repos/{repo_full_name}",
-            headers=self.headers
+            f"{self.base_url}/repos/{repo_full_name}", headers=self.headers
         )
 
         if repo_response.status_code == 404:
             return {
                 "exists": False,
-                "message": f"Repository {repo_full_name} not found - may need to be created"
+                "message": f"Repository {repo_full_name} not found - may need to be created",
             }
 
         repo_response.raise_for_status()
@@ -143,16 +152,17 @@ class MultiRepoSyncService:
         # Get recent commits
         commits_response = await client.get(
             f"{self.base_url}/repos/{repo_full_name}/commits?per_page=5",
-            headers=self.headers
+            headers=self.headers,
         )
         commits = commits_response.json() if commits_response.status_code == 200 else []
 
         # Get branches
         branches_response = await client.get(
-            f"{self.base_url}/repos/{repo_full_name}/branches",
-            headers=self.headers
+            f"{self.base_url}/repos/{repo_full_name}/branches", headers=self.headers
         )
-        branches = branches_response.json() if branches_response.status_code == 200 else []
+        branches = (
+            branches_response.json() if branches_response.status_code == 200 else []
+        )
 
         return {
             "exists": True,
@@ -164,7 +174,7 @@ class MultiRepoSyncService:
             "branches": [b["name"] for b in branches],
             "recent_commits": len(commits),
             "stars": repo_data.get("stargazers_count", 0),
-            "forks": repo_data.get("forks_count", 0)
+            "forks": repo_data.get("forks_count", 0),
         }
 
     async def discover_new_repos(self) -> List[str]:
@@ -172,12 +182,14 @@ class MultiRepoSyncService:
         logger.info("Discovering new Kova AI repositories...")
 
         owner = self.config.get("github_owner", "Kathrynhiggs21")
-        pattern = self.config.get("discovery_settings", {}).get("repo_name_pattern", "kova")
+        pattern = self.config.get("discovery_settings", {}).get(
+            "repo_name_pattern", "kova"
+        )
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(
                 f"{self.base_url}/users/{owner}/repos?per_page=100",
-                headers=self.headers
+                headers=self.headers,
             )
 
             if response.status_code != 200:
@@ -204,16 +216,19 @@ class MultiRepoSyncService:
 
             return new_repos
 
-    async def add_repo_to_config(self, repo_full_name: str, repo_type: str = "service") -> bool:
+    async def add_repo_to_config(
+        self, repo_full_name: str, repo_type: str = "service"
+    ) -> bool:
         """Add a new repository to the configuration"""
-        config_path = Path(__file__).parent.parent.parent.parent / "kova_repos_config.json"
+        config_path = (
+            Path(__file__).parent.parent.parent.parent / "kova_repos_config.json"
+        )
 
         try:
             # Check if repo exists on GitHub
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
-                    f"{self.base_url}/repos/{repo_full_name}",
-                    headers=self.headers
+                    f"{self.base_url}/repos/{repo_full_name}", headers=self.headers
                 )
 
                 if response.status_code == 404:
@@ -221,17 +236,19 @@ class MultiRepoSyncService:
                     # Still add it as planned
                     repo_info = {
                         "name": repo_full_name.split("/")[-1],
-                        "description": "Planned repository"
+                        "description": "Planned repository",
                     }
                 else:
                     repo_info = response.json()
 
             # Load current config
-            with open(config_path, 'r') as f:
+            with open(config_path, "r") as f:
                 config = json.load(f)
 
             # Check if already exists
-            existing = [r for r in config["repositories"] if r["full_name"] == repo_full_name]
+            existing = [
+                r for r in config["repositories"] if r["full_name"] == repo_full_name
+            ]
             if existing:
                 logger.info(f"Repository {repo_full_name} already in config")
                 return True
@@ -244,13 +261,13 @@ class MultiRepoSyncService:
                 "type": repo_type,
                 "enabled": True,
                 "sync_priority": 3,
-                "features": []
+                "features": [],
             }
 
             config["repositories"].append(new_repo)
 
             # Save updated config
-            with open(config_path, 'w') as f:
+            with open(config_path, "w") as f:
                 json.dump(config, f, indent=2)
 
             logger.info(f"Added {repo_full_name} to config")
@@ -268,16 +285,18 @@ class MultiRepoSyncService:
         headers = {
             "x-api-key": self.claude_api_key,
             "content-type": "application/json",
-            "anthropic-version": "2023-06-01"
+            "anthropic-version": "2023-06-01",
         }
 
         payload = {
             "model": "claude-3-sonnet-20240229",
             "max_tokens": 4000,
-            "messages": [{
-                "role": "user",
-                "content": f"Analyze this Kova AI repository data:\n\n{json.dumps(repo_data, indent=2)}"
-            }]
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"Analyze this Kova AI repository data:\n\n{json.dumps(repo_data, indent=2)}",
+                }
+            ],
         }
 
         try:
@@ -285,19 +304,21 @@ class MultiRepoSyncService:
                 response = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers=headers,
-                    json=payload
+                    json=payload,
                 )
 
                 if response.status_code == 200:
                     result = response.json()
                     return {
                         "status": "success",
-                        "analysis": result.get("content", [{}])[0].get("text", "No response")
+                        "analysis": result.get("content", [{}])[0].get(
+                            "text", "No response"
+                        ),
                     }
                 else:
                     return {
                         "status": "error",
-                        "error": f"Claude API returned {response.status_code}"
+                        "error": f"Claude API returned {response.status_code}",
                     }
         except Exception as e:
             logger.error(f"Failed to sync with Claude: {e}")
@@ -310,15 +331,14 @@ class MultiRepoSyncService:
         status = {
             "total_repos": len(repos),
             "repos": {},
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             for repo_full_name in repos:
                 try:
                     response = await client.get(
-                        f"{self.base_url}/repos/{repo_full_name}",
-                        headers=self.headers
+                        f"{self.base_url}/repos/{repo_full_name}", headers=self.headers
                     )
 
                     if response.status_code == 200:
@@ -327,18 +347,15 @@ class MultiRepoSyncService:
                             "exists": True,
                             "updated_at": repo_data.get("updated_at"),
                             "default_branch": repo_data.get("default_branch"),
-                            "open_issues": repo_data.get("open_issues_count", 0)
+                            "open_issues": repo_data.get("open_issues_count", 0),
                         }
                     else:
                         status["repos"][repo_full_name] = {
                             "exists": False,
-                            "status": "not_found_or_planned"
+                            "status": "not_found_or_planned",
                         }
                 except Exception as e:
-                    status["repos"][repo_full_name] = {
-                        "exists": False,
-                        "error": str(e)
-                    }
+                    status["repos"][repo_full_name] = {"exists": False, "error": str(e)}
 
         return status
 

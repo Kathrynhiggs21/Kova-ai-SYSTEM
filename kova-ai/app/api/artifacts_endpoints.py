@@ -4,16 +4,16 @@ Artifacts API Endpoints
 Manages Claude-generated artifacts (code, documents, diagrams, configs)
 """
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
-from enum import Enum
 import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.claude_connector import ClaudeConnector, ArtifactType
+from fastapi import APIRouter, HTTPException  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
+from typing import Optional, Dict, Any  # noqa: E402
+
+from services.claude_connector import ClaudeConnector, ArtifactType  # noqa: E402
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 
@@ -62,13 +62,11 @@ async def create_artifact(request: CreateArtifactRequest):
             name=request.name,
             artifact_type=request.artifact_type,
             description=request.description,
-            context=request.context
+            context=request.context,
         )
 
         return ArtifactResponse(
-            success=result.get("success", False),
-            data=result,
-            error=result.get("error")
+            success=result.get("success", False), data=result, error=result.get("error")
         )
 
     except Exception as e:
@@ -94,13 +92,11 @@ async def generate_code(request: GenerateCodeRequest):
         result = await connector.generate_code(
             description=request.description,
             language=request.language,
-            context=request.context
+            context=request.context,
         )
 
         return ArtifactResponse(
-            success=result.get("success", False),
-            data=result,
-            error=result.get("error")
+            success=result.get("success", False), data=result, error=result.get("error")
         )
 
     except Exception as e:
@@ -122,15 +118,11 @@ async def analyze_code(request: AnalyzeCodeRequest):
         connector = ClaudeConnector()
 
         result = await connector.analyze_code(
-            code=request.code,
-            language=request.language,
-            focus=request.focus
+            code=request.code, language=request.language, focus=request.focus
         )
 
         return ArtifactResponse(
-            success=result.get("success", False),
-            data=result,
-            error=result.get("error")
+            success=result.get("success", False), data=result, error=result.get("error")
         )
 
     except Exception as e:
@@ -138,7 +130,9 @@ async def analyze_code(request: AnalyzeCodeRequest):
 
 
 @router.post("/document/generate", response_model=ArtifactResponse)
-async def generate_document(title: str, description: str, context: Optional[Dict] = None):
+async def generate_document(
+    title: str, description: str, context: Optional[Dict] = None
+):
     """
     Generate markdown documentation using Claude AI
     """
@@ -146,15 +140,11 @@ async def generate_document(title: str, description: str, context: Optional[Dict
         connector = ClaudeConnector()
 
         result = await connector.generate_document(
-            title=title,
-            description=description,
-            context=context
+            title=title, description=description, context=context
         )
 
         return ArtifactResponse(
-            success=result.get("success", False),
-            data=result,
-            error=result.get("error")
+            success=result.get("success", False), data=result, error=result.get("error")
         )
 
     except Exception as e:
@@ -177,14 +167,11 @@ async def generate_diagram(description: str, context: Optional[Dict] = None):
         connector = ClaudeConnector()
 
         result = await connector.generate_diagram(
-            description=description,
-            context=context
+            description=description, context=context
         )
 
         return ArtifactResponse(
-            success=result.get("success", False),
-            data=result,
-            error=result.get("error")
+            success=result.get("success", False), data=result, error=result.get("error")
         )
 
     except Exception as e:
@@ -192,7 +179,9 @@ async def generate_diagram(description: str, context: Optional[Dict] = None):
 
 
 @router.post("/config/generate", response_model=ArtifactResponse)
-async def generate_config(description: str, config_format: str = "json", context: Optional[Dict] = None):
+async def generate_config(
+    description: str, config_format: str = "json", context: Optional[Dict] = None
+):
     """
     Generate configuration file using Claude AI
 
@@ -208,15 +197,10 @@ async def generate_config(description: str, config_format: str = "json", context
         ctx = context or {}
         ctx["format"] = config_format
 
-        result = await connector.generate_config(
-            description=description,
-            context=ctx
-        )
+        result = await connector.generate_config(description=description, context=ctx)
 
         return ArtifactResponse(
-            success=result.get("success", False),
-            data=result,
-            error=result.get("error")
+            success=result.get("success", False), data=result, error=result.get("error")
         )
 
     except Exception as e:
@@ -230,31 +214,30 @@ async def get_artifact_types():
         "artifact_types": [
             {
                 "type": "code",
-                "description": "Generate code in any programming language"
+                "description": "Generate code in any programming language",
             },
-            {
-                "type": "document",
-                "description": "Generate markdown documentation"
-            },
-            {
-                "type": "diagram",
-                "description": "Generate Mermaid diagrams"
-            },
-            {
-                "type": "config",
-                "description": "Generate configuration files"
-            },
-            {
-                "type": "data",
-                "description": "Generate data structures"
-            }
+            {"type": "document", "description": "Generate markdown documentation"},
+            {"type": "diagram", "description": "Generate Mermaid diagrams"},
+            {"type": "config", "description": "Generate configuration files"},
+            {"type": "data", "description": "Generate data structures"},
         ],
         "supported_languages": [
-            "python", "javascript", "typescript", "java", "go",
-            "rust", "c", "cpp", "csharp", "ruby", "php",
-            "swift", "kotlin", "scala", "r", "sql"
+            "python",
+            "javascript",
+            "typescript",
+            "java",
+            "go",
+            "rust",
+            "c",
+            "cpp",
+            "csharp",
+            "ruby",
+            "php",
+            "swift",
+            "kotlin",
+            "scala",
+            "r",
+            "sql",
         ],
-        "supported_config_formats": [
-            "json", "yaml", "toml", "ini", "xml"
-        ]
+        "supported_config_formats": ["json", "yaml", "toml", "ini", "xml"],
     }
