@@ -7,13 +7,8 @@ Provides endpoints for managing and syncing multiple Kova AI repositories.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
-import sys
-from pathlib import Path
 
-# Add parent directory to path for imports
-sys.path.append(str(Path(__file__).parent.parent))
-
-from services.multi_repo_sync_service import MultiRepoSyncService
+from app.services.multi_repo_sync_service import MultiRepoSyncService
 
 router = APIRouter(prefix="/multi-repo", tags=["multi-repo"])
 
