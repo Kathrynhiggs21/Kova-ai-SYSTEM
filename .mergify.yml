@@ -1,7 +1,9 @@
 pull_request_rules:
   - name: automatic merge on CI success
     conditions:
-      - "status-success=ci/circleci: build"
+      - "status-success=ci/circleci: build-and-test"
+      - "status-success=ci/circleci: lint-check"
+      - "status-success=ci/circleci: security-scan"
       - label=ready-to-merge
     actions:
       merge:
