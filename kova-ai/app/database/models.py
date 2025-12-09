@@ -1,8 +1,19 @@
-from sqlalchemy import Column, Integer, String, Text, TIMESTAMP, Boolean, JSON, ForeignKey, Enum
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    TIMESTAMP,
+    Boolean,
+    JSON,
+    ForeignKey,
+    Enum,
+)
 from sqlalchemy.orm import relationship
 from .session import Base
 from sqlalchemy import func
 import enum
+
 
 class RepositoryStatus(str, enum.Enum):
     ACTIVE = "active"
@@ -10,11 +21,13 @@ class RepositoryStatus(str, enum.Enum):
     SYNCING = "syncing"
     ERROR = "error"
 
+
 class SyncStatus(str, enum.Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+
 
 class Repository(Base):
     __tablename__ = "repository"
@@ -39,6 +52,7 @@ class Repository(Base):
     sync_logs = relationship("SyncLog", back_populates="repository")
     webhooks = relationship("WebhookEvent", back_populates="repository")
 
+
 class Error(Base):
     __tablename__ = "error"
 
@@ -57,6 +71,7 @@ class Error(Base):
 
     # Relationships
     repository = relationship("Repository", back_populates="errors")
+
 
 class SyncLog(Base):
     __tablename__ = "sync_log"
@@ -77,12 +92,15 @@ class SyncLog(Base):
     # Relationships
     repository = relationship("Repository", back_populates="sync_logs")
 
+
 class WebhookEvent(Base):
     __tablename__ = "webhook_event"
 
     id = Column(Integer, primary_key=True, index=True)
     repository_id = Column(Integer, ForeignKey("repository.id"), nullable=True)
-    event_type = Column(String(100), nullable=False, index=True)  # push, pull_request, issues
+    event_type = Column(
+        String(100), nullable=False, index=True
+    )  # push, pull_request, issues
     event_action = Column(String(100))  # opened, closed, synchronize
     github_delivery_id = Column(String(255), unique=True)
     payload = Column(JSON, nullable=False)
@@ -93,6 +111,7 @@ class WebhookEvent(Base):
 
     # Relationships
     repository = relationship("Repository", back_populates="webhooks")
+
 
 class ClaudeInteraction(Base):
     __tablename__ = "claude_interaction"
@@ -112,6 +131,7 @@ class ClaudeInteraction(Base):
 
     # Relationships
     repository = relationship("Repository")
+
 
 class Artifact(Base):
     __tablename__ = "artifact"

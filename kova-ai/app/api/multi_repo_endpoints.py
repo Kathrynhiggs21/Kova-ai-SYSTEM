@@ -4,16 +4,17 @@ Multi-Repository Management API Endpoints
 Provides endpoints for managing and syncing multiple Kova AI repositories.
 """
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict, Any, List
 import sys
 from pathlib import Path
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent))
 
-from services.multi_repo_sync_service import MultiRepoSyncService
+from fastapi import APIRouter, HTTPException  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
+from typing import Optional, Dict, Any, List  # noqa: E402
+
+from services.multi_repo_sync_service import MultiRepoSyncService  # noqa: E402
 
 router = APIRouter(prefix="/multi-repo", tags=["multi-repo"])
 
@@ -41,10 +42,7 @@ async def get_multi_repo_status():
         service = MultiRepoSyncService()
         status = await service.get_cross_repo_status()
 
-        return RepoStatusResponse(
-            status="success",
-            data=status
-        )
+        return RepoStatusResponse(status="success", data=status)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -62,16 +60,20 @@ async def sync_repositories(request: RepoSyncRequest):
         claude_results = {}
         if request.include_claude:
             for repo, result in sync_results.items():
-                if result.get("status") == "success" and result.get("data", {}).get("exists"):
-                    claude_results[repo] = await service.sync_with_claude(result["data"])
+                if result.get("status") == "success" and result.get("data", {}).get(
+                    "exists"
+                ):
+                    claude_results[repo] = await service.sync_with_claude(
+                        result["data"]
+                    )
 
         return RepoStatusResponse(
             status="success",
             data={
                 "sync_results": sync_results,
                 "claude_results": claude_results if request.include_claude else {},
-                "repos_synced": len(sync_results)
-            }
+                "repos_synced": len(sync_results),
+            },
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -85,11 +87,7 @@ async def discover_new_repos():
         new_repos = await service.discover_new_repos()
 
         return RepoStatusResponse(
-            status="success",
-            data={
-                "new_repos": new_repos,
-                "count": len(new_repos)
-            }
+            status="success", data={"new_repos": new_repos, "count": len(new_repos)}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -101,8 +99,7 @@ async def add_repository(request: RepoAddRequest):
     try:
         service = MultiRepoSyncService()
         success = await service.add_repo_to_config(
-            request.repo_full_name,
-            request.repo_type
+            request.repo_full_name, request.repo_type
         )
 
         if success:
@@ -110,8 +107,8 @@ async def add_repository(request: RepoAddRequest):
                 status="success",
                 data={
                     "message": f"Repository {request.repo_full_name} added successfully",
-                    "repo": request.repo_full_name
-                }
+                    "repo": request.repo_full_name,
+                },
             )
         else:
             raise HTTPException(status_code=500, detail="Failed to add repository")
@@ -128,11 +125,7 @@ async def list_repositories():
         repos = service.get_enabled_repos()
 
         return RepoStatusResponse(
-            status="success",
-            data={
-                "repositories": repos,
-                "count": len(repos)
-            }
+            status="success", data={"repositories": repos, "count": len(repos)}
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -144,9 +137,6 @@ async def get_repo_config():
     try:
         service = MultiRepoSyncService()
 
-        return RepoStatusResponse(
-            status="success",
-            data=service.config
-        )
+        return RepoStatusResponse(status="success", data=service.config)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -14,7 +14,6 @@ import httpx
 import json
 import logging
 from typing import Dict, List, Any, Optional
-from datetime import datetime
 from enum import Enum
 
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +47,7 @@ class ClaudeConnector:
         return {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "anthropic-version": "2023-06-01"
+            "anthropic-version": "2023-06-01",
         }
 
     async def send_message(
@@ -57,7 +56,7 @@ class ClaudeConnector:
         system_prompt: Optional[str] = None,
         conversation_history: Optional[List[Dict]] = None,
         temperature: float = 1.0,
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         Send a message to Claude
@@ -74,16 +73,13 @@ class ClaudeConnector:
         """
         try:
             messages = conversation_history or []
-            messages.append({
-                "role": "user",
-                "content": prompt
-            })
+            messages.append({"role": "user", "content": prompt})
 
             payload = {
                 "model": self.model,
                 "max_tokens": max_tokens or self.max_tokens,
                 "temperature": temperature,
-                "messages": messages
+                "messages": messages,
             }
 
             if system_prompt:
@@ -93,7 +89,7 @@ class ClaudeConnector:
                 response = await client.post(
                     f"{self.base_url}/messages",
                     headers=self._get_headers(),
-                    json=payload
+                    json=payload,
                 )
 
                 response.raise_for_status()
@@ -105,7 +101,7 @@ class ClaudeConnector:
                     "model": result.get("model"),
                     "usage": result.get("usage", {}),
                     "stop_reason": result.get("stop_reason"),
-                    "id": result.get("id")
+                    "id": result.get("id"),
                 }
 
         except httpx.HTTPStatusError as e:
@@ -113,20 +109,14 @@ class ClaudeConnector:
             return {
                 "success": False,
                 "error": str(e),
-                "status_code": e.response.status_code
+                "status_code": e.response.status_code,
             }
         except Exception as e:
             logger.error(f"Claude API error: {e}")
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}
 
     async def generate_code(
-        self,
-        description: str,
-        language: str = "python",
-        context: Optional[str] = None
+        self, description: str, language: str = "python", context: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Generate code using Claude
@@ -149,7 +139,7 @@ efficient, well-documented code that follows best practices."""
         if context:
             prompt += f"\n\nContext:\n{context}"
 
-        prompt += f"""
+        prompt += """
 
 Please provide:
 1. Complete, working code
@@ -159,9 +149,7 @@ Please provide:
 Format the code in a code block."""
 
         result = await self.send_message(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            max_tokens=4096
+            prompt=prompt, system_prompt=system_prompt, max_tokens=4096
         )
 
         if result["success"]:
@@ -174,16 +162,13 @@ Format the code in a code block."""
                 "code": code,
                 "full_response": content,
                 "language": language,
-                "artifact_type": ArtifactType.CODE
+                "artifact_type": ArtifactType.CODE,
             }
 
         return result
 
     async def analyze_code(
-        self,
-        code: str,
-        language: str = "python",
-        focus: Optional[str] = None
+        self, code: str, language: str = "python", focus: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Analyze code for issues, improvements, and insights
@@ -218,17 +203,11 @@ Provide analysis covering:
 5. Suggestions for improvement
 """
 
-        result = await self.send_message(
-            prompt=prompt,
-            system_prompt=system_prompt
-        )
+        result = await self.send_message(prompt=prompt, system_prompt=system_prompt)
 
         return result
 
-    async def analyze_repository(
-        self,
-        repo_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def analyze_repository(self, repo_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze a repository's structure and content
 
@@ -253,10 +232,7 @@ Provide analysis of:
 5. Recommendations for development
 """
 
-        result = await self.send_message(
-            prompt=prompt,
-            system_prompt=system_prompt
-        )
+        result = await self.send_message(prompt=prompt, system_prompt=system_prompt)
 
         return result
 
@@ -265,7 +241,7 @@ Provide analysis of:
         name: str,
         artifact_type: ArtifactType,
         description: str,
-        context: Optional[Dict] = None
+        context: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         """
         Create an artifact (code, document, diagram, etc.)
@@ -281,7 +257,9 @@ Provide analysis of:
         """
         if artifact_type == ArtifactType.CODE:
             language = context.get("language", "python") if context else "python"
-            return await self.generate_code(description, language, json.dumps(context) if context else None)
+            return await self.generate_code(
+                description, language, json.dumps(context) if context else None
+            )
 
         elif artifact_type == ArtifactType.DOCUMENT:
             return await self.generate_document(name, description, context)
@@ -293,13 +271,13 @@ Provide analysis of:
             return await self.generate_config(description, context)
 
         else:
-            return {"success": False, "error": f"Unsupported artifact type: {artifact_type}"}
+            return {
+                "success": False,
+                "error": f"Unsupported artifact type: {artifact_type}",
+            }
 
     async def generate_document(
-        self,
-        title: str,
-        description: str,
-        context: Optional[Dict] = None
+        self, title: str, description: str, context: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """Generate markdown documentation"""
         system_prompt = """You are an expert technical writer. Create clear,
@@ -321,25 +299,20 @@ Format as proper markdown with:
 - Links to resources
 """
 
-        result = await self.send_message(
-            prompt=prompt,
-            system_prompt=system_prompt
-        )
+        result = await self.send_message(prompt=prompt, system_prompt=system_prompt)
 
         if result["success"]:
             return {
                 "success": True,
                 "content": result["content"],
                 "title": title,
-                "artifact_type": ArtifactType.DOCUMENT
+                "artifact_type": ArtifactType.DOCUMENT,
             }
 
         return result
 
     async def generate_diagram(
-        self,
-        description: str,
-        context: Optional[Dict] = None
+        self, description: str, context: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """Generate Mermaid diagram code"""
         system_prompt = """You are an expert at creating clear, informative diagrams
@@ -360,10 +333,7 @@ Provide:
 3. How to render it
 """
 
-        result = await self.send_message(
-            prompt=prompt,
-            system_prompt=system_prompt
-        )
+        result = await self.send_message(prompt=prompt, system_prompt=system_prompt)
 
         if result["success"]:
             content = result["content"]
@@ -373,15 +343,13 @@ Provide:
                 "success": True,
                 "diagram_code": diagram_code,
                 "full_response": content,
-                "artifact_type": ArtifactType.DIAGRAM
+                "artifact_type": ArtifactType.DIAGRAM,
             }
 
         return result
 
     async def generate_config(
-        self,
-        description: str,
-        context: Optional[Dict] = None
+        self, description: str, context: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """Generate configuration file"""
         config_format = context.get("format", "json") if context else "json"
@@ -404,10 +372,7 @@ Provide:
 3. Usage instructions
 """
 
-        result = await self.send_message(
-            prompt=prompt,
-            system_prompt=system_prompt
-        )
+        result = await self.send_message(prompt=prompt, system_prompt=system_prompt)
 
         if result["success"]:
             content = result["content"]
@@ -418,15 +383,13 @@ Provide:
                 "config": config_code,
                 "format": config_format,
                 "full_response": content,
-                "artifact_type": ArtifactType.CONFIG
+                "artifact_type": ArtifactType.CONFIG,
             }
 
         return result
 
     async def multi_turn_conversation(
-        self,
-        messages: List[str],
-        system_prompt: Optional[str] = None
+        self, messages: List[str], system_prompt: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
         Conduct a multi-turn conversation
@@ -445,19 +408,15 @@ Provide:
             result = await self.send_message(
                 prompt=message,
                 system_prompt=system_prompt,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
             )
 
             if result["success"]:
                 # Add to history
-                conversation_history.append({
-                    "role": "user",
-                    "content": message
-                })
-                conversation_history.append({
-                    "role": "assistant",
-                    "content": result["content"]
-                })
+                conversation_history.append({"role": "user", "content": message})
+                conversation_history.append(
+                    {"role": "assistant", "content": result["content"]}
+                )
 
             responses.append(result)
 
@@ -494,7 +453,9 @@ async def quick_ask(question: str) -> str:
     """Quick question to Claude"""
     connector = ClaudeConnector()
     result = await connector.send_message(question)
-    return result.get("content", "") if result.get("success") else result.get("error", "")
+    return (
+        result.get("content", "") if result.get("success") else result.get("error", "")
+    )
 
 
 async def quick_code(description: str, language: str = "python") -> str:

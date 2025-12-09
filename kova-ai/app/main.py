@@ -2,18 +2,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
-import sys
-from pathlib import Path
-
-
-from app.api import health, ai_endpoints, webhooks, multi_repo_endpoints, artifacts_endpoints
+from app.api import (
+    health,
+    ai_endpoints,
+    webhooks,
+    multi_repo_endpoints,
+    artifacts_endpoints,
+)
 
 app = FastAPI(
     title="Kova AI System API",
     description="Multi-repository AI-powered development automation platform with Claude AI integration",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # CORS
