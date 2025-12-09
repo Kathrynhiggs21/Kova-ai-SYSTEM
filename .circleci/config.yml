@@ -46,7 +46,7 @@ jobs:
           command: |
             cd kova-ai
             . venv/bin/activate
-            python -m py_compile app/**/*.py app/**/**/*.py
+            find app -name "*.py" -exec python -m py_compile {} +
 
       - run:
           name: Validate JSON configs
