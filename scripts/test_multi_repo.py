@@ -250,7 +250,7 @@ class MultiRepoTester:
             await self.test_sync_repos(include_claude=False)
 
         # Print summary
-        self.print_summary()
+        return self.print_summary()
 
     def print_summary(self):
         """Print test summary"""
