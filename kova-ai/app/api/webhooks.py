@@ -252,20 +252,20 @@ async def github_webhook(
         payload = json.loads(body.decode())
 
         # Log event
-        logger.info(f"Received GitHub webhook: {x_github_event} - {x_hub_signature_256}")
+        logger.info(f"Received GitHub webhook: {x_github_event} - {x_github_delivery}")
 
         # Process in background
         background_tasks.add_task(
             process_webhook_background,
             x_github_event,
             payload,
-            x_hub_signature_256
+            x_github_delivery
         )
 
         return {
             "status": "accepted",
             "event": x_github_event,
-            "delivery_id": x_hub_signature_256
+            "delivery_id": x_github_delivery
         }
 
     except json.JSONDecodeError:
