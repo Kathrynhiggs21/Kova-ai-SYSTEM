@@ -8,14 +8,15 @@ Kova AI is a comprehensive, production-ready system that automatically detects a
 
 1. [Quick Start](#-quick-start)
 2. [Multi-Repository Management](#-multi-repository-management) 🆕
-3. [Files to Download](#-files-to-download)
-4. [System Requirements](#-system-requirements)
-5. [Installation Steps](#-installation-steps)
-6. [Configuration](#-configuration)
-7. [Testing the System](#-testing-the-system)
-8. [AppSheet Setup](#-appsheet-setup)
-9. [Features](#-features)
-10. [Troubleshooting](#-troubleshooting)
+3. [File Organization System](#-file-organization-system) 🆕
+4. [Files to Download](#-files-to-download)
+5. [System Requirements](#-system-requirements)
+6. [Installation Steps](#-installation-steps)
+7. [Configuration](#-configuration)
+8. [Testing the System](#-testing-the-system)
+9. [AppSheet Setup](#-appsheet-setup)
+10. [Features](#-features)
+11. [Troubleshooting](#-troubleshooting)
 
 ## 🎯 Quick Start
 
@@ -92,6 +93,117 @@ python3 scripts/test_multi_repo.py
 📚 **Documentation:**
 - **[Complete Multi-Repo Guide](MULTI_REPO_GUIDE.md)** - API reference, workflows, best practices
 - **[Setup Guide](SETUP_GUIDE.md)** - Step-by-step installation and configuration
+
+---
+
+## 📂 File Organization System
+
+**NEW**: Comprehensive file management system for organizing all Kova-related files from Google Drive and other sources!
+
+### What It Does
+
+- **Imports** all Kova-related files from Google Drive
+- **Analyzes** files for relevance, duplicates, and categorization
+- **Organizes** files into a structured Master Hub
+- **Maintains** clean organization with automated workflows
+
+### Key Features
+
+✅ **Automated Import** - Scan and import from Google Drive
+✅ **Smart Categorization** - Auto-categorize files by type and purpose
+✅ **Duplicate Detection** - Find exact and similar duplicates
+✅ **Relevance Scoring** - Score files 1-10 for importance
+✅ **Purgatory System** - Isolate questionable files for review
+✅ **Standardized Naming** - Consistent file naming convention
+✅ **Folder Structure** - 10 main categories with subcategories
+
+### Folder Structure
+
+```
+Kova-Master-Hub/
+├── 01-Core-System/          # Architecture, docs, configs
+├── 02-Repositories/         # All Kova repos
+├── 03-Integrations/         # Google Drive, Claude, GitHub, etc.
+├── 04-Data-Management/      # Active data, archives, backups
+├── 05-Development/          # Prototypes, experiments
+├── 06-Operations/           # Monitoring, maintenance, security
+├── 07-Communication/        # Email, meetings, collaboration
+├── 08-Resources/            # Learning, assets, references
+├── 09-Purgatory/            # Files needing review
+└── 10-Meta/                 # Organization tools & docs
+```
+
+### Quick Start
+
+```bash
+# 1. Set up (interactive)
+./scripts/setup_kova_organization.sh
+
+# 2. Or run manually:
+# Import from Google Drive
+python3 scripts/gdrive_import.py
+
+# Organize files (dry run first!)
+python3 scripts/file_organizer.py ~/Kova-Master-Hub \
+  --inventory kova_file_inventory/inventory_*.json \
+  --dry-run
+
+# Execute organization
+python3 scripts/file_organizer.py ~/Kova-Master-Hub \
+  --inventory kova_file_inventory/inventory_*.json \
+  --execute
+```
+
+### Tools Included
+
+- **`gdrive_import.py`** - Import and analyze Google Drive files
+- **`file_organizer.py`** - Organize files into Master Hub structure
+- **`setup_kova_organization.sh`** - Interactive setup wizard
+
+### Analysis Features
+
+The system provides comprehensive file analysis:
+
+- **Relevance Scoring**: 1-10 score based on keywords, recency, type
+- **Category Detection**: CORE, INT, DATA, DEV, OPS, COM, RES
+- **Duplicate Finding**: Exact name, similar name, semantic duplicates
+- **Metadata Extraction**: Size, dates, owners, links
+
+### Sample Output
+
+```
+📊 KOVA FILE ANALYSIS REPORT
+
+📁 Total Files: 342
+💾 Total Size: 1.2 GB
+
+📂 Files by Category:
+  CORE      :   45 files (13.2%)
+  INT       :   78 files (22.8%)
+  DATA      :   23 files (6.7%)
+  ...
+
+⭐ Files by Relevance:
+  Critical (9-10)      :   23 files (6.7%)
+  Important (7-8)      :   87 files (25.4%)
+  Useful (5-6)         :  145 files (42.4%)
+  ...
+
+🔁 Duplicates Found: 15
+```
+
+### Maintenance Workflows
+
+- **Daily**: Import new files from Google Drive
+- **Weekly**: Review purgatory folder
+- **Monthly**: Archive files older than 6 months
+- **Quarterly**: Full cleanup and reorganization
+
+📚 **Documentation:**
+- **[File Organization Reference](KOVA_FILE_ORGANIZATION.md)** - Complete structure details
+- **[Organization Guide](KOVA_ORGANIZATION_GUIDE.md)** - Step-by-step usage guide
+
+---
 
 ## 📦 Complete Platform Structure
 
