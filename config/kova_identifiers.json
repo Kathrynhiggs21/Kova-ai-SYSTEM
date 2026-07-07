@@ -1,0 +1,45 @@
+{
+  "project": {
+    "name": "KOVA OS",
+    "full_name": "Katy's Organizational Voice Assistant",
+    "tagline": "You clearly need me.",
+    "timezone": "America/New_York",
+    "primary_repo": "Kathrynhiggs21/Kova-ai-SYSTEM",
+    "website_repo_candidates": [
+      "Kathrynhiggs21/kovaos-site",
+      "Kathrynhiggs21/kova-ai-site"
+    ]
+  },
+  "repos": {
+    "system": "Kathrynhiggs21/Kova-ai-SYSTEM",
+    "core_backend": "Kathrynhiggs21/kova-ai",
+    "website": "Kathrynhiggs21/kovaos-site",
+    "legacy_site": "Kathrynhiggs21/kova-ai-site",
+    "memory": "Kathrynhiggs21/kova-ai-mem0",
+    "doc_engine": "Kathrynhiggs21/Kova-os-docengine",
+    "scribbles_experimental": "Kathrynhiggs21/Kova-AI-Scribbles"
+  },
+  "digest": {
+    "default_send_time": "09:00",
+    "default_channels": ["email", "dashboard"],
+    "archive_path": "reports/digests/"
+  },
+  "modules": [
+    "core",
+    "dashboard",
+    "integrations",
+    "daily_digest",
+    "memory",
+    "files",
+    "calendar",
+    "contacts",
+    "research",
+    "writing",
+    "finance",
+    "family",
+    "health",
+    "creative",
+    "voice",
+    "smart_home"
+  ]
+}
