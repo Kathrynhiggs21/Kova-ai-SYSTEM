@@ -117,18 +117,6 @@ async def upload_exports_to_gdrive():
         
         site_size = SITE_ZIP.stat().st_size / 1024 if SITE_ZIP.exists() else 0.0
         images_size = IMAGES_ZIP.stat().st_size / 1024 if IMAGES_ZIP.exists() else 0.0
-        
-        # Check if auth actually succeeded or had warnings in logs.
-        # Since we control export_kova_os.py directly, matching against our own
-        # logged strings is reliable for indicating specific local GDrive auth failure states.
-        if "Authentication failed" in result.stdout or "credentials.json not found" in result.stdout:
-            return GDriveUploadResponse(
-                success=False,
-                message="Compilation succeeded, but Google Drive Upload failed due to missing credentials.json.",
-                site_zip_size_kb=round(site_size, 2),
-                images_zip_size_kb=round(images_size, 2),
-                logs=result.stdout
-            )
             
         return GDriveUploadResponse(
             success=True,
@@ -139,6 +127,17 @@ async def upload_exports_to_gdrive():
         )
         
     except subprocess.CalledProcessError as e:
+        # Exit code 2 indicates compilation succeeded but Google Drive Upload failed (auth or missing credentials)
+        if e.returncode == 2:
+            site_size = SITE_ZIP.stat().st_size / 1024 if SITE_ZIP.exists() else 0.0
+            images_size = IMAGES_ZIP.stat().st_size / 1024 if IMAGES_ZIP.exists() else 0.0
+            return GDriveUploadResponse(
+                success=False,
+                message="Compilation succeeded, but Google Drive Upload failed due to missing credentials or auth failure.",
+                site_zip_size_kb=round(site_size, 2),
+                images_zip_size_kb=round(images_size, 2),
+                logs=e.stdout
+            )
         raise HTTPException(
             status_code=500,
             detail=f"Export script execution failed with error code {e.returncode}. Logs: {e.stderr}"

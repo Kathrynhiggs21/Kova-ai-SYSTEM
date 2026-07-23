@@ -111,9 +111,11 @@ def export_kova_os():
             else:
                 log("Google Drive Authentication failed or credentials.json not present. Skip auto-upload.", False)
                 log("Files are stored locally in the repository root and available for direct download via MCP / API.", False)
+                sys.exit(2)
         except Exception as e:
             log(f"Google Drive upload encountered an error: {e}", False)
             log("Fallback: Files are ready for download via MCP or API.", False)
+            sys.exit(2)
     else:
         log("Google Drive upload is disabled by default (use UPLOAD_TO_GDRIVE=true env var).")
         log("Files are fully compiled and ready to download locally or via MCP!")
