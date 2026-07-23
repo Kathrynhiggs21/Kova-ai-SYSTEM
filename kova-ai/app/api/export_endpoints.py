@@ -18,7 +18,15 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+def find_project_root() -> Path:
+    current = Path(__file__).resolve().parent
+    for _ in range(5):
+        if (current / "setup_kova_system.sh").exists():
+            return current
+        current = current.parent
+    return Path(__file__).resolve().parent.parent.parent.parent
+
+PROJECT_ROOT = find_project_root()
 SITE_ZIP = PROJECT_ROOT / "site_final.zip"
 IMAGES_ZIP = PROJECT_ROOT / "images.zip"
 

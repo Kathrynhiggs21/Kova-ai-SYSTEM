@@ -46,8 +46,8 @@ The command center dashboard can be opened in two ways:
 ### Option A: Direct Local Access (Zero Dependencies)
 You do not need to run a server to view your dashboard! 
 1. Open a browser and navigate to the file path:
-   - On Linux/macOS: `file:///path/to/your/Kova-ai-SYSTEM/site/index.html`
-   - On Windows: `file:///C:/path/to/your/Kova-ai-SYSTEM/site/index.html` (or open `site\index.html` in your file explorer).
+   - On Linux/macOS: `file:///<path_to_repository>/Kova-ai-SYSTEM/site/index.html`
+   - On Windows: `file:///C:/<path_to_repository>/Kova-ai-SYSTEM/site/index.html` (or open `site\index.html` in your file explorer).
 2. The dashboard runs as a premium Single Page App (SPA) with a built-in high-fidelity fallback database to bypass CORS and load all system state instantly.
 
 ### Option B: Hosting on `kovoas.com`
