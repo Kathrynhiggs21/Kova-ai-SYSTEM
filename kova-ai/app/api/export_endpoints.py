@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from typing import Optional
 
 # Ensure parent directory is in python path
 sys.path.append(str(Path(__file__).parent.parent))
