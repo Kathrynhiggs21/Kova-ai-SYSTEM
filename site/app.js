@@ -226,11 +226,12 @@ function renderDashboard(data) {
     
     let svgIcon = "";
     
-    // Icon mapping
+    // Icon mapping with validation
     const iconName = integration.name
       .toLowerCase()
       .replaceAll(" ", "_")
-      .replace(/_platform$/, "");
+      .replace(/_platform$/, "")
+      .replace(/[^a-z0-9_-]/g, ""); // Remove any non-safe characters
     svgIcon = `images/${iconName}.svg`;
     
     // Build DOM safely without innerHTML injection for user data

@@ -5,6 +5,7 @@ Provides routes to download final site ZIPs, image archives, or trigger Google D
 
 import sys
 import os
+import re
 import subprocess
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
@@ -123,12 +124,14 @@ async def upload_exports_to_gdrive():
         
         # Check for known failure markers or absence of success confirmation
         has_upload_success = "Uploaded" in combined_output or "Successfully uploaded" in combined_output
+        
+        # Use regex to check for error markers at line start to avoid false positives
+        error_pattern = re.compile(r'^(Error:|ERROR:)', re.MULTILINE)
         has_failure_marker = (
             "Authentication failed" in combined_output or 
             "credentials.json not found" in combined_output or
             "Upload failed" in combined_output or
-            "Error:" in combined_output or
-            "ERROR:" in combined_output
+            error_pattern.search(combined_output) is not None
         )
         
         if has_failure_marker or not has_upload_success:
