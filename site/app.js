@@ -237,7 +237,10 @@ function renderDashboard(data) {
     }
     
     // Icon mapping
-    const iconName = integration.name.toLowerCase().replaceAll(" ", "_");
+    const iconName = integration.name
+      .toLowerCase()
+      .replaceAll(" ", "_")
+      .replace(/_platform$/, "");
     svgIcon = `images/${iconName}.svg`;
     
     card.innerHTML = `
