@@ -6,6 +6,7 @@ Provides routes to download final site ZIPs, image archives, or trigger Google D
 import sys
 import os
 import subprocess
+import datetime
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
@@ -45,7 +46,6 @@ async def get_export_status():
     site_size = SITE_ZIP.stat().st_size / 1024 if site_compiled else 0.0
     images_size = IMAGES_ZIP.stat().st_size / 1024 if images_compiled else 0.0
     
-    import datetime
     site_mtime = datetime.datetime.fromtimestamp(SITE_ZIP.stat().st_mtime).isoformat() if site_compiled else None
     images_mtime = datetime.datetime.fromtimestamp(IMAGES_ZIP.stat().st_mtime).isoformat() if images_compiled else None
     
