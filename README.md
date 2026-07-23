@@ -9,7 +9,7 @@ Kova AI is a comprehensive, production-ready system that automatically detects a
 1. [Quick Start](#-quick-start)
 2. [Multi-Repository Management](#-multi-repository-management) 🆕
 3. [File Organization System](#-file-organization-system) 🆕
-4. [Files to Download](#-files-to-download)
+4. [KOVA OS Dashboard & Final Exports](#-kova-os-dashboard--final-exports)
 5. [System Requirements](#-system-requirements)
 6. [Installation Steps](#-installation-steps)
 7. [Configuration](#-configuration)
@@ -202,6 +202,32 @@ The system provides comprehensive file analysis:
 📚 **Documentation:**
 - **[File Organization Reference](KOVA_FILE_ORGANIZATION.md)** - Complete structure details
 - **[Organization Guide](KOVA_ORGANIZATION_GUIDE.md)** - Step-by-step usage guide
+
+---
+
+## 📦 KOVA OS Dashboard & Final Exports
+
+The system now includes a premium **KOVA OS Dashboard v1** website along with compiled assets and automation scripts for running KOVA completely outside of Manus!
+
+### Dashboard & Images Package
+- **Interactive Local Dashboard**: Located at `site/index.html`. Open this file directly in any web browser to view the interactive command center!
+- **Compiled SVG Images**: Located at `site/images/` for use with `kovoas.com`.
+- **`site_final.zip`**: Contains the complete dashboard website, app scripts, and images. Ready to unzip and deploy to your server!
+- **`images.zip`**: Contains only the standalone compiled SVG images/icons.
+
+### Exports & Compilation Scripts
+- **`scripts/generate_svg_assets.py`**: Generates all beautiful, scalable SVG logos and icons programmatically.
+- **`scripts/export_kova_os.py`**: Compiles the latest website configuration, packs `site_final.zip` and `images.zip`, and integrates with the Google Drive API to upload them directly to your Drive!
+
+### API Download & Integration Endpoints
+When the backend API server is running, you can access these routes to manage and download exports:
+- `GET /api/export/status` - View status, sizes, and timestamps of compiled archives.
+- `GET /api/export/site` - Compile and download the final website ZIP.
+- `GET /api/export/images` - Compile and download the images archive.
+- `POST /api/export/gdrive-upload` - Compile and upload archives directly to Google Drive.
+
+📚 **Running Outside Manus Documentation:**
+- **[Working Outside Manus Guide](docs/command-center/KOVA_RUN_OUTSIDE_MANUS.md)** - Comprehensive local setup, MCP downloads, and Google Drive syncing guide.
 
 ---
 
