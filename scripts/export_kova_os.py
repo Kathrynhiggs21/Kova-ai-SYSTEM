@@ -20,7 +20,16 @@ def log(msg, success=True):
     print(f"{prefix} {msg}")
 
 def package_zip(source_dir: Path, target_zip: Path, include_parent=False):
-    """Zips a directory recursively using Python's standard zipfile module."""
+    """
+    Zips a directory recursively using Python's standard zipfile module.
+    
+    Args:
+        source_dir (Path): The directory to package into the ZIP.
+        target_zip (Path): The destination path for the ZIP archive.
+        include_parent (bool): If True, includes the parent directory name 
+                               in the archive structure. If False, packages 
+                               only the contents of the source_dir.
+    """
     if not source_dir.exists():
         log(f"Source directory does not exist: {source_dir}", False)
         return False

@@ -118,7 +118,9 @@ async def upload_exports_to_gdrive():
         site_size = SITE_ZIP.stat().st_size / 1024 if SITE_ZIP.exists() else 0.0
         images_size = IMAGES_ZIP.stat().st_size / 1024 if IMAGES_ZIP.exists() else 0.0
         
-        # Check if auth actually succeeded or had warnings in logs
+        # Check if auth actually succeeded or had warnings in logs.
+        # Since we control export_kova_os.py directly, matching against our own
+        # logged strings is reliable for indicating specific local GDrive auth failure states.
         if "Authentication failed" in result.stdout or "credentials.json not found" in result.stdout:
             return GDriveUploadResponse(
                 success=False,
