@@ -118,14 +118,25 @@ async def upload_exports_to_gdrive():
         site_size = SITE_ZIP.stat().st_size / 1024 if SITE_ZIP.exists() else 0.0
         images_size = IMAGES_ZIP.stat().st_size / 1024 if IMAGES_ZIP.exists() else 0.0
         
-        # Check if auth actually succeeded or had warnings in logs
-        if "Authentication failed" in result.stdout or "credentials.json not found" in result.stdout:
+        # Combine stdout and stderr for comprehensive log checking
+        combined_output = result.stdout + result.stderr
+        
+        # Check for known failure markers or absence of success confirmation
+        has_upload_success = "Uploaded" in combined_output or "Successfully uploaded" in combined_output
+        has_failure_marker = (
+            "Authentication failed" in combined_output or 
+            "credentials.json not found" in combined_output or
+            "Upload failed" in combined_output or
+            "error" in combined_output.lower()
+        )
+        
+        if has_failure_marker or not has_upload_success:
             return GDriveUploadResponse(
                 success=False,
-                message="Compilation succeeded, but Google Drive Upload failed due to missing credentials.json.",
+                message="Compilation succeeded, but Google Drive upload failed or was not confirmed.",
                 site_zip_size_kb=round(site_size, 2),
                 images_zip_size_kb=round(images_size, 2),
-                logs=result.stdout
+                logs=combined_output
             )
             
         return GDriveUploadResponse(
@@ -133,7 +144,7 @@ async def upload_exports_to_gdrive():
             message="Successfully compiled and uploaded KOVA OS exports to Google Drive!",
             site_zip_size_kb=round(site_size, 2),
             images_zip_size_kb=round(images_size, 2),
-            logs=result.stdout
+            logs=combined_output
         )
         
     except subprocess.CalledProcessError as e:

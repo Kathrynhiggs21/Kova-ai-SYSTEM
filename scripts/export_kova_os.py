@@ -9,7 +9,6 @@ import os
 import sys
 import zipfile
 from pathlib import Path
-import json
 
 # Setup paths
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

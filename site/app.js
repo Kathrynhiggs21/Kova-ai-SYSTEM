@@ -243,17 +243,47 @@ function renderDashboard(data) {
       .replace(/_platform$/, "");
     svgIcon = `images/${iconName}.svg`;
     
-    card.innerHTML = `
-      <img src="${svgIcon}" alt="" class="w-8 h-8 p-1.5 bg-slate-800 rounded-lg text-slate-300">
-      <div class="flex-1 min-w-0">
-        <div class="flex justify-between items-center gap-2 mb-1">
-          <p class="font-bold text-slate-200 text-sm truncate">${integration.name}</p>
-          ${statusBadge}
-        </div>
-        <p class="text-[10px] text-slate-400 line-clamp-2" title="${integration.evidence}">${integration.evidence}</p>
-        <p class="text-[10px] text-indigo-300 mt-1.5 font-semibold truncate"><span class="text-slate-500 font-normal">Next:</span> ${integration.next_action}</p>
-      </div>
-    `;
+    // Build DOM safely without innerHTML injection for user data
+    const img = document.createElement("img");
+    img.src = svgIcon;
+    img.alt = "";
+    img.className = "w-8 h-8 p-1.5 bg-slate-800 rounded-lg text-slate-300";
+    
+    const contentDiv = document.createElement("div");
+    contentDiv.className = "flex-1 min-w-0";
+    
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "flex justify-between items-center gap-2 mb-1";
+    
+    const nameP = document.createElement("p");
+    nameP.className = "font-bold text-slate-200 text-sm truncate";
+    nameP.textContent = integration.name;
+    
+    const badgeContainer = document.createElement("span");
+    badgeContainer.innerHTML = statusBadge;
+    
+    headerDiv.appendChild(nameP);
+    headerDiv.appendChild(badgeContainer);
+    
+    const evidenceP = document.createElement("p");
+    evidenceP.className = "text-[10px] text-slate-400 line-clamp-2";
+    evidenceP.textContent = integration.evidence;
+    evidenceP.setAttribute("title", integration.evidence);
+    
+    const actionP = document.createElement("p");
+    actionP.className = "text-[10px] text-indigo-300 mt-1.5 font-semibold truncate";
+    const nextLabel = document.createElement("span");
+    nextLabel.className = "text-slate-500 font-normal";
+    nextLabel.textContent = "Next:";
+    actionP.appendChild(nextLabel);
+    actionP.appendChild(document.createTextNode(" " + integration.next_action));
+    
+    contentDiv.appendChild(headerDiv);
+    contentDiv.appendChild(evidenceP);
+    contentDiv.appendChild(actionP);
+    
+    card.appendChild(img);
+    card.appendChild(contentDiv);
     integrationsGrid.appendChild(card);
   });
   

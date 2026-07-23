@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 from pathlib import Path
 
 def create_svg_assets(target_dir: Path):

@@ -89,6 +89,10 @@ To enable direct exports of your final packages to Google Drive:
 
 1. Obtain your `credentials.json` from the Google Cloud Console (enabled for Google Drive API).
 2. Save `credentials.json` in the root of the repository.
+   
+   **⚠️ IMPORTANT:** Do not commit `credentials.json` or `token.pickle` to version control. 
+   Add them to `.gitignore` to prevent accidental commits of your OAuth credentials.
+   
 3. Run the export script with the upload environment variable set to `true`:
 
 ```bash
