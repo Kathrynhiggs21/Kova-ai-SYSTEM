@@ -224,17 +224,7 @@ function renderDashboard(data) {
     const card = document.createElement("div");
     card.className = "p-4 bg-slate-900/40 rounded-xl border border-slate-800 flex items-start gap-3.5 transition-all duration-200 hover:bg-slate-900/60";
     
-    let statusBadge = "";
     let svgIcon = "";
-    
-    // Choose status badge colors
-    if (integration.status === "active") {
-      statusBadge = `<span class="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-emerald-400"></span>Active</span>`;
-    } else if (integration.status.includes("ready") || integration.status.includes("connected")) {
-      statusBadge = `<span class="px-1.5 py-0.5 text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-indigo-400 animate-pulse"></span>Ready</span>`;
-    } else {
-      statusBadge = `<span class="px-1.5 py-0.5 text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full flex items-center gap-1"><span class="w-1 h-1 rounded-full bg-rose-400"></span>Blocked</span>`;
-    }
     
     // Icon mapping
     const iconName = integration.name
@@ -259,11 +249,39 @@ function renderDashboard(data) {
     nameP.className = "font-bold text-slate-200 text-sm truncate";
     nameP.textContent = integration.name;
     
-    const badgeContainer = document.createElement("span");
-    badgeContainer.innerHTML = statusBadge;
+    // Build status badge safely with DOM methods
+    const createStatusBadge = (status) => {
+      const badge = document.createElement("span");
+      badge.className = "px-1.5 py-0.5 text-[9px] font-bold rounded-full flex items-center gap-1";
+      
+      const dot = document.createElement("span");
+      dot.className = "w-1 h-1 rounded-full";
+      
+      const label = document.createElement("span");
+      
+      if (status === "active") {
+        badge.className += " bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        dot.className += " bg-emerald-400";
+        label.textContent = "Active";
+      } else if (status.includes("ready") || status.includes("connected")) {
+        badge.className += " bg-indigo-500/10 text-indigo-400 border border-indigo-500/20";
+        dot.className += " bg-indigo-400 animate-pulse";
+        label.textContent = "Ready";
+      } else {
+        badge.className += " bg-rose-500/10 text-rose-400 border border-rose-500/20";
+        dot.className += " bg-rose-400";
+        label.textContent = "Blocked";
+      }
+      
+      badge.appendChild(dot);
+      badge.appendChild(label);
+      return badge;
+    };
+    
+    const statusBadge = createStatusBadge(integration.status);
     
     headerDiv.appendChild(nameP);
-    headerDiv.appendChild(badgeContainer);
+    headerDiv.appendChild(statusBadge);
     
     const evidenceP = document.createElement("p");
     evidenceP.className = "text-[10px] text-slate-400 line-clamp-2";

@@ -127,7 +127,8 @@ async def upload_exports_to_gdrive():
             "Authentication failed" in combined_output or 
             "credentials.json not found" in combined_output or
             "Upload failed" in combined_output or
-            "error" in combined_output.lower()
+            "Error:" in combined_output or
+            "ERROR:" in combined_output
         )
         
         if has_failure_marker or not has_upload_success:
