@@ -213,6 +213,7 @@ function renderDashboard(data) {
     item.querySelector('[data-kova-field="title"]').textContent = p.title || "";
     item.querySelector('[data-kova-field="status"]').textContent = p.status || "";
     item.querySelector('[data-kova-field="reason"]').textContent = p.reason || "";
+    prioritiesList.appendChild(item);
   });
   
   // Render Daily Digest Content
@@ -316,8 +317,9 @@ function renderDashboard(data) {
     li.className = "flex gap-2 bg-rose-950/20 border border-rose-500/10 p-2.5 rounded-lg text-rose-300";
     li.innerHTML = `
       <svg class="w-4 h-4 text-rose-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-      <span>${blocker}</span>
+      <span data-kova-field="blocker"></span>
     `;
+    li.querySelector('[data-kova-field="blocker"]').textContent = blocker || "";
     blockersList.appendChild(li);
   });
   
@@ -328,10 +330,20 @@ function renderDashboard(data) {
     const id = `act-chk-${idx}`;
     const div = document.createElement("div");
     div.className = "flex items-start gap-3 bg-slate-900/40 hover:bg-slate-900/60 p-3 rounded-lg border border-slate-800 transition-colors text-xs text-slate-300";
-    div.innerHTML = `
-      <input type="checkbox" id="${id}" onchange="toggleAction('${id}')" class="w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 mt-0.5 cursor-pointer">
-      <label for="${id}" class="cursor-pointer font-medium select-none flex-1 leading-relaxed">${act}</label>
-    `;
+    
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.id = id;
+    input.className = "w-4 h-4 rounded border-slate-700 bg-slate-950 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 mt-0.5 cursor-pointer";
+    input.addEventListener("change", () => toggleAction(id));
+    
+    const label = document.createElement("label");
+    label.setAttribute("for", id);
+    label.className = "cursor-pointer font-medium select-none flex-1 leading-relaxed";
+    label.textContent = act || "";
+    
+    div.appendChild(input);
+    div.appendChild(label);
     nextActionsList.appendChild(div);
   });
   
