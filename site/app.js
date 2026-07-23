@@ -204,13 +204,15 @@ function renderDashboard(data) {
       <span class="font-bold text-indigo-400">#${idx + 1}</span>
       <div class="flex-1">
         <div class="flex justify-between items-center">
-          <p class="font-bold text-slate-200">${p.title}</p>
-          <span class="px-1.5 py-0.5 rounded font-mono text-[9px] uppercase border ${badgeColor}">${p.status}</span>
+          <p class="font-bold text-slate-200" data-kova-field="title"></p>
+          <span class="px-1.5 py-0.5 rounded font-mono text-[9px] uppercase border ${badgeColor}" data-kova-field="status"></span>
         </div>
-        <p class="text-[10px] text-slate-400 mt-1">${p.reason}</p>
+        <p class="text-[10px] text-slate-400 mt-1" data-kova-field="reason"></p>
       </div>
     `;
-    prioritiesList.appendChild(item);
+    item.querySelector('[data-kova-field="title"]').textContent = p.title || "";
+    item.querySelector('[data-kova-field="status"]').textContent = p.status || "";
+    item.querySelector('[data-kova-field="reason"]').textContent = p.reason || "";
   });
   
   // Render Daily Digest Content
