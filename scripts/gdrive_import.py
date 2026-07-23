@@ -30,7 +30,11 @@ except ImportError:
 
 
 # Configuration
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+SCOPES = [
+    'https://www.googleapis.com/auth/drive.readonly',
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/drive'
+]
 KOVA_KEYWORDS = [
     'kova', 'kova-ai', 'kova ai', 'kovaai',
     'purgatory', 'claude', 'multi-repo',
@@ -65,8 +69,31 @@ class Colors:
 class GoogleDriveImporter:
     """Import and analyze Kova files from Google Drive"""
 
-    def __init__(self, credentials_path: str = 'credentials.json'):
-        self.credentials_path = credentials_path
+    def __init__(self, credentials_path: Optional[str] = None):
+        # Resolve project root (parent of the 'scripts' directory where gdrive_import.py resides)
+        self.script_dir = Path(__file__).resolve().parent
+        self.project_root = self.script_dir.parent
+        
+        # 1. Resolve credentials path
+        if credentials_path:
+            self.credentials_path = str(Path(credentials_path).resolve())
+        else:
+            # Check project root first (e.g. Kova-ai-SYSTEM/)
+            root_creds = self.project_root / 'credentials.json'
+            if root_creds.exists():
+                self.credentials_path = str(root_creds)
+            else:
+                # Then check current working directory
+                cwd_creds = Path('credentials.json').resolve()
+                if cwd_creds.exists():
+                    self.credentials_path = str(cwd_creds)
+                else:
+                    # Default to project root for logging and error reporting
+                    self.credentials_path = str(root_creds)
+        
+        # 2. Resolve token.pickle path in project root so it is shared across CLI and API
+        self.token_path = str(self.project_root / 'token.pickle')
+        
         self.service = None
         self.file_inventory = []
         self.duplicates = []
@@ -83,7 +110,7 @@ class GoogleDriveImporter:
             return False
 
         creds = None
-        token_path = 'token.pickle'
+        token_path = self.token_path
 
         # Load existing credentials
         if os.path.exists(token_path):

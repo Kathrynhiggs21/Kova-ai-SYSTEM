@@ -18,7 +18,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+PROJECT_ROOT_HOST = Path(__file__).resolve().parent.parent.parent.parent
+if Path("/workspace").exists():
+    PROJECT_ROOT = Path("/workspace")
+else:
+    PROJECT_ROOT = PROJECT_ROOT_HOST
+
 SITE_ZIP = PROJECT_ROOT / "site_final.zip"
 IMAGES_ZIP = PROJECT_ROOT / "images.zip"
 

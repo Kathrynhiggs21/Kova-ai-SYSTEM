@@ -1,5 +1,9 @@
 asyncpg==0.30.0
 fastapi==0.110.0
+google-api-python-client==2.122.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+google-auth==2.29.0
 httpx==0.28.1
 prometheus-client==0.22.1
 psycopg2-binary==2.9.10
