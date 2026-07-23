@@ -1,6 +1,6 @@
 asyncpg==0.30.0
 fastapi==0.110.0
-httpx==0.28.1
+httpx>=0.27.2,<0.28
 prometheus-client==0.22.1
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
