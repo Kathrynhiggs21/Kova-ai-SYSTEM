@@ -4,6 +4,8 @@
 
 Kova AI is a comprehensive, production-ready system that automatically detects and fixes code errors, processes natural language commands, and manages your entire development workflow through AI.
 
+For the full KOVA OS vision, runtime options, integration strategy, and phased roadmap, see the [KOVA OS Final Guide](docs/command-center/KOVA_OS_FINAL_GUIDE.md).
+
 ## 📋 Table of Contents
 
 1. [Quick Start](#-quick-start)
