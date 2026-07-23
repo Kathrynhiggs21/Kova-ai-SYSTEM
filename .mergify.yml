@@ -9,4 +9,6 @@ pull_request_rules:
       merge:
         method: squash
         strict: false
-queue_rules: []
+queue_rules:
+  - autoqueue: true
+    name: "Mergify "
