@@ -65,7 +65,7 @@ async def get_export_status():
     )
 
 @router.get("/site")
-async def download_site_zip():
+def download_site_zip():
     """Downloads the compiled website archive (site_final.zip)."""
     if not SITE_ZIP.exists():
         # Trigger compilation dynamically
@@ -84,7 +84,7 @@ async def download_site_zip():
     )
 
 @router.get("/images")
-async def download_images_zip():
+def download_images_zip():
     """Downloads the compiled images archive for kovoas.com (images.zip)."""
     if not IMAGES_ZIP.exists():
         # Trigger compilation dynamically
@@ -103,7 +103,7 @@ async def download_images_zip():
     )
 
 @router.post("/gdrive-upload", response_model=GDriveUploadResponse)
-async def upload_exports_to_gdrive():
+def upload_exports_to_gdrive():
     """
     Triggers local compilation and initiates Google Drive upload.
     Requires Google OAuth credentials.json to be set up.
