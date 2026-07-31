@@ -10,7 +10,7 @@ What is already in place here:
 - Health and AI command endpoints
 - Multi-repo orchestration for GitHub-based projects
 - Google Drive import and organization scripts
-- Command-center docs, dashboard specs, and digest specs
+- A static Dashboard v1 UI (`site/index.html`) plus command-center docs (dashboard specs + digest specs)
 - A documented plan for integrations such as Google Calendar, Gmail, Drive, Contacts, and more
 
 What is not fully built yet:
