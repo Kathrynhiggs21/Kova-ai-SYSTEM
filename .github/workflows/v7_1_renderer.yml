@@ -1,0 +1,49 @@
+name: V7.1 Card Production Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset_url:
+        description: 'URL to the V7.1 Canonical Workbook CSV'
+        required: true
+        default: 'https://githubusercontent.com'
+      pilot_run:
+        description: 'Run 10-card quality gate? (true/false)'
+        required: true
+        default: 'true'
+
+jobs:
+  render_cards:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout kova-ai Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-genai pandas requests
+
+      - name: Execute Batch Renderer
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python scripts/batch_renderer.py \
+            --csv_url "${{ github.event.inputs.dataset_url }}" \
+            --pilot "${{ github.event.inputs.pilot_run }}"
+
+      - name: Upload Production Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: v7.1-rendered-deck-artifacts
+          path: |
+            output/
+            logs/
+          if-no-files-found: error
