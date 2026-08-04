@@ -4,6 +4,24 @@
 
 The Kova AI System is a comprehensive AI-powered development automation platform built with FastAPI, PostgreSQL, Docker, and monitoring tools. It provides automatic error detection, AI integrations, and real-time monitoring capabilities.
 
+## Repository Overview
+
+This is a production-ready AI development automation platform with the following key characteristics:
+- **Primary Language**: Python 3.11+ with FastAPI framework
+- **Database**: PostgreSQL with Docker containerization
+- **Architecture**: Microservices with Docker Compose orchestration
+- **Testing**: Manual validation required (no automated test framework)
+- **Deployment**: Docker-first with Kubernetes support
+- **Monitoring**: Prometheus metrics and Grafana dashboards included
+
+## Key Development Principles
+
+1. **Docker-First Development**: All development should use Docker containers
+2. **API-Driven Architecture**: All functionality exposed through FastAPI endpoints
+3. **Environment-Based Configuration**: Use .env files for all configuration
+4. **Manual Validation Required**: No automated tests - manual validation is critical
+5. **Minimal Changes**: Make the smallest possible changes to achieve goals
+
 ## Working Effectively
 
 ### System Requirements
@@ -334,6 +352,59 @@ Always run `./verify_platform.sh` before reporting issues. This script checks:
 - Pin dependency versions in requirements.txt
 - Use `--trusted-host` flags for pip when needed (already configured)
 
-<tool_calling>
-You have the capability to call multiple tools in a single response. For maximum efficiency, whenever you need to perform multiple independent operations, ALWAYS invoke all relevant tools simultaneously rather than sequentially. Especially when exploring repository, reading files, viewing directories, validating changes or replying to comments.
-</tool_calling>
+## Project Context for AI Agents
+
+### Common Tasks and Workflows
+When working on this repository, AI agents typically need to:
+
+1. **Feature Development**
+   - Add new API endpoints in `kova-ai/app/api/`
+   - Modify database schema in `kova-ai/scripts/init.sql`
+   - Update environment variables in `kova-ai/.env.example`
+   - Test endpoints using curl or browser
+
+2. **Bug Fixes**
+   - Analyze logs: `docker compose logs -f api`
+   - Check health endpoint: `curl http://localhost:8000/health`
+   - Verify platform with: `./verify_platform.sh`
+   - Reset if needed: `docker compose down -v && ./setup_kova_system.sh`
+
+3. **Configuration Changes**
+   - Environment variables in `kova-ai/.env`
+   - Docker services in `kova-ai/docker-compose.yml`
+   - API routing in `kova-ai/app/main.py`
+   - Database schema in `kova-ai/scripts/init.sql`
+
+### Expected Behavior and Outputs
+- **Health endpoint** should always return `{"status":"ok"}`
+- **API documentation** should be accessible at `http://localhost:8000/docs`
+- **Startup time** should be 30-45 seconds for complete system
+- **Container status** should show all services as "Up" in `docker compose ps`
+
+### Error Patterns and Solutions
+- **SSL Certificate Errors**: Already fixed with `--trusted-host` flags
+- **Port Conflicts**: Check with `netstat -tulpn | grep 8000`
+- **Database Issues**: Reset with `docker compose down -v`
+- **Build Failures**: Usually timeout related - increase timeout to 300+ seconds
+
+### File Modification Guidelines
+- **Never modify** `setup_kova_system.sh` or `verify_platform.sh` without testing
+- **Always backup** `.env` files before making changes
+- **Test immediately** after modifying API endpoints
+- **Validate syntax** for Python files before committing
+- **Check Docker builds** after modifying Dockerfile or requirements.txt
+
+### AI Agent Success Criteria
+When working on this repository, an AI agent should:
+1. Successfully start the system using `./setup_kova_system.sh`
+2. Verify all endpoints respond correctly
+3. Ensure Docker containers remain healthy
+4. Validate changes don't break existing functionality
+5. Provide clear documentation for any new features
+
+### Integration Points
+- **External APIs**: OpenAI, Anthropic, Pinecone (configured via .env)
+- **GitHub Webhooks**: `/webhooks/github` endpoint
+- **AppSheet**: Mobile app integration via `appsheet_config.json`
+- **Monitoring**: Prometheus metrics at `/metrics` endpoint
+- **Documentation**: Auto-generated Swagger UI at `/docs`
