@@ -78,7 +78,7 @@ You do not need a special “KOVA computer” to get started. The easiest path i
 
 - a laptop or desktop computer
 - Docker Desktop or Docker Engine
-- Python 3.9+ or 3.11+
+- Python 3.11+
 - a GitHub account
 - API keys for the services you want to connect
 
