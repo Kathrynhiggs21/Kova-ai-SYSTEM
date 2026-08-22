@@ -74,7 +74,14 @@ function render() {
   section.cards.forEach((card) => {
     const article = document.createElement("article");
     article.className = "border border-slate-800 rounded-xl bg-slate-900/50 p-4 sm:p-5";
-    article.innerHTML = `<h3 class=\"font-bold text-indigo-300\">${card.title}</h3><p class=\"text-sm text-slate-400 mt-2\">${card.body}</p>`;
+    const heading = document.createElement("h3");
+    heading.className = "font-bold text-indigo-300";
+    heading.textContent = card.title;
+    const body = document.createElement("p");
+    body.className = "text-sm text-slate-400 mt-2";
+    body.textContent = card.body;
+    article.appendChild(heading);
+    article.appendChild(body);
     cards.appendChild(article);
   });
 }

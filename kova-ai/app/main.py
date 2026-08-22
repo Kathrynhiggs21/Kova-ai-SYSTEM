@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -48,15 +49,22 @@ app.include_router(mcp_endpoints.router)
 app.mount("/metrics", make_asgi_app())
 
 if web_root.exists():
-    app.mount("/static", StaticFiles(directory=web_root), name="kovaos-static")
+    app.mount("/static/kovaos", StaticFiles(directory=web_root), name="kovaos-static")
+
+
+def _page_or_404(file_name: str) -> FileResponse:
+    file_path = web_root / file_name
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Page not found")
+    return FileResponse(file_path)
 
 
 @app.get("/", include_in_schema=False)
 async def kovaos_home():
-    return FileResponse(web_root / "index.html")
+    return _page_or_404("index.html")
 
 
 @app.get("/dashboard", include_in_schema=False)
 @app.get("/dashboard/{subpath:path}", include_in_schema=False)
 async def kovaos_dashboard(subpath: str = ""):
-    return FileResponse(web_root / "dashboard.html")
+    return _page_or_404("dashboard.html")
