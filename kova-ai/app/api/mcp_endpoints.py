@@ -1,15 +1,12 @@
-import json
-from pathlib import Path
+import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
 router = APIRouter(tags=["mcp"])
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-SITE_ZIP = PROJECT_ROOT / "site_final.zip"
-IMAGES_ZIP = PROJECT_ROOT / "images.zip"
+MCP_API_KEY = os.getenv("MCP_API_KEY")
 
 
 class MCPRequest(BaseModel):
@@ -41,23 +38,21 @@ def _tools() -> List[Dict[str, Any]]:
             "description": "Returns API health status.",
             "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
         },
-        {
-            "name": "export_status",
-            "description": "Returns KOVA OS export artifact status.",
-            "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
-        },
     ]
 
 
-def _export_status() -> Dict[str, Any]:
-    return {
-        "site_compiled": SITE_ZIP.exists(),
-        "images_compiled": IMAGES_ZIP.exists(),
-    }
+def _require_mcp_auth(x_api_key: Optional[str]) -> None:
+    if MCP_API_KEY and x_api_key != MCP_API_KEY:
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "ApiKey"},
+        )
 
 
 @router.get("/mcp")
-async def mcp_info() -> Dict[str, Any]:
+async def mcp_info(x_api_key: Optional[str] = Header(default=None, alias="X-API-Key")) -> Dict[str, Any]:
+    _require_mcp_auth(x_api_key)
     return {
         "status": "ok",
         "server": _server_info(),
@@ -65,8 +60,12 @@ async def mcp_info() -> Dict[str, Any]:
     }
 
 
-@router.post("/mcp", response_model=MCPResponse)
-async def mcp_rpc(request: MCPRequest) -> MCPResponse:
+@router.post("/mcp", response_model=MCPResponse, response_model_exclude_none=True)
+async def mcp_rpc(
+    request: MCPRequest,
+    x_api_key: Optional[str] = Header(default=None, alias="X-API-Key"),
+) -> MCPResponse:
+    _require_mcp_auth(x_api_key)
     if request.method == "initialize":
         return MCPResponse(
             id=request.id,
@@ -82,15 +81,15 @@ async def mcp_rpc(request: MCPRequest) -> MCPResponse:
 
     if request.method == "tools/call":
         tool_name = request.params.get("name")
+        if not tool_name:
+            return MCPResponse(
+                id=request.id,
+                error={"code": -32602, "message": "Missing required parameter: name"},
+            )
         if tool_name == "health_check":
             return MCPResponse(
                 id=request.id,
                 result={"content": [{"type": "text", "text": '{"status":"ok"}'}]},
-            )
-        if tool_name == "export_status":
-            return MCPResponse(
-                id=request.id,
-                result={"content": [{"type": "text", "text": json.dumps(_export_status())}]},
             )
         return MCPResponse(
             id=request.id,

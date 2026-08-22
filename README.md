@@ -390,6 +390,7 @@ PINECONE_API_KEY=...            # Your Pinecone key
 POSTGRES_PASSWORD=...           # Database password
 SECRET_KEY=...                  # JWT secret key
 ADMIN_EMAIL=...                 # Admin email
+MCP_API_KEY=...                 # Require API key for /mcp when set
 ```
 
 ### GitHub Webhook Setup
