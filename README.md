@@ -213,7 +213,7 @@ The system now includes a premium **KOVA OS Dashboard v1** website along with co
 
 ### Dashboard & Images Package
 - **Interactive Local Dashboard**: Located at `site/index.html`. Open this file directly in any web browser to view the interactive command center!
-- **Compiled SVG Images**: Located at `site/images/` for use with `kovoas.com`.
+- **Compiled SVG Images**: Located at `site/images/` for use with `kovaos.com`.
 - **`site_final.zip`**: Contains the complete dashboard website, app scripts, and images. Ready to unzip and deploy to your server!
 - **`images.zip`**: Contains only the standalone compiled SVG images/icons.
 

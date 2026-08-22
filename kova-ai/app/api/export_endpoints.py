@@ -80,7 +80,7 @@ def download_site_zip():
 
 @router.get("/images")
 def download_images_zip():
-    """Downloads the compiled images archive for kovoas.com (images.zip)."""
+    """Downloads the compiled images archive for kovaos.com (images.zip)."""
     if not IMAGES_ZIP.exists():
         # Trigger compilation dynamically
         try:

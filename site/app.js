@@ -105,7 +105,7 @@ const fallbackDigestText = `<h3>KOVA Daily Digest — 2026-07-23</h3>
 <h4 class="font-bold text-indigo-400 mt-3">Project Pulse</h4>
 <div class="space-y-1.5 text-slate-300">
   <p><strong>KOVA OS:</strong> Command-center docs, integration matrix, dashboard v1 spec, daily digest spec, and static JSON dashboard config are now complete. Live exports are successfully packaged!</p>
-  <p><strong>Dashboard v1:</strong> This premium static HTML dashboard has been successfully implemented and is ready for production hosting at <code>kovoas.com</code>.</p>
+  <p><strong>Dashboard v1:</strong> This premium static HTML dashboard has been successfully implemented and is ready for production hosting at <code>kovaos.com</code>.</p>
 </div>`;
 
 // Calendar Agenda Fallback
@@ -120,7 +120,7 @@ const fallbackMemory = [
   { key: "Preferred Timezone", val: "America/New_York (Eastern Time)" },
   { key: "Primary Owner", val: "Katy (Kathrynhiggs21)" },
   { key: "Orchestrator Path", val: "Kova-ai-SYSTEM" },
-  { key: "Deployment Goal", val: "kovoas.com (static and API routes)" },
+  { key: "Deployment Goal", val: "kovaos.com (static and API routes)" },
   { key: "Tone and Voice", val: "Slightly playful, helpful, says 'You clearly need me.'" }
 ];
 
@@ -481,7 +481,7 @@ function triggerLocalExport() {
 }
 
 function triggerImagesExport() {
-  logToConsole("Initiating images package compilation for kovoas.com...", "amber");
+  logToConsole("Initiating images package compilation for kovaos.com...", "amber");
   
   fetch('/api/export/images')
     .then(res => {

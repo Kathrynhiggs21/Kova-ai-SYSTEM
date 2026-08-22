@@ -13,7 +13,7 @@ Kova-ai-SYSTEM/
 ├── site/                     # Premium Static Dashboard v1 Website
 │   ├── index.html            # Main User Interface
 │   ├── app.js                # Core JS logic & fallbacks
-│   └── images/               # Compiled SVG Icons (for kovoas.com)
+│   └── images/               # Compiled SVG Icons (for kovaos.com)
 ├── kova-ai/                  # FastAPI Backend API Server (Dockerized)
 │   └── app/api/
 │       └── export_endpoints.py # Download & Google Drive Export API
@@ -49,10 +49,10 @@ You do not need to run a server to view your dashboard!
    `file:///path/to/your/Kova-ai-SYSTEM/site/index.html` (or your local equivalent).
 2. The dashboard runs as a premium Single Page App (SPA) with a built-in high-fidelity fallback database to bypass CORS and load all system state instantly.
 
-### Option B: Hosting on `kovoas.com`
+### Option B: Hosting on `kovaos.com`
 To deploy the dashboard publicly:
 1. Unzip `site_final.zip` into your static hosting provider root (e.g., Netlify, Vercel, GitHub Pages, or any standard web server).
-2. Point your domain `kovoas.com` or `kovaos.com` to the hosting provider.
+2. Point your domain `kovaos.com` to the hosting provider.
 3. Access your secure, beautiful command center from any device!
 
 ---
