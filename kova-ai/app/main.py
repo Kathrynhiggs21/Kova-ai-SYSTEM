@@ -48,8 +48,7 @@ app.include_router(mcp_endpoints.router)
 # Metrics
 app.mount("/metrics", make_asgi_app())
 
-if web_root.exists():
-    app.mount("/static/kovaos", StaticFiles(directory=web_root), name="kovaos-static")
+app.mount("/static/kovaos", StaticFiles(directory=web_root, check_dir=False), name="kovaos-static")
 
 
 def _page_or_404(file_name: str) -> FileResponse:
@@ -60,11 +59,11 @@ def _page_or_404(file_name: str) -> FileResponse:
 
 
 @app.get("/", include_in_schema=False)
-async def kovaos_home():
+def kovaos_home():
     return _page_or_404("index.html")
 
 
 @app.get("/dashboard", include_in_schema=False)
 @app.get("/dashboard/{subpath:path}", include_in_schema=False)
-async def kovaos_dashboard(subpath: str = ""):
+def kovaos_dashboard(subpath: str = ""):
     return _page_or_404("dashboard.html")

@@ -100,7 +100,9 @@ function wireClientRouting() {
 }
 
 document.getElementById("nav-toggle").addEventListener("click", () => {
-  document.getElementById("mobile-nav").classList.toggle("hidden");
+  const mobileNav = document.getElementById("mobile-nav");
+  mobileNav.classList.toggle("hidden");
+  mobileNav.classList.toggle("grid");
 });
 
 wireClientRouting();
