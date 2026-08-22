@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KOVA OS Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="fixed top-[-10%] left-[-10%] w-[45vw] h-[45vw] rounded-full bg-indigo-700/20 blur-[120px] pointer-events-none -z-10"></div>
+  <div class="fixed bottom-[-10%] right-[-10%] w-[45vw] h-[45vw] rounded-full bg-purple-700/20 blur-[120px] pointer-events-none -z-10"></div>
+
+  <header class="sticky top-0 z-20 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div>
+        <a href="/" class="text-xs uppercase tracking-[0.2em] text-indigo-300">Kova OS</a>
+        <h1 class="font-black text-lg sm:text-2xl">Dashboard</h1>
+      </div>
+      <button id="nav-toggle" class="sm:hidden border border-slate-700 rounded-lg px-3 py-1.5 text-sm">Menu</button>
+      <nav id="nav" class="hidden sm:flex items-center gap-2 text-sm">
+        <a data-route="overview" href="/dashboard/overview" class="dash-link px-3 py-1.5 rounded-lg border border-slate-700">Overview</a>
+        <a data-route="integrations" href="/dashboard/integrations" class="dash-link px-3 py-1.5 rounded-lg border border-slate-700">Integrations</a>
+        <a data-route="devices" href="/dashboard/devices" class="dash-link px-3 py-1.5 rounded-lg border border-slate-700">Devices</a>
+        <a data-route="automation" href="/dashboard/automation" class="dash-link px-3 py-1.5 rounded-lg border border-slate-700">Automation</a>
+      </nav>
+    </div>
+    <nav id="mobile-nav" class="hidden sm:hidden px-4 pb-3 grid grid-cols-2 gap-2 text-sm">
+      <a data-route="overview" href="/dashboard/overview" class="dash-link px-3 py-2 rounded-lg border border-slate-700">Overview</a>
+      <a data-route="integrations" href="/dashboard/integrations" class="dash-link px-3 py-2 rounded-lg border border-slate-700">Integrations</a>
+      <a data-route="devices" href="/dashboard/devices" class="dash-link px-3 py-2 rounded-lg border border-slate-700">Devices</a>
+      <a data-route="automation" href="/dashboard/automation" class="dash-link px-3 py-2 rounded-lg border border-slate-700">Automation</a>
+    </nav>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6 sm:py-8">
+    <section class="mb-5 border border-slate-800 rounded-2xl bg-slate-900/60 p-4 sm:p-5">
+      <p id="page-kicker" class="text-xs uppercase tracking-[0.2em] text-indigo-300">Dashboard</p>
+      <h2 id="page-title" class="text-xl sm:text-2xl font-extrabold mt-1">Overview</h2>
+      <p id="page-subtitle" class="text-sm sm:text-base text-slate-400 mt-2">KOVA command center telemetry and controls.</p>
+    </section>
+
+    <section id="cards" class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5"></section>
+  </main>
+
+  <script src="/static/dashboard.js"></script>
+</body>
+</html>
