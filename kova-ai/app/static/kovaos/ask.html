@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ask KOVA — Your AI Second Brain</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            kova: {
+              400: '#a855f7',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+            }
+          },
+          animation: {
+            'pulse-ring': 'pulseRing 2s cubic-bezier(0.4,0,0.6,1) infinite',
+            'spin-slow': 'spin 3s linear infinite',
+          },
+          keyframes: {
+            pulseRing: {
+              '0%,100%': { transform: 'scale(1)', opacity: '0.7' },
+              '50%': { transform: 'scale(1.12)', opacity: '0.3' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      background: #060412;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0;
+    }
+    .orb-1 { background: rgba(139,92,246,0.20); width: 50vw; height: 50vw; top:-20%; left:-10%; }
+    .orb-2 { background: rgba(59,130,246,0.14); width: 40vw; height: 40vw; bottom:-15%; right:-5%; }
+
+    .glass {
+      background: rgba(15,10,35,0.65);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(139,92,246,0.18);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+    .glass-light {
+      background: rgba(20,15,45,0.55);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .grad-text {
+      background: linear-gradient(135deg, #c084fc, #818cf8, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Mic button */
+    .mic-btn {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .mic-btn.listening {
+      background: linear-gradient(135deg, #dc2626, #9f1239);
+      animation: pulseRing 1.5s ease-in-out infinite;
+    }
+    .mic-btn::before {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      background: rgba(139,92,246,0.25);
+      animation: pulseRing 2s ease-in-out infinite;
+      z-index: -1;
+    }
+    .mic-btn.listening::before {
+      background: rgba(220,38,38,0.3);
+    }
+
+    /* Command input */
+    .cmd-input {
+      background: transparent;
+      color: #f1f5f9;
+      outline: none;
+      font-size: 1.0625rem;
+      width: 100%;
+      caret-color: #a855f7;
+    }
+    .cmd-input::placeholder { color: rgba(148,163,184,0.5); }
+
+    /* Response area */
+    .response-card {
+      transition: all 0.3s ease;
+    }
+
+    /* Suggestion chip */
+    .chip {
+      background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.25);
+      color: #c084fc;
+      font-size: 0.75rem;
+      padding: 0.375rem 0.875rem;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .chip:hover {
+      background: rgba(139,92,246,0.25);
+      border-color: rgba(139,92,246,0.5);
+      color: #e9d5ff;
+      transform: translateY(-1px);
+    }
+
+    /* History item */
+    .history-item {
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.15s;
+    }
+    .history-item:hover { background: rgba(139,92,246,0.07); }
+
+    /* Typing indicator */
+    .typing-dot {
+      width: 6px; height: 6px;
+      background: #a855f7;
+      border-radius: 50%;
+      animation: bounce 1.2s infinite ease-in-out;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%,80%,100% { transform: translateY(0); opacity: 0.5; }
+      40% { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #4c1d95; border-radius: 4px; }
+
+    .nav-link { color: rgba(203,213,225,0.75); font-size:0.875rem; font-weight:500; transition: color 0.2s; }
+    .nav-link:hover { color: #c084fc; }
+
+    .dot-live {
+      width:8px; height:8px; background:#22c55e; border-radius:50%;
+      box-shadow: 0 0 0 2px rgba(34,197,94,0.3); animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen overflow-x-hidden">
+
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <!-- ═══ NAVBAR ═══ -->
+  <nav class="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/30 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between gap-4">
+      <a href="/" class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-900/50">
+          <svg viewBox="0 0 24 24" fill="none" class="w-4 h-4 text-white" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+          </svg>
+        </div>
+        <span class="font-black text-lg tracking-tight">KOVA <span class="text-violet-400 font-light">OS</span></span>
+      </a>
+      <div class="hidden md:flex items-center gap-6">
+        <a href="/" class="nav-link">Home</a>
+        <a href="/ask" class="nav-link text-violet-300">Ask KOVA</a>
+        <a href="/brain" class="nav-link">My Brain</a>
+        <a href="/dashboard/overview" class="nav-link">Dashboard</a>
+      </div>
+      <div class="flex items-center gap-2">
+        <div id="status-indicator" class="hidden sm:flex items-center gap-1.5 text-xs text-emerald-400">
+          <div class="dot-live"></div><span>Online</span>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══ MAIN LAYOUT ═══ -->
+  <div class="flex min-h-screen pt-[65px]">
+
+    <!-- Sidebar (desktop) -->
+    <aside class="hidden lg:flex flex-col w-72 xl:w-80 border-r border-white/5 bg-black/20 fixed top-[65px] bottom-0 overflow-y-auto">
+      <div class="p-5 border-b border-white/5">
+        <p class="text-xs uppercase tracking-[0.25em] text-slate-500 mb-3">Quick Access</p>
+        <div class="flex flex-col gap-1">
+          <a href="/ask" class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-violet-600/15 border border-violet-500/20 text-sm font-medium text-violet-300">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 flex-shrink-0"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            Ask KOVA
+          </a>
+          <a href="/brain" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 flex-shrink-0"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96-.46 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3z"/></svg>
+            My Brain
+          </a>
+          <a href="/dashboard/overview" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 flex-shrink-0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Dashboard
+          </a>
+          <a href="/dashboard/integrations" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-all">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 flex-shrink-0"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Sync &amp; Apps
+          </a>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="p-5 flex-1">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs uppercase tracking-[0.25em] text-slate-500">Recent</p>
+          <button id="clear-history-btn" class="text-xs text-slate-600 hover:text-rose-400 transition-colors">Clear</button>
+        </div>
+        <div id="history-list" class="flex flex-col gap-0.5 text-sm">
+          <p class="text-slate-600 text-xs italic py-4 text-center">Your queries will appear here</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 lg:ml-72 xl:ml-80 flex flex-col items-center px-4 py-8 sm:py-12 max-w-4xl mx-auto w-full">
+
+      <!-- Header -->
+      <div class="text-center mb-10 w-full">
+        <div class="inline-flex items-center gap-2 glass-light rounded-full px-4 py-1.5 text-xs text-violet-300 mb-5">
+          <div class="dot-live"></div>
+          KOVA is listening
+        </div>
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black mb-3">
+          <span class="grad-text">Ask anything.</span>
+        </h1>
+        <p class="text-slate-400 text-base sm:text-lg">Search your life, sync apps, create content or fire a task — just type or speak.</p>
+      </div>
+
+      <!-- ═══ COMMAND BAR ═══ -->
+      <div class="w-full glass rounded-2xl p-4 sm:p-5 mb-6">
+        <div class="flex items-center gap-3">
+          <!-- Mic button -->
+          <button id="mic-btn" class="mic-btn w-12 h-12 flex-shrink-0 flex items-center justify-center text-white shadow-lg" title="Hold to speak">
+            <svg id="mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+
+          <!-- Text input -->
+          <div class="flex-1">
+            <input
+              id="cmd-input"
+              type="text"
+              class="cmd-input"
+              placeholder="Ask KOVA anything… search, create, sync, find"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+
+          <!-- Send button -->
+          <button id="send-btn" class="flex-shrink-0 w-10 h-10 rounded-xl bg-violet-700 hover:bg-violet-600 flex items-center justify-center transition-all hover:scale-105 active:scale-95" title="Send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-white">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Input mode indicator -->
+        <div class="flex items-center gap-2 mt-3 pt-3 border-t border-white/5 text-xs text-slate-500">
+          <span id="mode-label">⌨️ Type your request</span>
+          <span class="ml-auto">Press <kbd class="glass-light px-1.5 py-0.5 rounded text-slate-400 text-xs">Enter</kbd> to send</span>
+        </div>
+      </div>
+
+      <!-- ═══ SUGGESTIONS ═══ -->
+      <div class="w-full mb-8">
+        <p class="text-xs text-slate-500 mb-3 uppercase tracking-wider">Try asking…</p>
+        <div class="flex flex-wrap gap-2" id="suggestions">
+          <button class="chip" onclick="fillCmd(this)">Find me a healthy dinner recipe</button>
+          <button class="chip" onclick="fillCmd(this)">Sync my Google Calendar</button>
+          <button class="chip" onclick="fillCmd(this)">What have I been working on?</button>
+          <button class="chip" onclick="fillCmd(this)">Create a plan for this week</button>
+          <button class="chip" onclick="fillCmd(this)">Search the web for AI news today</button>
+          <button class="chip" onclick="fillCmd(this)">Remind me about my fitness goals</button>
+          <button class="chip" onclick="fillCmd(this)">Generate a code snippet for me</button>
+          <button class="chip" onclick="fillCmd(this)">What apps are connected to KOVA?</button>
+        </div>
+      </div>
+
+      <!-- ═══ RESPONSE AREA ═══ -->
+      <div id="response-area" class="w-full flex flex-col gap-4"></div>
+
+    </main>
+  </div>
+
+  <script>
+    // ─── State ───────────────────────────────────────────────────────────────
+    let history = JSON.parse(localStorage.getItem('kova_history') || '[]');
+    let isListening = false;
+    let recognition = null;
+
+    // ─── Elements ────────────────────────────────────────────────────────────
+    const input = document.getElementById('cmd-input');
+    const sendBtn = document.getElementById('send-btn');
+    const micBtn = document.getElementById('mic-btn');
+    const modeLabel = document.getElementById('mode-label');
+    const responseArea = document.getElementById('response-area');
+    const historyList = document.getElementById('history-list');
+
+    // ─── Health check ────────────────────────────────────────────────────────
+    fetch('/health').then(r => r.json()).then(() => {
+      document.getElementById('status-indicator').classList.remove('hidden');
+    }).catch(() => {});
+
+    // ─── Send on Enter ───────────────────────────────────────────────────────
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCommand(); } });
+    sendBtn.addEventListener('click', sendCommand);
+
+    // ─── Fill from suggestion ─────────────────────────────────────────────────
+    function fillCmd(el) {
+      input.value = el.textContent;
+      input.focus();
+    }
+
+    // ─── Voice recognition ───────────────────────────────────────────────────
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.add('listening');
+        modeLabel.textContent = '🎤 Listening… speak now';
+      };
+      recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        modeLabel.textContent = '⌨️ Type your request';
+      };
+      recognition.onresult = (e) => {
+        const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+        input.value = transcript;
+        if (e.results[e.results.length - 1].isFinal) sendCommand();
+      };
+      recognition.onerror = (e) => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        if (e.error !== 'no-speech') modeLabel.textContent = '⚠️ Mic error: ' + e.error;
+        else modeLabel.textContent = '⌨️ Type your request';
+      };
+
+      micBtn.addEventListener('click', () => {
+        if (isListening) recognition.stop();
+        else recognition.start();
+      });
+    } else {
+      micBtn.title = 'Voice not supported in this browser';
+      micBtn.style.opacity = '0.4';
+      micBtn.style.cursor = 'not-allowed';
+    }
+
+    // ─── Send command ────────────────────────────────────────────────────────
+    async function sendCommand() {
+      const query = input.value.trim();
+      if (!query) return;
+      input.value = '';
+      modeLabel.textContent = '⌨️ Type your request';
+
+      // Add user bubble
+      appendMessage('user', query);
+
+      // Save to history
+      history.unshift({ q: query, t: Date.now() });
+      if (history.length > 50) history.pop();
+      localStorage.setItem('kova_history', JSON.stringify(history));
+      renderHistory();
+
+      // Show typing indicator
+      const typingId = 'typing-' + Date.now();
+      appendTyping(typingId);
+
+      try {
+        const res = await fetch('/ai/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: query })
+        });
+        removeTyping(typingId);
+        if (res.ok) {
+          const data = await res.json();
+          const reply = data.response || data.result || data.message || JSON.stringify(data);
+          appendMessage('kova', reply);
+        } else {
+          appendMessage('kova', `⚠️ KOVA returned status ${res.status}. The AI endpoint may need an API key configured.`);
+        }
+      } catch (err) {
+        removeTyping(typingId);
+        appendMessage('kova', `⚠️ Could not reach KOVA AI. Check that the backend is running and your API keys are configured in .env.`);
+      }
+    }
+
+    function appendMessage(role, text) {
+      const isUser = role === 'user';
+      const div = document.createElement('div');
+      div.className = 'w-full flex ' + (isUser ? 'justify-end' : 'justify-start');
+      div.innerHTML = `
+        <div class="max-w-[85%] sm:max-w-[75%] ${isUser
+          ? 'bg-violet-700/40 border border-violet-500/30 rounded-2xl rounded-tr-md'
+          : 'glass rounded-2xl rounded-tl-md'
+        } px-4 py-3 text-sm leading-relaxed text-slate-100">
+          ${isUser ? '' : `<p class="text-xs text-violet-400 font-semibold mb-1.5 uppercase tracking-wider">KOVA</p>`}
+          <p class="whitespace-pre-wrap">${escapeHtml(text)}</p>
+        </div>`;
+      responseArea.appendChild(div);
+      responseArea.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function appendTyping(id) {
+      const div = document.createElement('div');
+      div.id = id;
+      div.className = 'w-full flex justify-start';
+      div.innerHTML = `
+        <div class="glass rounded-2xl rounded-tl-md px-5 py-3.5">
+          <p class="text-xs text-violet-400 font-semibold mb-2 uppercase tracking-wider">KOVA</p>
+          <div class="flex gap-1.5 items-center">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        </div>`;
+      responseArea.appendChild(div);
+      div.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function removeTyping(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    // ─── History sidebar ─────────────────────────────────────────────────────
+    function renderHistory() {
+      if (!history.length) {
+        historyList.innerHTML = '<p class="text-slate-600 text-xs italic py-4 text-center">Your queries will appear here</p>';
+        return;
+      }
+      historyList.innerHTML = history.slice(0, 30).map((item, i) => `
+        <button class="history-item w-full text-left px-3 py-2.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 transition-all truncate" onclick="document.getElementById('cmd-input').value=this.dataset.q; document.getElementById('cmd-input').focus();" data-q="${escapeHtml(item.q)}">
+          <span class="text-slate-600 mr-1">${i + 1}.</span>${escapeHtml(item.q)}
+        </button>
+      `).join('');
+    }
+
+    document.getElementById('clear-history-btn').addEventListener('click', () => {
+      history = [];
+      localStorage.removeItem('kova_history');
+      renderHistory();
+    });
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    renderHistory();
+    input.focus();
+
+    // Welcome message
+    setTimeout(() => {
+      appendMessage('kova', "Hi! I'm KOVA — your AI second brain. I can search your notes and history, sync your apps, help you create content, or fire any task you need. What would you like to do?");
+    }, 400);
+  </script>
+</body>
+</html>

@@ -63,6 +63,17 @@ def kovaos_home():
     return _page_or_404("index.html")
 
 
+@app.get("/ask", include_in_schema=False)
+def kovaos_ask():
+    return _page_or_404("ask.html")
+
+
+@app.get("/brain", include_in_schema=False)
+@app.get("/brain/{subpath:path}", include_in_schema=False)
+def kovaos_brain(subpath: str = ""):
+    return _page_or_404("brain.html")
+
+
 @app.get("/dashboard", include_in_schema=False)
 @app.get("/dashboard/{subpath:path}", include_in_schema=False)
 def kovaos_dashboard(subpath: str = ""):
