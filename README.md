@@ -415,6 +415,11 @@ curl -X POST http://localhost:8000/ai/command \
   -d '{"command": "create a REST API for user management"}'
 ```
 
+### Test MCP Endpoint
+```bash
+curl http://localhost:8000/mcp
+```
+
 ### Test Error Scanning
 ```bash
 curl -X POST http://localhost:8000/api/scan \
@@ -562,6 +567,7 @@ Once running, access interactive API docs at:
 - `POST /webhooks/github` - GitHub webhook
 - `GET /health` - Health check
 - `GET /metrics` - Prometheus metrics
+- `GET/POST /mcp` - MCP server endpoint
 
 ## 🔒 Security Notes
 

@@ -9,6 +9,7 @@ from app.api import (
     multi_repo_endpoints,
     artifacts_endpoints,
     export_endpoints,
+    mcp_endpoints,
 )
 
 app = FastAPI(
@@ -35,6 +36,7 @@ app.include_router(webhooks.router)
 app.include_router(multi_repo_endpoints.router)
 app.include_router(artifacts_endpoints.router)
 app.include_router(export_endpoints.router)
+app.include_router(mcp_endpoints.router)
 
 # Metrics
 app.mount("/metrics", make_asgi_app())
