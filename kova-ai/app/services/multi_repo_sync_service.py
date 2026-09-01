@@ -15,6 +15,14 @@ from typing import Dict, List, Any
 from pathlib import Path
 from functools import wraps
 
+from app.core.repository_registry import (
+    CANONICAL_GITHUB_OWNER,
+    CANONICAL_REPOSITORIES,
+    is_safe_github_owner,
+    parse_github_repository,
+    repository_key,
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -101,47 +109,87 @@ class MultiRepoSyncService:
 
             owner = config.get("github_owner")
             repositories = config.get("repositories")
-            if not isinstance(owner, str) or not owner.strip():
-                raise ValueError("Registry github_owner must be a non-empty string")
+            if not is_safe_github_owner(owner):
+                raise ValueError("Registry github_owner must be a safe GitHub owner")
             if not isinstance(repositories, list) or not repositories:
                 raise ValueError("Registry repositories must be a non-empty list")
 
+            seen_repositories = set()
             for repository in repositories:
                 if not isinstance(repository, dict):
                     raise ValueError("Each registry repository must be an object")
+                name = repository.get("name")
                 full_name = repository.get("full_name")
                 enabled = repository.get("enabled")
-                if not isinstance(full_name, str) or not full_name.strip():
+                parsed_repository = parse_github_repository(full_name)
+                if parsed_repository is None:
                     raise ValueError(
-                        "Each registry repository must have a non-empty full_name"
+                        "Each registry repository must have a safe owner/name coordinate"
                     )
+                repository_owner, repository_name = parsed_repository
+                if repository_owner.casefold() != owner.casefold():
+                    raise ValueError("Registry repository owner does not match github_owner")
+                if not isinstance(name, str) or name != repository_name:
+                    raise ValueError("Registry repository name does not match full_name")
                 if not isinstance(enabled, bool):
                     raise ValueError(
                         "Each registry repository must have a boolean enabled flag"
                     )
 
-            for settings_name in (
-                "sync_settings",
-                "discovery_settings",
-                "integration_settings",
-            ):
-                settings = config.get(settings_name, {})
+                normalized_repository = repository_key(full_name)
+                if normalized_repository in seen_repositories:
+                    raise ValueError("Registry repository coordinates must be unique")
+                seen_repositories.add(normalized_repository)
+
+            settings_schema = {
+                "sync_settings": {
+                    "auto_sync_enabled": bool,
+                    "sync_interval_minutes": int,
+                    "sync_on_push": bool,
+                    "sync_on_pr": bool,
+                    "cross_repo_notifications": bool,
+                },
+                "discovery_settings": {
+                    "auto_discover_new_repos": bool,
+                    "repo_name_pattern": str,
+                    "watch_for_new_repos": bool,
+                },
+                "integration_settings": {
+                    "claude_api_enabled": bool,
+                    "github_webhooks_enabled": bool,
+                    "cross_repo_prs": bool,
+                    "unified_changelog": bool,
+                },
+            }
+            for settings_name, required_settings in settings_schema.items():
+                settings = config.get(settings_name)
                 if not isinstance(settings, dict):
                     raise ValueError(f"Registry {settings_name} must be an object")
+                for setting_name, expected_type in required_settings.items():
+                    if type(settings.get(setting_name)) is not expected_type:
+                        raise ValueError(
+                            f"Registry {settings_name}.{setting_name} must be "
+                            f"{expected_type.__name__}"
+                        )
+
+            if config["sync_settings"]["sync_interval_minutes"] <= 0:
+                raise ValueError("Registry sync interval must be positive")
+            if not config["discovery_settings"]["repo_name_pattern"].strip():
+                raise ValueError("Registry repository discovery pattern cannot be empty")
 
             return config
         except Exception as e:
-            logger.error(f"Failed to load config: {e}")
+            logger.error("Failed to load config %s: %s", self.config_path, e)
             return self._get_default_config()
 
     def _get_default_config(self) -> Dict[str, Any]:
         """Return the canonical, fail-safe configuration if the file is unavailable."""
         return {
-            "github_owner": "Kathrynhiggs21",
+            "github_owner": CANONICAL_GITHUB_OWNER,
             "repositories": [
                 {
                     "name": "Kova-ai-SYSTEM",
-                    "full_name": "Kathrynhiggs21/Kova-ai-SYSTEM",
+                    "full_name": CANONICAL_REPOSITORIES[0],
                     "description": "Canonical KOVA OS orchestration hub and FastAPI backend",
                     "type": "core",
                     "enabled": True,
@@ -150,7 +198,7 @@ class MultiRepoSyncService:
                 },
                 {
                     "name": "kova-ai-dash",
-                    "full_name": "Kathrynhiggs21/kova-ai-dash",
+                    "full_name": CANONICAL_REPOSITORIES[1],
                     "description": "Current KOVA OS command-center frontend",
                     "type": "frontend",
                     "enabled": True,

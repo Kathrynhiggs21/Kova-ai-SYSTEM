@@ -125,6 +125,50 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(service.get_enabled_repos(), CANONICAL_REPOSITORIES)
 
+    async def test_unsafe_repository_coordinate_falls_back_to_canonical_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "kova_repos_config.json"
+            write_config(config_path)
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            config["repositories"][0]["name"] = "user"
+            config["repositories"][0]["full_name"] = "../user"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
+                service = MultiRepoSyncService()
+
+        self.assertEqual(service.get_enabled_repos(), CANONICAL_REPOSITORIES)
+
+    async def test_case_variant_duplicate_falls_back_to_canonical_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "kova_repos_config.json"
+            write_config(config_path)
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            duplicate = dict(config["repositories"][0])
+            duplicate["name"] = "kova-ai-system"
+            duplicate["full_name"] = "kathrynhiggs21/kova-ai-system"
+            duplicate["enabled"] = False
+            config["repositories"].append(duplicate)
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
+                service = MultiRepoSyncService()
+
+        self.assertEqual(len(service.config["repositories"]), 2)
+        self.assertEqual(service.get_enabled_repos(), CANONICAL_REPOSITORIES)
+
+    async def test_invalid_nested_setting_falls_back_to_canonical_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "kova_repos_config.json"
+            write_config(config_path)
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            config["discovery_settings"]["repo_name_pattern"] = []
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
+                service = MultiRepoSyncService()
+
+        self.assertEqual(
+            service.config["discovery_settings"]["repo_name_pattern"], "kova-ai-"
+        )
+
     async def test_claude_service_stays_disabled_even_when_key_exists(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = Path(temp_dir) / "kova_repos_config.json"

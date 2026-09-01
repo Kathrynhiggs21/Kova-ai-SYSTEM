@@ -121,6 +121,41 @@ class ConfigValidatorTests(unittest.TestCase):
         )
         self.assertNotIn("Validation failed", output)
 
+    def test_url_fragment_repository_alias_is_rejected(self):
+        config = valid_config()
+        config["repositories"][0]["name"] = "Repo#shadow"
+        config["repositories"][0]["full_name"] = "Kathrynhiggs21/Repo#shadow"
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any("Invalid GitHub repository coordinate" in e for e in results["errors"])
+        )
+
+    def test_parent_segment_repository_coordinate_is_rejected(self):
+        config = valid_config()
+        config["repositories"][0]["name"] = "user"
+        config["repositories"][0]["full_name"] = "../user"
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any("Invalid GitHub repository coordinate" in e for e in results["errors"])
+        )
+
+    def test_boolean_sync_interval_is_rejected(self):
+        config = valid_config()
+        config["sync_settings"]["sync_interval_minutes"] = True
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "sync_settings.sync_interval_minutes should be int", results["errors"]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
