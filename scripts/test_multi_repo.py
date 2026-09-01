@@ -21,16 +21,16 @@ REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 
 def load_owner_api_key() -> str:
     """Load the owner key from the process or local .env without printing it."""
-    process_value = os.getenv("KOVA_OWNER_API_KEY", "")
-    if process_value.strip():
+    process_value = os.getenv("KOVA_OWNER_API_KEY", "").strip()
+    if process_value:
         return process_value
 
     env_path = REPOSITORY_ROOT / "kova-ai" / ".env"
     if not env_path.exists():
         return ""
 
-    file_value = dotenv_values(env_path).get("KOVA_OWNER_API_KEY") or ""
-    return str(file_value) if str(file_value).strip() else ""
+    file_value = str(dotenv_values(env_path).get("KOVA_OWNER_API_KEY") or "").strip()
+    return file_value
 
 
 class Colors:
@@ -52,9 +52,10 @@ class MultiRepoTester:
         owner_api_key: str | None = None,
     ):
         self.base_url = base_url
-        self.owner_api_key = (
+        selected_owner_api_key = (
             load_owner_api_key() if owner_api_key is None else owner_api_key
         )
+        self.owner_api_key = selected_owner_api_key.strip()
         self.auth_headers = (
             {"X-Kova-API-Key": self.owner_api_key}
             if self.owner_api_key.strip()

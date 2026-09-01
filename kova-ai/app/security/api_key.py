@@ -13,7 +13,7 @@ owner_api_key_header = APIKeyHeader(name="X-Kova-API-Key", auto_error=False)
 
 def get_owner_api_key() -> str:
     """Return the configured owner API key, if any."""
-    return os.getenv("KOVA_OWNER_API_KEY", "")
+    return os.getenv("KOVA_OWNER_API_KEY", "").strip()
 
 
 async def require_owner_api_key(

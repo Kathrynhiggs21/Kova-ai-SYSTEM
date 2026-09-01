@@ -59,8 +59,8 @@ class MultiRepoClientAuthenticationTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotIn(OWNER_KEY, rendered_log)
 
-    def test_process_owner_key_is_loaded_without_transformation(self):
-        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
+    def test_process_owner_key_trims_surrounding_whitespace(self):
+        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": f"  {OWNER_KEY}  "}):
             self.assertEqual(load_owner_api_key(), OWNER_KEY)
 
 
