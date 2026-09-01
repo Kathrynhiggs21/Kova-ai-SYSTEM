@@ -93,8 +93,43 @@ class MultiRepoSyncService:
     def _load_config(self) -> Dict[str, Any]:
         """Load multi-repo configuration"""
         try:
-            with open(self.config_path, "r") as f:
-                return json.load(f)
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+
+            if not isinstance(config, dict):
+                raise ValueError("Top-level registry value must be an object")
+
+            owner = config.get("github_owner")
+            repositories = config.get("repositories")
+            if not isinstance(owner, str) or not owner.strip():
+                raise ValueError("Registry github_owner must be a non-empty string")
+            if not isinstance(repositories, list) or not repositories:
+                raise ValueError("Registry repositories must be a non-empty list")
+
+            for repository in repositories:
+                if not isinstance(repository, dict):
+                    raise ValueError("Each registry repository must be an object")
+                full_name = repository.get("full_name")
+                enabled = repository.get("enabled")
+                if not isinstance(full_name, str) or not full_name.strip():
+                    raise ValueError(
+                        "Each registry repository must have a non-empty full_name"
+                    )
+                if not isinstance(enabled, bool):
+                    raise ValueError(
+                        "Each registry repository must have a boolean enabled flag"
+                    )
+
+            for settings_name in (
+                "sync_settings",
+                "discovery_settings",
+                "integration_settings",
+            ):
+                settings = config.get(settings_name, {})
+                if not isinstance(settings, dict):
+                    raise ValueError(f"Registry {settings_name} must be an object")
+
+            return config
         except Exception as e:
             logger.error(f"Failed to load config: {e}")
             return self._get_default_config()

@@ -104,6 +104,23 @@ class ConfigValidatorTests(unittest.TestCase):
             any("Duplicate full_name" in error for error in results["errors"])
         )
 
+    def test_unhashable_repository_fields_report_schema_errors(self):
+        config = valid_config()
+        config["repositories"][0]["name"] = ["Kova-ai-SYSTEM"]
+        config["repositories"][0]["full_name"] = {
+            "owner": "Kathrynhiggs21",
+            "repo": "Kova-ai-SYSTEM",
+        }
+
+        passed, results, output = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertTrue(any("field 'name' should be str" in e for e in results["errors"]))
+        self.assertTrue(
+            any("field 'full_name' should be str" in e for e in results["errors"])
+        )
+        self.assertNotIn("Validation failed", output)
+
 
 if __name__ == "__main__":
     unittest.main()

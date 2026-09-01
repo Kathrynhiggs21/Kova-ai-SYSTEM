@@ -277,9 +277,15 @@ class ConfigValidator:
             for repo in self.config.get("repositories", [])
             if isinstance(repo, dict)
         ]
-        names = [repo.get("name") for repo in repos if repo.get("name")]
+        names = [
+            repo.get("name")
+            for repo in repos
+            if isinstance(repo.get("name"), str) and repo.get("name")
+        ]
         full_names = [
-            repo.get("full_name") for repo in repos if repo.get("full_name")
+            repo.get("full_name")
+            for repo in repos
+            if isinstance(repo.get("full_name"), str) and repo.get("full_name")
         ]
 
         duplicates = []
