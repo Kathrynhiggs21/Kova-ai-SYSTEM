@@ -1,10 +1,13 @@
 """Security regression tests for KOVA's owner-only API boundary."""
 
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kova-ai"))
 
 import httpx
 from fastapi import HTTPException

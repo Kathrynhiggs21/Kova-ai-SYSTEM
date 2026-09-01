@@ -345,7 +345,10 @@ class MultiRepoSyncService:
             }
 
         if not self.claude_api_key:
-            return {"error": "Claude API key not configured"}
+            return {
+                "status": "error",
+                "error": "Claude API key not configured",
+            }
 
         headers = {
             "x-api-key": self.claude_api_key,

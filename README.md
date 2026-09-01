@@ -66,19 +66,22 @@ integration settings.
   synchronization, cross-repository notifications, and unified AI analysis.
 - Dashboard integration badges are recorded state, not verified live health.
 
-### Local Read-Only Checks
+### Authenticated Local Checks
 
-The current API does not yet have an owner-authentication boundary. Keep it on a
-trusted local network and do not expose mutation, sync, AI, or export endpoints
-to the public internet.
+The API now requires the owner key for repository, AI, artifact, webhook-status,
+and export/upload mutations. Keep it on a trusted network until the full
+deployment stack has been reviewed, and never embed the key in browser code.
 
-All KOVA routes except `/health`, documentation, metrics, and the signed GitHub
-webhook require the owner key in the `X-Kova-API-Key` header. Keep that key in a
-server-side secret store; never embed it in browser JavaScript.
+Public routes are limited to `/health`, documentation, metrics, the signed
+GitHub webhook receiver, and side-effect-free reads of already-published export
+archives at `/api/export/status`, `/api/export/site`, and
+`/api/export/images`. Missing archives return 404 and are not compiled on
+demand.
 
 ```bash
 # Check configured repository metadata locally
-curl http://localhost:8000/multi-repo/status
+curl -H "X-Kova-API-Key: $KOVA_OWNER_API_KEY" \
+  http://localhost:8000/multi-repo/status
 ```
 
 ### Testing & Validation
