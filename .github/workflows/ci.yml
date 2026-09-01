@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-platform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run Platform Verification
+        run: |
+          chmod +x verify_platform.sh
+          ./verify_platform.sh
+
+      - name: Validate Multi-Repo Config
+        run: python3 scripts/validate_config.py
+
+      - name: Compile Python App Modules
+        run: python3 -m compileall -q kova-ai/app
