@@ -49,7 +49,7 @@ class MultiRepoTester:
     def __init__(
         self,
         base_url: str = "http://localhost:8000",
-        owner_api_key: str = None,
+        owner_api_key: str | None = None,
     ):
         self.base_url = base_url
         self.owner_api_key = (

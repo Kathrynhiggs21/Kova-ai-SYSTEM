@@ -127,8 +127,11 @@ GITHUB_WEBHOOK_SECRET=replace_with_a_generated_webhook_secret
 **Important**: Replace the placeholder values with your actual tokens!
 Owner-only API clients must send the configured value in the
 `X-Kova-API-Key` request header. Never embed this key in browser JavaScript.
-The command examples later in this guide omit the header for readability; add
-it to every request except `/health`.
+The protected command examples later in this guide omit the header for
+readability; add it to repository, AI, artifact, webhook-status, and
+export/upload mutation requests. Public routes are limited to `/health`,
+documentation, metrics, the signed GitHub webhook receiver, and
+side-effect-free reads of already-published export archives.
 
 ### Step 3: Verify Configuration
 
