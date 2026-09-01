@@ -75,7 +75,9 @@ This generates:
 These files are immediately ready for copy/download from your workspace.
 
 ### 2. Live API Endpoints
-If the FastAPI server is running, you can use these custom REST endpoints to download the compiled packages dynamically:
+If the FastAPI server is running, you can download already-published packages.
+These read-only endpoints never compile or upload files; generate fresh archives
+with the local CLI first.
 
 - **Get Compilation Status**: `GET http://localhost:8000/api/export/status`
 - **Download Full Site ZIP**: `GET http://localhost:8000/api/export/site`

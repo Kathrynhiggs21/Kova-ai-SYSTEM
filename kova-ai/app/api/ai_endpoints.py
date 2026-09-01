@@ -1,11 +1,14 @@
 import os
+import logging
 import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import json
+from urllib.parse import quote
 
 router = APIRouter(prefix="/ai")
+logger = logging.getLogger(__name__)
 
 
 class ClaudeCommand(BaseModel):
@@ -34,8 +37,11 @@ async def ai_command(command: ClaudeCommand):
             return await process_github_data(command)
         else:
             return await execute_general_command(command)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected /ai/command failure")
+        raise HTTPException(status_code=500, detail="Internal server error") from None
 
 
 async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
@@ -46,15 +52,17 @@ async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
     if not anthropic_key:
         raise HTTPException(status_code=400, detail="Anthropic API key not configured")
 
+    repository = await require_allowed_repository(command.repository)
+
     # Fetch repository data
-    repo_data = await fetch_repository_data(command.repository, github_token)
+    repo_data = await fetch_repository_data(repository, github_token)
 
     # Send to Claude
     claude_response = await send_to_claude(repo_data, command.command, anthropic_key)
 
     return ClaudeResponse(
         status="success",
-        data={"sync_completed": True, "repository": command.repository},
+        data={"sync_completed": True, "repository": repository},
         claude_response=claude_response,
         repository_info=repo_data,
     )
@@ -63,15 +71,19 @@ async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
 async def analyze_repository(command: ClaudeCommand) -> ClaudeResponse:
     """Analyze repository structure and content"""
     github_token = os.getenv("GITHUB_TOKEN")
+    repository = await require_allowed_repository(command.repository)
+    file_path = (
+        validate_repository_path(command.file_path) if command.file_path else None
+    )
 
-    repo_data = await fetch_repository_data(command.repository, github_token)
+    repo_data = await fetch_repository_data(repository, github_token)
 
     analysis = {
-        "structure": await get_repository_structure(command.repository, github_token),
-        "recent_commits": await get_recent_commits(command.repository, github_token),
+        "structure": await get_repository_structure(repository, github_token),
+        "recent_commits": await get_recent_commits(repository, github_token),
         "file_content": (
-            await get_file_content(command.repository, command.file_path, github_token)
-            if command.file_path
+            await get_file_content(repository, file_path, github_token)
+            if file_path
             else None
         ),
     }
@@ -84,9 +96,7 @@ async def process_github_data(command: ClaudeCommand) -> ClaudeResponse:
     github_token = os.getenv("GITHUB_TOKEN")
 
     processed_data = {
-        "repositories": await get_user_repositories("Kathrynhiggs21", github_token),
         "kova_repos": await get_kova_repositories(github_token),
-        "latest_activity": await get_latest_activity("Kathrynhiggs21", github_token),
     }
 
     return ClaudeResponse(status="success", data=processed_data)
@@ -99,6 +109,33 @@ async def execute_general_command(command: ClaudeCommand) -> ClaudeResponse:
         data={"command": command.command, "context": command.context},
         claude_response=f"Processed command: {command.command}",
     )
+
+
+async def require_allowed_repository(repository: Optional[str]) -> str:
+    """Resolve a repository and require it to be enabled in KOVA configuration."""
+    resolved_repository = repository or "Kathrynhiggs21/Kova-ai-SYSTEM"
+    allowed_repositories = set(await load_kova_repos_from_config())
+    if resolved_repository not in allowed_repositories:
+        raise HTTPException(
+            status_code=403,
+            detail="Repository is not enabled in KOVA configuration",
+        )
+    return resolved_repository
+
+
+def validate_repository_path(file_path: str) -> str:
+    """Validate and URL-encode a repository-relative file path."""
+    if not file_path or len(file_path) > 1024:
+        raise HTTPException(status_code=400, detail="Invalid repository file path")
+    if file_path.startswith("/") or "\\" in file_path or "\x00" in file_path:
+        raise HTTPException(status_code=400, detail="Invalid repository file path")
+    if "?" in file_path or "#" in file_path or "%" in file_path:
+        raise HTTPException(status_code=400, detail="Invalid repository file path")
+
+    if any(part in {"", ".", ".."} for part in file_path.split("/")):
+        raise HTTPException(status_code=400, detail="Invalid repository file path")
+
+    return quote(file_path, safe="/")
 
 
 async def fetch_repository_data(repository: str, github_token: str) -> Dict[str, Any]:

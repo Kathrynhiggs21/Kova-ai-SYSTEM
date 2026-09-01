@@ -447,66 +447,87 @@ function submitConsoleCommand() {
 }
 
 // Download/Export triggers (direct or API integrations)
+async function fetchArchive(path) {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`Archive request failed with HTTP ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const isZip =
+    signature.length === 4 &&
+    signature[0] === 0x50 &&
+    signature[1] === 0x4b &&
+    ((signature[2] === 0x03 && signature[3] === 0x04) ||
+      (signature[2] === 0x05 && signature[3] === 0x06) ||
+      (signature[2] === 0x07 && signature[3] === 0x08));
+  if (!isZip) {
+    throw new Error("Archive response is not a ZIP file");
+  }
+  return blob;
+}
+
+function downloadArchive(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+}
+
+function requestLocalArchive(path, filename) {
+  const link = document.createElement("a");
+  link.href = path;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
+async function downloadExport(apiPath, fallbackPath, filename) {
+  if (window.location.protocol === "file:") {
+    requestLocalArchive(fallbackPath, filename);
+    logToConsole(
+      `Opened the checked-in ${filename} download request; completion cannot be verified in local file mode.`,
+      "amber"
+    );
+    return true;
+  }
+
+  try {
+    const blob = await fetchArchive(apiPath);
+    downloadArchive(blob, filename);
+    logToConsole(`Successfully downloaded ${filename} via local API.`, "emerald");
+    return true;
+  } catch (apiError) {
+    try {
+      const blob = await fetchArchive(fallbackPath);
+      downloadArchive(blob, filename);
+      logToConsole(
+        `Downloaded the checked-in ${filename} archive; it may be older than the current source.`,
+        "amber"
+      );
+      return true;
+    } catch (fallbackError) {
+      logToConsole(
+        `Unable to download ${filename}: neither the published API nor the checked-in archive is available.`,
+        "rose"
+      );
+      return false;
+    }
+  }
+}
+
 function triggerLocalExport() {
-  logToConsole("Initiating full site package compilation...", "amber");
-  
-  // Direct file download trigger or API endpoint call
-  fetch('/api/export/site')
-    .then(res => {
-      if (res.ok) {
-        return res.blob();
-      }
-      throw new Error("Local API endpoint not running, falling back to static download");
-    })
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'site_final.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Successfully downloaded site_final.zip via local API.", "emerald");
-    })
-    .catch(err => {
-      // Fallback: direct download link if packaged locally
-      const a = document.createElement('a');
-      a.href = '../site_final.zip';
-      a.download = 'site_final.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Downloaded packaged site_final.zip from static cache.", "emerald");
-    });
+  logToConsole("Preparing the latest available site package download...", "amber");
+  return downloadExport("/api/export/site", "../site_final.zip", "site_final.zip");
 }
 
 function triggerImagesExport() {
-  logToConsole("Initiating images package compilation for kovoas.com...", "amber");
-  
-  fetch('/api/export/images')
-    .then(res => {
-      if (res.ok) {
-        return res.blob();
-      }
-      throw new Error("Local API endpoint not running, falling back to static download");
-    })
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'images.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Successfully downloaded images.zip via local API.", "emerald");
-    })
-    .catch(err => {
-      const a = document.createElement('a');
-      a.href = '../images.zip';
-      a.download = 'images.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Downloaded packaged images.zip from static cache.", "emerald");
-    });
+  logToConsole("Preparing the latest available images package download...", "amber");
+  return downloadExport("/api/export/images", "../images.zip", "images.zip");
 }

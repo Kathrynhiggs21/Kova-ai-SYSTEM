@@ -7,6 +7,10 @@
 > cross-repository PRs, and unified changelogs are disabled. The older repository
 > tables and `/discover`, `/add`, and automated-Claude examples below describe a
 > previous plan and must not be used to change the active KOVA OS registry.
+>
+> All examples targeting `/multi-repo/*` also require the configured owner key
+> in the `X-Kova-API-Key` header. Keep the API private and never put this key in
+> client-side code.
 
 ## Overview
 

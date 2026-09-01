@@ -112,8 +112,10 @@ POSTGRES_USER=kova
 POSTGRES_PASSWORD=kova_pass
 DATABASE_URL=postgresql+asyncpg://kova:kova_pass@db:5432/kova
 
-# API Keys (REQUIRED)
-API_KEY=your_api_key_here
+# Owner authentication and browser access (REQUIRED). Generate a long random
+# value and store it in server-side secrets before starting the API.
+KOVA_OWNER_API_KEY=
+KOVA_ALLOWED_ORIGINS=http://localhost:5173
 
 # Multi-Repository Management (REQUIRED)
 GITHUB_TOKEN=ghp_YOUR_ACTUAL_GITHUB_TOKEN_HERE
@@ -124,6 +126,13 @@ GITHUB_WEBHOOK_SECRET=
 ```
 
 **Important**: Replace the placeholder values with your actual tokens!
+Owner-only API clients must send the configured value in the
+`X-Kova-API-Key` request header. Never embed this key in browser JavaScript.
+The protected command examples later in this guide omit the header for
+readability; add it to repository, AI, artifact, webhook-status, and
+export/upload mutation requests. Public routes are limited to `/health`,
+documentation, metrics, the signed GitHub webhook receiver, and
+side-effect-free reads of already-published export archives.
 
 ### Step 3: Verify Configuration
 

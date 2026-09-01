@@ -3,13 +3,15 @@ GitHub Webhooks API
 Handles GitHub webhook events and forwards to Claude for processing
 """
 
-from fastapi import APIRouter, Request, HTTPException, Header, BackgroundTasks
+from fastapi import APIRouter, Request, HTTPException, Header, BackgroundTasks, Depends
 from typing import Optional
 import hmac
 import hashlib
 import json
 import os
 import logging
+
+from app.security.api_key import require_owner_api_key
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
@@ -292,7 +294,7 @@ async def github_webhook(
         )
 
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(require_owner_api_key)])
 async def webhook_status():
     """Get webhook configuration status"""
     return {

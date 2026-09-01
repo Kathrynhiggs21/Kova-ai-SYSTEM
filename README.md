@@ -66,15 +66,22 @@ integration settings.
   synchronization, cross-repository notifications, and unified AI analysis.
 - Dashboard integration badges are recorded state, not verified live health.
 
-### Local Read-Only Checks
+### Authenticated Local Checks
 
-The current API does not yet have an owner-authentication boundary. Keep it on a
-trusted local network and do not expose mutation, sync, AI, or export endpoints
-to the public internet.
+The API now requires the owner key for repository, AI, artifact, webhook-status,
+and export/upload mutations. Keep it on a trusted network until the full
+deployment stack has been reviewed, and never embed the key in browser code.
+
+Public routes are limited to `/health`, documentation, metrics, the signed
+GitHub webhook receiver, and side-effect-free reads of already-published export
+archives at `/api/export/status`, `/api/export/site`, and
+`/api/export/images`. Missing archives return 404 and are not compiled on
+demand.
 
 ```bash
 # Check configured repository metadata locally
-curl http://localhost:8000/multi-repo/status
+curl -H "X-Kova-API-Key: $KOVA_OWNER_API_KEY" \
+  http://localhost:8000/multi-repo/status
 ```
 
 ### Testing & Validation
@@ -219,9 +226,9 @@ The system now includes a premium **KOVA OS Dashboard v1** website along with co
 ### API Download & Integration Endpoints
 When the backend API server is running, you can access these routes to manage and download exports:
 - `GET /api/export/status` - View status, sizes, and timestamps of compiled archives.
-- `GET /api/export/site` - Compile and download the final website ZIP.
-- `GET /api/export/images` - Compile and download the images archive.
-- `POST /api/export/gdrive-upload` - Compile and upload archives directly to Google Drive.
+- `GET /api/export/site` - Download the already-published website ZIP; returns 404 rather than compiling on demand.
+- `GET /api/export/images` - Download the already-published images archive; returns 404 rather than compiling on demand.
+- `POST /api/export/gdrive-upload` - Owner-authenticated compilation and Google Drive upload; send `X-Kova-API-Key` from a trusted client.
 
 📚 **Running Outside Manus Documentation:**
 - **[Working Outside Manus Guide](docs/command-center/KOVA_RUN_OUTSIDE_MANUS.md)** - Comprehensive local setup, MCP downloads, and Google Drive syncing guide.
@@ -506,8 +513,10 @@ docker-compose exec postgres psql -U kova -d kova < scripts/init.sql
 
 #### API key errors
 ```bash
-# Verify .env file
-cat kova-ai/.env | grep API_KEY
+# Verify that the owner key is present without printing it
+grep -Eq '^KOVA_OWNER_API_KEY=[[:space:]]*[^[:space:]]' kova-ai/.env \
+  && echo 'KOVA owner key is configured' \
+  || echo 'KOVA owner key is missing'
 
 # Restart services after changing .env
 docker-compose restart

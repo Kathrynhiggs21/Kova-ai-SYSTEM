@@ -13,6 +13,25 @@ from pathlib import Path
 import json
 from datetime import datetime
 
+from dotenv import dotenv_values
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+
+
+def load_owner_api_key() -> str:
+    """Load the owner key from the process or local .env without printing it."""
+    process_value = os.getenv("KOVA_OWNER_API_KEY", "").strip()
+    if process_value:
+        return process_value
+
+    env_path = REPOSITORY_ROOT / "kova-ai" / ".env"
+    if not env_path.exists():
+        return ""
+
+    file_value = str(dotenv_values(env_path).get("KOVA_OWNER_API_KEY") or "").strip()
+    return file_value
+
 
 class Colors:
     """ANSI color codes for terminal output"""
@@ -27,8 +46,21 @@ class Colors:
 class MultiRepoTester:
     """Test suite for multi-repository management system"""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8000",
+        owner_api_key: str | None = None,
+    ):
         self.base_url = base_url
+        selected_owner_api_key = (
+            load_owner_api_key() if owner_api_key is None else owner_api_key
+        )
+        self.owner_api_key = selected_owner_api_key.strip()
+        self.auth_headers = (
+            {"X-Kova-API-Key": self.owner_api_key}
+            if self.owner_api_key.strip()
+            else {}
+        )
         self.results = []
         self.passed = 0
         self.failed = 0
@@ -63,7 +95,9 @@ class MultiRepoTester:
     async def test_list_repos(self) -> bool:
         """Test listing all repositories"""
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(
+                timeout=10.0, headers=self.auth_headers
+            ) as client:
                 response = await client.get(f"{self.base_url}/multi-repo/list")
 
                 if response.status_code != 200:
@@ -85,7 +119,9 @@ class MultiRepoTester:
     async def test_get_status(self) -> bool:
         """Test getting status of all repositories"""
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(
+                timeout=30.0, headers=self.auth_headers
+            ) as client:
                 response = await client.get(f"{self.base_url}/multi-repo/status")
 
                 if response.status_code != 200:
@@ -107,7 +143,9 @@ class MultiRepoTester:
     async def test_discover_repos(self) -> bool:
         """Test discovering new repositories"""
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(
+                timeout=30.0, headers=self.auth_headers
+            ) as client:
                 response = await client.get(f"{self.base_url}/multi-repo/discover")
 
                 if response.status_code != 200:
@@ -125,7 +163,9 @@ class MultiRepoTester:
     async def test_get_config(self) -> bool:
         """Test getting repository configuration"""
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
+            async with httpx.AsyncClient(
+                timeout=10.0, headers=self.auth_headers
+            ) as client:
                 response = await client.get(f"{self.base_url}/multi-repo/config")
 
                 if response.status_code != 200:
@@ -144,7 +184,9 @@ class MultiRepoTester:
     async def test_sync_repos(self, include_claude: bool = False) -> bool:
         """Test syncing repositories"""
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(
+                timeout=60.0, headers=self.auth_headers
+            ) as client:
                 payload = {"include_claude": include_claude}
                 response = await client.post(
                     f"{self.base_url}/multi-repo/sync",
@@ -207,7 +249,12 @@ class MultiRepoTester:
                 content = f.read()
 
             # Check for required environment variables
-            required_vars = ["GITHUB_TOKEN", "ANTHROPIC_API_KEY", "DATABASE_URL"]
+            required_vars = [
+                "KOVA_OWNER_API_KEY",
+                "GITHUB_TOKEN",
+                "ANTHROPIC_API_KEY",
+                "DATABASE_URL",
+            ]
             missing_vars = [var for var in required_vars if var not in content]
 
             if missing_vars:
@@ -242,12 +289,19 @@ class MultiRepoTester:
         else:
             self.log_test("Health Check", True, "API is running")
 
-            # Run API tests
-            await self.test_list_repos()
-            await self.test_get_config()
-            await self.test_get_status()
-            await self.test_discover_repos()
-            await self.test_sync_repos(include_claude=False)
+            if not self.owner_api_key.strip():
+                self.log_test(
+                    "Owner Authentication",
+                    False,
+                    "Set KOVA_OWNER_API_KEY in the environment or kova-ai/.env",
+                )
+            else:
+                # Run owner-authenticated API tests without logging the key.
+                await self.test_list_repos()
+                await self.test_get_config()
+                await self.test_get_status()
+                await self.test_discover_repos()
+                await self.test_sync_repos(include_claude=False)
 
         # Print summary
         return self.print_summary()

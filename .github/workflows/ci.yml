@@ -25,6 +25,11 @@ jobs:
           cache: pip
           cache-dependency-path: kova-ai/requirements.txt
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Install Python Dependencies
         run: python3 -m pip install -r kova-ai/requirements.txt
 
@@ -41,3 +46,8 @@ jobs:
 
       - name: Compile Python App Modules
         run: python3 -m compileall -q kova-ai/app
+
+      - name: Run Browser Export Tests
+        run: |
+          node --check site/app.js
+          node --test tests/test_site_exports.js
