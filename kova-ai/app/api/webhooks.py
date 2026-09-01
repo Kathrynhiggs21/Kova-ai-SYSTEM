@@ -14,23 +14,36 @@ import logging
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
 
-GITHUB_WEBHOOK_SECRET = os.getenv("GITHUB_WEBHOOK_SECRET", "")
+
+def get_github_webhook_secret() -> str:
+    """Return the configured GitHub webhook secret, if any."""
+    return os.getenv("GITHUB_WEBHOOK_SECRET", "")
 
 
-def verify_github_signature(payload_body: bytes, signature_header: str) -> bool:
-    """Verify GitHub webhook signature"""
-    if not GITHUB_WEBHOOK_SECRET:
-        logger.warning("GITHUB_WEBHOOK_SECRET not set, skipping signature verification")
-        return True
+def verify_github_signature(
+    payload_body: bytes,
+    signature_header: Optional[str],
+    secret: Optional[str] = None,
+) -> bool:
+    """Verify a GitHub ``sha256`` webhook signature.
 
-    if not signature_header:
+    Verification deliberately fails closed when the secret is missing. GitHub's
+    legacy ``sha1`` signature format is not accepted.
+    """
+    webhook_secret = get_github_webhook_secret() if secret is None else secret
+    if not webhook_secret:
+        logger.error("GITHUB_WEBHOOK_SECRET is not configured")
         return False
 
-    hash_algorithm, github_signature = signature_header.split("=")
-    algorithm = hashlib.sha256 if hash_algorithm == "sha256" else hashlib.sha1
+    if not signature_header or not signature_header.startswith("sha256="):
+        return False
+
+    github_signature = signature_header.removeprefix("sha256=")
+    if not github_signature:
+        return False
 
     expected_signature = hmac.new(
-        GITHUB_WEBHOOK_SECRET.encode(), msg=payload_body, digestmod=algorithm
+        webhook_secret.encode(), msg=payload_body, digestmod=hashlib.sha256
     ).hexdigest()
 
     return hmac.compare_digest(expected_signature, github_signature)
@@ -238,8 +251,16 @@ async def github_webhook(
         # Get raw body for signature verification
         body = await request.body()
 
+        webhook_secret = get_github_webhook_secret()
+        if not webhook_secret:
+            logger.error("Rejecting GitHub webhook because its secret is not configured")
+            raise HTTPException(
+                status_code=503,
+                detail="GitHub webhook verification is not configured",
+            )
+
         # Verify signature
-        if not verify_github_signature(body, x_hub_signature_256):
+        if not verify_github_signature(body, x_hub_signature_256, webhook_secret):
             raise HTTPException(status_code=401, detail="Invalid signature")
 
         # Parse payload
@@ -259,18 +280,23 @@ async def github_webhook(
             "delivery_id": x_github_delivery,
         }
 
-    except json.JSONDecodeError:
+    except (json.JSONDecodeError, UnicodeDecodeError):
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
-    except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected GitHub webhook error")
+        raise HTTPException(
+            status_code=500,
+            detail="GitHub webhook processing failed",
+        )
 
 
 @router.get("/status")
 async def webhook_status():
     """Get webhook configuration status"""
     return {
-        "webhook_secret_configured": bool(GITHUB_WEBHOOK_SECRET),
+        "webhook_secret_configured": bool(get_github_webhook_secret()),
         "claude_api_configured": bool(os.getenv("ANTHROPIC_API_KEY")),
         "github_token_configured": bool(os.getenv("GITHUB_TOKEN")),
         "endpoint": "/webhooks/github",

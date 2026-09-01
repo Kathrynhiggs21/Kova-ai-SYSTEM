@@ -22,6 +22,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: pip
+          cache-dependency-path: kova-ai/requirements.txt
+
+      - name: Install Python Dependencies
+        run: python3 -m pip install -r kova-ai/requirements.txt
 
       - name: Run Platform Verification
         run: |
@@ -30,6 +35,9 @@ jobs:
 
       - name: Validate Multi-Repo Config
         run: python3 scripts/validate_config.py
+
+      - name: Run Python Unit Tests
+        run: PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v
 
       - name: Compile Python App Modules
         run: python3 -m compileall -q kova-ai/app
