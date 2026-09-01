@@ -11,6 +11,16 @@ from pathlib import Path
 from typing import Dict, List, Any, Tuple
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "kova-ai"))
+
+from app.core.repository_registry import (  # noqa: E402
+    is_safe_github_owner,
+    parse_github_repository,
+    repository_key,
+)
+
+
 class Colors:
     """ANSI color codes"""
     GREEN = '\033[92m'
@@ -59,7 +69,7 @@ class ConfigValidator:
     def validate_json_format(self) -> bool:
         """Validate JSON format"""
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
             if not isinstance(self.config, dict):
                 self.error("Top-level JSON value must be an object")
@@ -99,11 +109,8 @@ class ConfigValidator:
     def validate_github_owner(self) -> bool:
         """Validate GitHub owner field"""
         owner = self.config.get("github_owner", "")
-        if not owner or not isinstance(owner, str):
-            self.error("github_owner must be a non-empty string")
-            return False
-        if " " in owner:
-            self.error("github_owner should not contain spaces")
+        if not is_safe_github_owner(owner):
+            self.error("github_owner must be a URL-safe GitHub owner name")
             return False
         self.success(f"GitHub owner: {owner}")
         return True
@@ -162,13 +169,23 @@ class ConfigValidator:
             # Validate full_name format
             if "full_name" in repo:
                 full_name = repo["full_name"]
-                if not isinstance(full_name, str) or full_name.count("/") != 1:
-                    self.error(f"  Invalid full_name format: {full_name} (should be 'owner/repo')")
+                parsed_repository = parse_github_repository(full_name)
+                if parsed_repository is None:
+                    self.error(
+                        f"  Invalid GitHub repository coordinate: {full_name} "
+                        "(should be a URL-safe 'owner/repo')"
+                    )
                     all_valid = False
                 else:
-                    owner, name = full_name.split("/", 1)
-                    if owner != self.config.get("github_owner"):
-                        self.warning(f"  Repo owner '{owner}' doesn't match github_owner '{self.config.get('github_owner')}'")
+                    owner, name = parsed_repository
+                    if owner.casefold() != str(
+                        self.config.get("github_owner", "")
+                    ).casefold():
+                        self.error(
+                            f"  Repo owner '{owner}' doesn't match github_owner "
+                            f"'{self.config.get('github_owner')}'"
+                        )
+                        all_valid = False
                     if repo.get("name") != name:
                         self.error(
                             f"  Repo name '{repo.get('name')}' does not match "
@@ -217,7 +234,7 @@ class ConfigValidator:
         for field, expected_type in recommended_fields.items():
             if field not in settings:
                 self.warning(f"Missing recommended sync setting: {field}")
-            elif not isinstance(settings[field], expected_type):
+            elif type(settings[field]) is not expected_type:
                 self.error(f"sync_settings.{field} should be {expected_type.__name__}")
                 all_valid = False
             else:
@@ -239,7 +256,7 @@ class ConfigValidator:
         for field, expected_type in recommended_fields.items():
             if field not in settings:
                 self.warning(f"Missing recommended discovery setting: {field}")
-            elif not isinstance(settings[field], expected_type):
+            elif type(settings[field]) is not expected_type:
                 self.error(f"discovery_settings.{field} should be {expected_type.__name__}")
                 all_valid = False
             else:
@@ -262,7 +279,7 @@ class ConfigValidator:
         for field, expected_type in recommended_fields.items():
             if field not in settings:
                 self.warning(f"Missing recommended integration setting: {field}")
-            elif not isinstance(settings[field], expected_type):
+            elif type(settings[field]) is not expected_type:
                 self.error(f"integration_settings.{field} should be {expected_type.__name__}")
                 all_valid = False
             else:
@@ -299,9 +316,7 @@ class ConfigValidator:
             seen_names.add(normalized_name)
 
         for full_name in full_names:
-            normalized_full_name = (
-                full_name.casefold() if isinstance(full_name, str) else full_name
-            )
+            normalized_full_name = repository_key(full_name)
             if normalized_full_name in seen_full_names:
                 duplicates.append(f"Duplicate full_name: {full_name}")
             seen_full_names.add(normalized_full_name)
