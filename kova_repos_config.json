@@ -8,12 +8,7 @@
       "type": "core",
       "enabled": true,
       "sync_priority": 1,
-      "features": [
-        "orchestration",
-        "fastapi",
-        "ci",
-        "deployment"
-      ]
+      "features": ["orchestration", "fastapi", "ci", "deployment"]
     },
     {
       "name": "kova-ai-dash",
@@ -22,13 +17,31 @@
       "type": "frontend",
       "enabled": true,
       "sync_priority": 1,
-      "features": [
-        "dashboard",
-        "integration-ui",
-        "authentication",
-        "persistence",
-        "storage"
-      ]
+      "features": ["dashboard", "integration-ui", "authentication", "persistence", "storage"]
+    }
+  ],
+  "worlds": [
+    {
+      "name": "scribbles-by-marcy",
+      "full_name": "Kathrynhiggs21/scribbles-by-marcy",
+      "type": "world",
+      "runtime_enabled": false,
+      "relationship": "independent-domain-repository"
+    },
+    {
+      "name": "Scribbles-Zoo-Project",
+      "full_name": "Kathrynhiggs21/Scribbles-Zoo-Project",
+      "type": "world",
+      "runtime_enabled": false,
+      "relationship": "independent-domain-repository",
+      "exclusions": ["legacy-renderer"]
+    }
+  ],
+  "excluded_repositories": [
+    {
+      "full_name": "Kathrynhiggs21/kova-ai",
+      "reason": "mixed legacy repository; renderer-specific code/workflows are not part of KOVA OS",
+      "runtime_enabled": false
     }
   ],
   "sync_settings": {
