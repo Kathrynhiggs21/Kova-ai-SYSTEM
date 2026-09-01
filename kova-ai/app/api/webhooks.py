@@ -284,9 +284,12 @@ async def github_webhook(
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
     except HTTPException:
         raise
-    except Exception as e:
-        logger.error(f"Webhook error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Unexpected GitHub webhook error")
+        raise HTTPException(
+            status_code=500,
+            detail="GitHub webhook processing failed",
+        )
 
 
 @router.get("/status")

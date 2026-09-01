@@ -7,8 +7,9 @@ import unittest
 from unittest.mock import patch
 
 import httpx
+from fastapi import BackgroundTasks, HTTPException
 
-from app.api.webhooks import verify_github_signature
+from app.api.webhooks import github_webhook, verify_github_signature
 from app.main import app
 
 
@@ -101,6 +102,24 @@ class GitHubWebhookEndpointTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "accepted")
+
+    async def test_unexpected_errors_do_not_leak_internal_details(self):
+        class FailingRequest:
+            async def body(self):
+                raise RuntimeError("sensitive internal detail")
+
+        with patch.dict(os.environ, {"GITHUB_WEBHOOK_SECRET": SECRET}):
+            with patch("app.api.webhooks.logger.exception") as log_exception:
+                with self.assertRaises(HTTPException) as raised:
+                    await github_webhook(FailingRequest(), BackgroundTasks())
+
+        self.assertEqual(raised.exception.status_code, 500)
+        self.assertEqual(
+            raised.exception.detail,
+            "GitHub webhook processing failed",
+        )
+        self.assertNotIn("sensitive", raised.exception.detail)
+        log_exception.assert_called_once_with("Unexpected GitHub webhook error")
 
 
 if __name__ == "__main__":
