@@ -29,12 +29,51 @@ def write_config(path: Path, *, claude_enabled: bool = False) -> None:
             {
                 "github_owner": "Kathrynhiggs21",
                 "repositories": [
-                    {"full_name": CANONICAL_REPOSITORIES[0], "enabled": True},
-                    {"full_name": CANONICAL_REPOSITORIES[1], "enabled": True},
-                    {"full_name": "example/disabled", "enabled": False},
+                    {
+                        "name": "Kova-ai-SYSTEM",
+                        "full_name": CANONICAL_REPOSITORIES[0],
+                        "description": "Canonical KOVA OS orchestrator",
+                        "type": "core",
+                        "enabled": True,
+                        "sync_priority": 1,
+                        "features": ["orchestration"],
+                    },
+                    {
+                        "name": "kova-ai-dash",
+                        "full_name": CANONICAL_REPOSITORIES[1],
+                        "description": "KOVA OS command center",
+                        "type": "frontend",
+                        "enabled": True,
+                        "sync_priority": 1,
+                        "features": ["dashboard"],
+                    },
+                    {
+                        "name": "disabled",
+                        "full_name": "Kathrynhiggs21/disabled",
+                        "description": "Disabled test repository",
+                        "type": "service",
+                        "enabled": False,
+                        "sync_priority": 5,
+                        "features": [],
+                    },
                 ],
+                "sync_settings": {
+                    "auto_sync_enabled": False,
+                    "sync_interval_minutes": 30,
+                    "sync_on_push": False,
+                    "sync_on_pr": False,
+                    "cross_repo_notifications": False,
+                },
+                "discovery_settings": {
+                    "auto_discover_new_repos": False,
+                    "repo_name_pattern": "kova-ai-",
+                    "watch_for_new_repos": False,
+                },
                 "integration_settings": {
                     "claude_api_enabled": claude_enabled,
+                    "github_webhooks_enabled": False,
+                    "cross_repo_prs": False,
+                    "unified_changelog": False,
                 },
             }
         ),
@@ -56,6 +95,32 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             missing_path = Path(temp_dir) / "missing.json"
             with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(missing_path)}):
+                service = MultiRepoSyncService()
+
+        self.assertEqual(service.get_enabled_repos(), CANONICAL_REPOSITORIES)
+
+    async def test_non_object_registry_falls_back_to_canonical_repositories(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "kova_repos_config.json"
+            config_path.write_text("[]", encoding="utf-8")
+            with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
+                service = MultiRepoSyncService()
+
+        self.assertEqual(service.get_enabled_repos(), CANONICAL_REPOSITORIES)
+
+    async def test_malformed_repository_falls_back_to_canonical_repositories(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "kova_repos_config.json"
+            config_path.write_text(
+                json.dumps(
+                    {
+                        "github_owner": "Kathrynhiggs21",
+                        "repositories": [{"full_name": [], "enabled": True}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
                 service = MultiRepoSyncService()
 
         self.assertEqual(service.get_enabled_repos(), CANONICAL_REPOSITORIES)
