@@ -8,10 +8,12 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional
+
+from app.security.api_key import require_owner_api_key
 
 # Ensure parent directory is in python path
 sys.path.append(str(Path(__file__).parent.parent))
@@ -61,14 +63,7 @@ async def get_export_status():
 
 @router.get("/site")
 def download_site_zip():
-    """Downloads the compiled website archive (site_final.zip)."""
-    if not SITE_ZIP.exists():
-        # Trigger compilation dynamically
-        try:
-            subprocess.run([sys.executable, str(PROJECT_ROOT / "scripts/export_kova_os.py")], check=True)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Site compilation failed: {e}")
-            
+    """Download the already-published website archive without side effects."""
     if not SITE_ZIP.exists():
         raise HTTPException(status_code=404, detail="site_final.zip not found on system.")
         
@@ -80,14 +75,7 @@ def download_site_zip():
 
 @router.get("/images")
 def download_images_zip():
-    """Downloads the compiled images archive for kovoas.com (images.zip)."""
-    if not IMAGES_ZIP.exists():
-        # Trigger compilation dynamically
-        try:
-            subprocess.run([sys.executable, str(PROJECT_ROOT / "scripts/export_kova_os.py")], check=True)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Images compilation failed: {e}")
-            
+    """Download the already-published images archive without side effects."""
     if not IMAGES_ZIP.exists():
         raise HTTPException(status_code=404, detail="images.zip not found on system.")
         
@@ -97,7 +85,11 @@ def download_images_zip():
         media_type="application/zip"
     )
 
-@router.post("/gdrive-upload", response_model=GDriveUploadResponse)
+@router.post(
+    "/gdrive-upload",
+    response_model=GDriveUploadResponse,
+    dependencies=[Depends(require_owner_api_key)],
+)
 def upload_exports_to_gdrive():
     """
     Triggers local compilation and initiates Google Drive upload.

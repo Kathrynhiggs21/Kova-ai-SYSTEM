@@ -100,17 +100,53 @@ class MultiRepoSyncService:
             return self._get_default_config()
 
     def _get_default_config(self) -> Dict[str, Any]:
-        """Return default configuration if file not found"""
+        """Return the canonical, fail-safe configuration if the file is unavailable."""
         return {
             "github_owner": "Kathrynhiggs21",
             "repositories": [
-                {"full_name": "Kathrynhiggs21/Kova-ai-SYSTEM", "enabled": True},
-                {"full_name": "Kathrynhiggs21/kova-ai", "enabled": True},
-                {"full_name": "Kathrynhiggs21/kova-ai-site", "enabled": True},
-                {"full_name": "Kathrynhiggs21/kova-ai-mem0", "enabled": True},
-                {"full_name": "Kathrynhiggs21/kova-ai-docengine", "enabled": True},
-                {"full_name": "Kathrynhiggs21/Kova-AI-Scribbles", "enabled": True},
+                {
+                    "name": "Kova-ai-SYSTEM",
+                    "full_name": "Kathrynhiggs21/Kova-ai-SYSTEM",
+                    "description": "Canonical KOVA OS orchestration hub and FastAPI backend",
+                    "type": "core",
+                    "enabled": True,
+                    "sync_priority": 1,
+                    "features": ["orchestration", "fastapi", "ci", "deployment"],
+                },
+                {
+                    "name": "kova-ai-dash",
+                    "full_name": "Kathrynhiggs21/kova-ai-dash",
+                    "description": "Current KOVA OS command-center frontend",
+                    "type": "frontend",
+                    "enabled": True,
+                    "sync_priority": 1,
+                    "features": [
+                        "dashboard",
+                        "integration-ui",
+                        "authentication",
+                        "persistence",
+                        "storage",
+                    ],
+                },
             ],
+            "sync_settings": {
+                "auto_sync_enabled": False,
+                "sync_interval_minutes": 30,
+                "sync_on_push": False,
+                "sync_on_pr": False,
+                "cross_repo_notifications": False,
+            },
+            "discovery_settings": {
+                "auto_discover_new_repos": False,
+                "repo_name_pattern": "kova-ai-",
+                "watch_for_new_repos": False,
+            },
+            "integration_settings": {
+                "claude_api_enabled": False,
+                "github_webhooks_enabled": False,
+                "cross_repo_prs": False,
+                "unified_changelog": False,
+            },
         }
 
     def get_enabled_repos(self) -> List[str]:
@@ -120,6 +156,10 @@ class MultiRepoSyncService:
             for repo in self.config.get("repositories", [])
             if repo.get("enabled", True)
         ]
+
+    def is_integration_enabled(self, setting: str) -> bool:
+        """Return whether an integration is explicitly enabled in the registry."""
+        return self.config.get("integration_settings", {}).get(setting) is True
 
     async def sync_all_repositories(self) -> Dict[str, Any]:
         """Sync all enabled repositories"""
@@ -298,6 +338,12 @@ class MultiRepoSyncService:
 
     async def sync_with_claude(self, repo_data: Dict[str, Any]) -> Dict[str, Any]:
         """Send repository data to Claude API for analysis"""
+        if not self.is_integration_enabled("claude_api_enabled"):
+            return {
+                "status": "disabled",
+                "error": "Claude API integration is disabled in KOVA configuration",
+            }
+
         if not self.claude_api_key:
             return {"error": "Claude API key not configured"}
 

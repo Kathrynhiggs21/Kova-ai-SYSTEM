@@ -38,52 +38,47 @@ chmod +x setup_kova_system.sh
 
 ## 🔗 Multi-Repository Management
 
-**NEW**: The Kova AI System now manages multiple repositories from one central hub!
+The canonical KOVA OS build currently spans two repositories. This service reads
+their GitHub metadata for status reporting; it does not copy code or perform a
+true cross-repository synchronization.
 
 ### Managed Repositories
 
-This system coordinates these Kova AI repositories:
+This system tracks these active KOVA OS repositories:
 
-- **Kova-ai-SYSTEM** - Main orchestration hub (this repo)
-- **kova-ai** - Core backend API service
-- **kova-ai-site** - Website and documentation
-- **kova-ai-mem0** - Memory and persistence system
-- **kova-ai-docengine** - Document processing engine
-- **Kova-AI-Scribbles** - Experimental features
+- **Kova-ai-SYSTEM** - Canonical orchestration hub and FastAPI backend (this repo)
+- **kova-ai-dash** - Current command-center frontend
+
+Repositories from older plans are not active build components unless they are
+explicitly restored to `kova_repos_config.json`. In particular, `kova-ai` is
+currently a separate Zoo card-generator project and is not part of KOVA OS.
+
+`kova_repos_config.json` is the runtime source of truth. `MULTI_REPO_GUIDE.md`,
+`SETUP_GUIDE.md`, older repository lists, and legacy deployment scripts are
+archival unless they explicitly match that registry and its disabled-by-default
+integration settings.
 
 ### Key Features
 
-✅ **Auto-Discovery** - Automatically finds new Kova AI repos
-✅ **Cross-Repo Sync** - Coordinate updates across all repos
-✅ **Claude Integration** - AI analyzes all repos together
-✅ **Dynamic Configuration** - Add new repos without code changes
-✅ **Centralized Control** - Manage everything from one place
-✅ **Production-Ready** - Retry logic, rate limiting, error handling
-✅ **Comprehensive Testing** - Automated validation and test suite
-✅ **Well-Documented** - Setup guides, troubleshooting, examples
+- **Available now:** configured-repository listing, GitHub metadata retrieval,
+  status inspection, and configuration validation.
+- **Disabled until implemented and secured:** automatic discovery, push/PR
+  synchronization, cross-repository notifications, and unified AI analysis.
+- Dashboard integration badges are recorded state, not verified live health.
 
-### Quick Multi-Repo Commands
+### Local Read-Only Checks
+
+The current API does not yet have an owner-authentication boundary. Keep it on a
+trusted local network and do not expose mutation, sync, AI, or export endpoints
+to the public internet.
 
 All KOVA routes except `/health`, documentation, metrics, and the signed GitHub
 webhook require the owner key in the `X-Kova-API-Key` header. Keep that key in a
 server-side secret store; never embed it in browser JavaScript.
 
 ```bash
-# Check status of all repos
+# Check configured repository metadata locally
 curl http://localhost:8000/multi-repo/status
-
-# Sync all repos with Claude AI
-curl -X POST http://localhost:8000/multi-repo/sync \
-  -H "Content-Type: application/json" \
-  -d '{"include_claude": true}'
-
-# Discover new repos
-curl http://localhost:8000/multi-repo/discover
-
-# Add a new repo
-curl -X POST http://localhost:8000/multi-repo/add \
-  -H "Content-Type: application/json" \
-  -d '{"repo_full_name": "Kathrynhiggs21/kova-ai-newrepo"}'
 ```
 
 ### Testing & Validation
@@ -97,8 +92,8 @@ python3 scripts/test_multi_repo.py
 ```
 
 📚 **Documentation:**
-- **[Complete Multi-Repo Guide](MULTI_REPO_GUIDE.md)** - API reference, workflows, best practices
-- **[Setup Guide](SETUP_GUIDE.md)** - Step-by-step installation and configuration
+- **[Historical Multi-Repo Reference](MULTI_REPO_GUIDE.md)** - legacy workflows; do not use to change the runtime registry
+- **[Historical Setup Reference](SETUP_GUIDE.md)** - legacy setup examples retained for migration context
 
 ---
 
@@ -228,9 +223,9 @@ The system now includes a premium **KOVA OS Dashboard v1** website along with co
 ### API Download & Integration Endpoints
 When the backend API server is running, you can access these routes to manage and download exports:
 - `GET /api/export/status` - View status, sizes, and timestamps of compiled archives.
-- `GET /api/export/site` - Compile and download the final website ZIP.
-- `GET /api/export/images` - Compile and download the images archive.
-- `POST /api/export/gdrive-upload` - Compile and upload archives directly to Google Drive.
+- `GET /api/export/site` - Download the already-published website ZIP; returns 404 rather than compiling on demand.
+- `GET /api/export/images` - Download the already-published images archive; returns 404 rather than compiling on demand.
+- `POST /api/export/gdrive-upload` - Owner-authenticated compilation and Google Drive upload; send `X-Kova-API-Key` from a trusted client.
 
 📚 **Running Outside Manus Documentation:**
 - **[Working Outside Manus Guide](docs/command-center/KOVA_RUN_OUTSIDE_MANUS.md)** - Comprehensive local setup, MCP downloads, and Google Drive syncing guide.

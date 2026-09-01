@@ -21,7 +21,7 @@ async def require_owner_api_key(
 ) -> None:
     """Require a valid owner key and reject all traffic when unconfigured."""
     configured_api_key = get_owner_api_key()
-    if not configured_api_key:
+    if not configured_api_key or not configured_api_key.strip():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="KOVA owner authentication is not configured",

@@ -456,7 +456,7 @@ function triggerLocalExport() {
       if (res.ok) {
         return res.blob();
       }
-      throw new Error("Local API endpoint not running, falling back to static download");
+      throw new Error("Published API archive is unavailable; trying the checked-in archive");
     })
     .then(blob => {
       const url = window.URL.createObjectURL(blob);
@@ -476,7 +476,7 @@ function triggerLocalExport() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      logToConsole("Downloaded packaged site_final.zip from static cache.", "emerald");
+      logToConsole("Downloaded the checked-in site_final.zip archive; it may be older than the current source.", "amber");
     });
 }
 
@@ -488,7 +488,7 @@ function triggerImagesExport() {
       if (res.ok) {
         return res.blob();
       }
-      throw new Error("Local API endpoint not running, falling back to static download");
+      throw new Error("Published API archive is unavailable; trying the checked-in archive");
     })
     .then(blob => {
       const url = window.URL.createObjectURL(blob);
@@ -507,6 +507,6 @@ function triggerImagesExport() {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      logToConsole("Downloaded packaged images.zip from static cache.", "emerald");
+      logToConsole("Downloaded the checked-in images.zip archive; it may be older than the current source.", "amber");
     });
 }

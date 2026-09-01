@@ -1,8 +1,16 @@
 # Kova AI Multi-Repository Management Guide
 
-> Security note: all examples targeting `/multi-repo/*` require the configured
-> owner key in the `X-Kova-API-Key` header. Keep the API private and do not put
-> this key in client-side code.
+> **Historical reference — do not use these workflows for the current build.**
+> The runtime source of truth is `kova_repos_config.json`. It currently enables
+> only `Kathrynhiggs21/Kova-ai-SYSTEM` and
+> `Kathrynhiggs21/kova-ai-dash`; automatic discovery, Claude sync, webhooks,
+> cross-repository PRs, and unified changelogs are disabled. The older repository
+> tables and `/discover`, `/add`, and automated-Claude examples below describe a
+> previous plan and must not be used to change the active KOVA OS registry.
+>
+> All examples targeting `/multi-repo/*` also require the configured owner key
+> in the `X-Kova-API-Key` header. Keep the API private and never put this key in
+> client-side code.
 
 ## Overview
 
