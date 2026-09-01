@@ -156,6 +156,40 @@ class ConfigValidatorTests(unittest.TestCase):
             "sync_settings.sync_interval_minutes should be int", results["errors"]
         )
 
+    def test_missing_nested_setting_is_rejected(self):
+        config = valid_config()
+        del config["integration_settings"]["unified_changelog"]
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "Missing required integration setting: unified_changelog",
+            results["errors"],
+        )
+
+    def test_nonpositive_sync_interval_is_rejected(self):
+        config = valid_config()
+        config["sync_settings"]["sync_interval_minutes"] = 0
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "sync_settings.sync_interval_minutes must be positive", results["errors"]
+        )
+
+    def test_blank_discovery_pattern_is_rejected(self):
+        config = valid_config()
+        config["discovery_settings"]["repo_name_pattern"] = "  "
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "discovery_settings.repo_name_pattern cannot be empty", results["errors"]
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
