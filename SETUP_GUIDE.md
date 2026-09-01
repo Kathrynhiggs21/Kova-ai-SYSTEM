@@ -121,8 +121,8 @@ KOVA_ALLOWED_ORIGINS=http://localhost:5173
 GITHUB_TOKEN=ghp_YOUR_ACTUAL_GITHUB_TOKEN_HERE
 ANTHROPIC_API_KEY=sk-ant-YOUR_ACTUAL_ANTHROPIC_KEY_HERE
 
-# Required when the GitHub webhook endpoint is enabled
-GITHUB_WEBHOOK_SECRET=replace_with_a_generated_webhook_secret
+# Required when the GitHub webhook endpoint is enabled. Generate a unique value.
+GITHUB_WEBHOOK_SECRET=
 ```
 
 **Important**: Replace the placeholder values with your actual tokens!
