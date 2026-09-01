@@ -221,8 +221,10 @@ class ConfigValidator:
     def validate_sync_settings(self) -> bool:
         """Validate sync settings"""
         settings = self.config.get("sync_settings", {})
+        if not isinstance(settings, dict):
+            return False
 
-        recommended_fields = {
+        required_fields = {
             "auto_sync_enabled": bool,
             "sync_interval_minutes": int,
             "sync_on_push": bool,
@@ -231,11 +233,15 @@ class ConfigValidator:
         }
 
         all_valid = True
-        for field, expected_type in recommended_fields.items():
+        for field, expected_type in required_fields.items():
             if field not in settings:
-                self.warning(f"Missing recommended sync setting: {field}")
+                self.error(f"Missing required sync setting: {field}")
+                all_valid = False
             elif type(settings[field]) is not expected_type:
                 self.error(f"sync_settings.{field} should be {expected_type.__name__}")
+                all_valid = False
+            elif field == "sync_interval_minutes" and settings[field] <= 0:
+                self.error("sync_settings.sync_interval_minutes must be positive")
                 all_valid = False
             else:
                 self.success(f"sync_settings.{field}: {settings[field]}")
@@ -245,19 +251,25 @@ class ConfigValidator:
     def validate_discovery_settings(self) -> bool:
         """Validate discovery settings"""
         settings = self.config.get("discovery_settings", {})
+        if not isinstance(settings, dict):
+            return False
 
-        recommended_fields = {
+        required_fields = {
             "auto_discover_new_repos": bool,
             "repo_name_pattern": str,
             "watch_for_new_repos": bool
         }
 
         all_valid = True
-        for field, expected_type in recommended_fields.items():
+        for field, expected_type in required_fields.items():
             if field not in settings:
-                self.warning(f"Missing recommended discovery setting: {field}")
+                self.error(f"Missing required discovery setting: {field}")
+                all_valid = False
             elif type(settings[field]) is not expected_type:
                 self.error(f"discovery_settings.{field} should be {expected_type.__name__}")
+                all_valid = False
+            elif field == "repo_name_pattern" and not settings[field].strip():
+                self.error("discovery_settings.repo_name_pattern cannot be empty")
                 all_valid = False
             else:
                 self.success(f"discovery_settings.{field}: {settings[field]}")
@@ -267,8 +279,10 @@ class ConfigValidator:
     def validate_integration_settings(self) -> bool:
         """Validate integration settings"""
         settings = self.config.get("integration_settings", {})
+        if not isinstance(settings, dict):
+            return False
 
-        recommended_fields = {
+        required_fields = {
             "claude_api_enabled": bool,
             "github_webhooks_enabled": bool,
             "cross_repo_prs": bool,
@@ -276,9 +290,10 @@ class ConfigValidator:
         }
 
         all_valid = True
-        for field, expected_type in recommended_fields.items():
+        for field, expected_type in required_fields.items():
             if field not in settings:
-                self.warning(f"Missing recommended integration setting: {field}")
+                self.error(f"Missing required integration setting: {field}")
+                all_valid = False
             elif type(settings[field]) is not expected_type:
                 self.error(f"integration_settings.{field} should be {expected_type.__name__}")
                 all_valid = False
