@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import json
-from pathlib import PurePosixPath
 from urllib.parse import quote
 
 router = APIRouter(prefix="/ai")
@@ -133,8 +132,7 @@ def validate_repository_path(file_path: str) -> str:
     if "?" in file_path or "#" in file_path or "%" in file_path:
         raise HTTPException(status_code=400, detail="Invalid repository file path")
 
-    path = PurePosixPath(file_path)
-    if any(part in {"", ".", ".."} for part in path.parts):
+    if any(part in {"", ".", ".."} for part in file_path.split("/")):
         raise HTTPException(status_code=400, detail="Invalid repository file path")
 
     return quote(file_path, safe="/")

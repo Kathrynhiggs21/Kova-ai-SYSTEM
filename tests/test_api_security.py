@@ -105,6 +105,14 @@ class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
 
+    async def test_supplied_owner_key_ignores_surrounding_whitespace(self):
+        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
+            response = await self.request(
+                "GET", "/multi-repo/list", owner_key=f"  {OWNER_KEY}  "
+            )
+
+        self.assertEqual(response.status_code, 200)
+
     async def test_noncanonical_repository_is_denied_before_github_access(self):
         with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
             response = await self.request(
@@ -199,6 +207,9 @@ class RepositoryPathTests(unittest.TestCase):
             "README.md?ref=other",
             "README.md#fragment",
             "encoded%2Fpath",
+            "docs/./README.md",
+            "docs//README.md",
+            "docs/README.md/",
         ]
 
         for file_path in unsafe_paths:

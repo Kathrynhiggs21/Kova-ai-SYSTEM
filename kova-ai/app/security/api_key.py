@@ -27,8 +27,9 @@ async def require_owner_api_key(
             detail="KOVA owner authentication is not configured",
         )
 
-    if not supplied_api_key or not secrets.compare_digest(
-        supplied_api_key, configured_api_key
+    normalized_supplied_api_key = (supplied_api_key or "").strip()
+    if not normalized_supplied_api_key or not secrets.compare_digest(
+        normalized_supplied_api_key, configured_api_key
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
