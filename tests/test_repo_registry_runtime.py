@@ -63,9 +63,13 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
             write_config(config_path, claude_enabled=False)
             with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
                 service = MultiRepoSyncService(claude_api_key="configured-key")
-                result = await service.sync_with_claude({"name": "KOVA"})
+                with patch(
+                    "app.services.multi_repo_sync_service.httpx.AsyncClient"
+                ) as http_client:
+                    result = await service.sync_with_claude({"name": "KOVA"})
 
         self.assertEqual(result["status"], "disabled")
+        http_client.assert_not_called()
 
     async def test_sync_endpoint_rejects_disabled_claude_request(self):
         with tempfile.TemporaryDirectory() as temp_dir:
