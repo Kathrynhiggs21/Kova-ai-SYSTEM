@@ -11,6 +11,16 @@ from pathlib import Path
 from typing import Dict, List, Any, Tuple
 
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "kova-ai"))
+
+from app.core.repository_registry import (  # noqa: E402
+    is_safe_github_owner,
+    parse_github_repository,
+    repository_key,
+)
+
+
 class Colors:
     """ANSI color codes"""
     GREEN = '\033[92m'
@@ -59,8 +69,11 @@ class ConfigValidator:
     def validate_json_format(self) -> bool:
         """Validate JSON format"""
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
+            if not isinstance(self.config, dict):
+                self.error("Top-level JSON value must be an object")
+                return False
             self.success("Valid JSON format")
             return True
         except json.JSONDecodeError as e:
@@ -96,11 +109,8 @@ class ConfigValidator:
     def validate_github_owner(self) -> bool:
         """Validate GitHub owner field"""
         owner = self.config.get("github_owner", "")
-        if not owner or not isinstance(owner, str):
-            self.error("github_owner must be a non-empty string")
-            return False
-        if " " in owner:
-            self.error("github_owner should not contain spaces")
+        if not is_safe_github_owner(owner):
+            self.error("github_owner must be a URL-safe GitHub owner name")
             return False
         self.success(f"GitHub owner: {owner}")
         return True
@@ -119,12 +129,32 @@ class ConfigValidator:
 
         all_valid = True
         for i, repo in enumerate(repos):
-            self.log(f"\n  Validating repo #{i + 1}: {repo.get('name', 'unknown')}", Colors.BLUE)
+            if not isinstance(repo, dict):
+                self.error(f"Repository entry #{i + 1} must be an object")
+                all_valid = False
+                continue
+
+            self.log(
+                f"\n  Validating repo #{i + 1}: {repo.get('name', 'unknown')}",
+                Colors.BLUE,
+            )
 
             # Check required fields
+            required_repo_types = {
+                "name": str,
+                "full_name": str,
+                "type": str,
+                "enabled": bool,
+            }
             for field in required_repo_fields:
                 if field not in repo:
                     self.error(f"  Repo '{repo.get('name', 'unknown')}' missing required field: {field}")
+                    all_valid = False
+                elif not isinstance(repo[field], required_repo_types[field]):
+                    self.error(
+                        f"  Repo '{repo.get('name', 'unknown')}' field '{field}' "
+                        f"should be {required_repo_types[field].__name__}"
+                    )
                     all_valid = False
 
             # Check recommended fields
@@ -139,24 +169,49 @@ class ConfigValidator:
             # Validate full_name format
             if "full_name" in repo:
                 full_name = repo["full_name"]
-                if "/" not in full_name:
-                    self.error(f"  Invalid full_name format: {full_name} (should be 'owner/repo')")
+                parsed_repository = parse_github_repository(full_name)
+                if parsed_repository is None:
+                    self.error(
+                        f"  Invalid GitHub repository coordinate: {full_name} "
+                        "(should be a URL-safe 'owner/repo')"
+                    )
                     all_valid = False
                 else:
-                    owner, name = full_name.split("/", 1)
-                    if owner != self.config.get("github_owner"):
-                        self.warning(f"  Repo owner '{owner}' doesn't match github_owner '{self.config.get('github_owner')}'")
+                    owner, name = parsed_repository
+                    if owner.casefold() != str(
+                        self.config.get("github_owner", "")
+                    ).casefold():
+                        self.error(
+                            f"  Repo owner '{owner}' doesn't match github_owner "
+                            f"'{self.config.get('github_owner')}'"
+                        )
+                        all_valid = False
+                    if repo.get("name") != name:
+                        self.error(
+                            f"  Repo name '{repo.get('name')}' does not match "
+                            f"full_name repository '{name}'"
+                        )
+                        all_valid = False
 
             # Validate sync_priority
             if "sync_priority" in repo:
                 priority = repo["sync_priority"]
-                if not isinstance(priority, int) or priority < 1 or priority > 5:
-                    self.warning(f"  sync_priority should be between 1-5, got: {priority}")
+                if (
+                    not isinstance(priority, int)
+                    or isinstance(priority, bool)
+                    or priority < 1
+                    or priority > 5
+                ):
+                    self.error(f"  sync_priority should be an integer between 1-5, got: {priority}")
+                    all_valid = False
 
             # Validate features
             if "features" in repo:
                 if not isinstance(repo["features"], list):
                     self.error(f"  'features' should be a list")
+                    all_valid = False
+                elif not all(isinstance(feature, str) for feature in repo["features"]):
+                    self.error("  'features' entries should all be strings")
                     all_valid = False
 
         if all_valid:
@@ -166,8 +221,10 @@ class ConfigValidator:
     def validate_sync_settings(self) -> bool:
         """Validate sync settings"""
         settings = self.config.get("sync_settings", {})
+        if not isinstance(settings, dict):
+            return False
 
-        recommended_fields = {
+        required_fields = {
             "auto_sync_enabled": bool,
             "sync_interval_minutes": int,
             "sync_on_push": bool,
@@ -176,11 +233,15 @@ class ConfigValidator:
         }
 
         all_valid = True
-        for field, expected_type in recommended_fields.items():
+        for field, expected_type in required_fields.items():
             if field not in settings:
-                self.warning(f"Missing recommended sync setting: {field}")
-            elif not isinstance(settings[field], expected_type):
+                self.error(f"Missing required sync setting: {field}")
+                all_valid = False
+            elif type(settings[field]) is not expected_type:
                 self.error(f"sync_settings.{field} should be {expected_type.__name__}")
+                all_valid = False
+            elif field == "sync_interval_minutes" and settings[field] <= 0:
+                self.error("sync_settings.sync_interval_minutes must be positive")
                 all_valid = False
             else:
                 self.success(f"sync_settings.{field}: {settings[field]}")
@@ -190,19 +251,25 @@ class ConfigValidator:
     def validate_discovery_settings(self) -> bool:
         """Validate discovery settings"""
         settings = self.config.get("discovery_settings", {})
+        if not isinstance(settings, dict):
+            return False
 
-        recommended_fields = {
+        required_fields = {
             "auto_discover_new_repos": bool,
             "repo_name_pattern": str,
             "watch_for_new_repos": bool
         }
 
         all_valid = True
-        for field, expected_type in recommended_fields.items():
+        for field, expected_type in required_fields.items():
             if field not in settings:
-                self.warning(f"Missing recommended discovery setting: {field}")
-            elif not isinstance(settings[field], expected_type):
+                self.error(f"Missing required discovery setting: {field}")
+                all_valid = False
+            elif type(settings[field]) is not expected_type:
                 self.error(f"discovery_settings.{field} should be {expected_type.__name__}")
+                all_valid = False
+            elif field == "repo_name_pattern" and not settings[field].strip():
+                self.error("discovery_settings.repo_name_pattern cannot be empty")
                 all_valid = False
             else:
                 self.success(f"discovery_settings.{field}: {settings[field]}")
@@ -212,8 +279,10 @@ class ConfigValidator:
     def validate_integration_settings(self) -> bool:
         """Validate integration settings"""
         settings = self.config.get("integration_settings", {})
+        if not isinstance(settings, dict):
+            return False
 
-        recommended_fields = {
+        required_fields = {
             "claude_api_enabled": bool,
             "github_webhooks_enabled": bool,
             "cross_repo_prs": bool,
@@ -221,10 +290,11 @@ class ConfigValidator:
         }
 
         all_valid = True
-        for field, expected_type in recommended_fields.items():
+        for field, expected_type in required_fields.items():
             if field not in settings:
-                self.warning(f"Missing recommended integration setting: {field}")
-            elif not isinstance(settings[field], expected_type):
+                self.error(f"Missing required integration setting: {field}")
+                all_valid = False
+            elif type(settings[field]) is not expected_type:
                 self.error(f"integration_settings.{field} should be {expected_type.__name__}")
                 all_valid = False
             else:
@@ -234,23 +304,37 @@ class ConfigValidator:
 
     def check_duplicates(self) -> bool:
         """Check for duplicate repositories"""
-        repos = self.config.get("repositories", [])
-        names = [repo.get("name") for repo in repos]
-        full_names = [repo.get("full_name") for repo in repos]
+        repos = [
+            repo
+            for repo in self.config.get("repositories", [])
+            if isinstance(repo, dict)
+        ]
+        names = [
+            repo.get("name")
+            for repo in repos
+            if isinstance(repo.get("name"), str) and repo.get("name")
+        ]
+        full_names = [
+            repo.get("full_name")
+            for repo in repos
+            if isinstance(repo.get("full_name"), str) and repo.get("full_name")
+        ]
 
         duplicates = []
         seen_names = set()
         seen_full_names = set()
 
         for name in names:
-            if name in seen_names:
+            normalized_name = name.casefold() if isinstance(name, str) else name
+            if normalized_name in seen_names:
                 duplicates.append(f"Duplicate name: {name}")
-            seen_names.add(name)
+            seen_names.add(normalized_name)
 
         for full_name in full_names:
-            if full_name in seen_full_names:
+            normalized_full_name = repository_key(full_name)
+            if normalized_full_name in seen_full_names:
                 duplicates.append(f"Duplicate full_name: {full_name}")
-            seen_full_names.add(full_name)
+            seen_full_names.add(normalized_full_name)
 
         if duplicates:
             for dup in duplicates:
@@ -265,15 +349,28 @@ class ConfigValidator:
         self.log(f"\n{Colors.BOLD}=== Validating Kova AI Repository Configuration ==={Colors.RESET}\n")
         self.log(f"Config file: {Colors.BLUE}{self.config_path}{Colors.RESET}\n")
 
-        # Run validations
-        validations = [
-            ("File Existence", self.validate_file_exists),
-            ("JSON Format", self.validate_json_format),
-        ]
+        all_passed = True
 
-        # Only run these if file exists and is valid JSON
-        if self.config:
-            validations.extend([
+        def run_validation(name, validator):
+            nonlocal all_passed
+            self.log(f"\n{Colors.BOLD}{name}:{Colors.RESET}")
+            try:
+                if not validator():
+                    all_passed = False
+                    return False
+            except Exception as e:
+                self.error(f"Validation failed: {e}")
+                all_passed = False
+                return False
+            return True
+
+        file_exists = run_validation("File Existence", self.validate_file_exists)
+        json_valid = False
+        if file_exists:
+            json_valid = run_validation("JSON Format", self.validate_json_format)
+
+        if json_valid:
+            validations = [
                 ("Required Fields", self.validate_required_fields),
                 ("GitHub Owner", self.validate_github_owner),
                 ("Repositories", self.validate_repositories),
@@ -281,17 +378,9 @@ class ConfigValidator:
                 ("Discovery Settings", self.validate_discovery_settings),
                 ("Integration Settings", self.validate_integration_settings),
                 ("Duplicate Check", self.check_duplicates),
-            ])
-
-        all_passed = True
-        for name, validator in validations:
-            self.log(f"\n{Colors.BOLD}{name}:{Colors.RESET}")
-            try:
-                if not validator():
-                    all_passed = False
-            except Exception as e:
-                self.error(f"Validation failed: {e}")
-                all_passed = False
+            ]
+            for name, validator in validations:
+                run_validation(name, validator)
 
         # Print summary
         self.print_summary(all_passed)
