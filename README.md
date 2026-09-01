@@ -514,7 +514,7 @@ docker-compose exec postgres psql -U kova -d kova < scripts/init.sql
 #### API key errors
 ```bash
 # Verify that the owner key is present without printing it
-grep -q '^KOVA_OWNER_API_KEY=.' kova-ai/.env \
+grep -Eq '^KOVA_OWNER_API_KEY=[[:space:]]*[^[:space:]]' kova-ai/.env \
   && echo 'KOVA owner key is configured' \
   || echo 'KOVA owner key is missing'
 
