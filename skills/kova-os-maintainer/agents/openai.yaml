@@ -1,0 +1,4 @@
+interface:
+  display_name: "KOVA OS Maintainer"
+  short_description: "Safe KOVA OS repo maintenance flow"
+  default_prompt: "Maintain KOVA OS with minimal, canonical, secure changes and run required validations."
