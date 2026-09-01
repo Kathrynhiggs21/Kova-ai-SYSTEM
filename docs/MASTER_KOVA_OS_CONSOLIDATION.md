@@ -20,6 +20,27 @@ KOVA OS at `kovaos.com` is the single personal operating system, AI assistant, c
 
 Nothing is deleted merely because it is old or duplicated. Ambiguous items go to Purgatory first.
 
+## Non-destructive lifecycle tagging
+KOVA records lifecycle status as metadata while leaving the governed file's contents, filename, and location unchanged by default.
+
+Use exactly one lifecycle tag for each exact asset version:
+- `KOVA:FINAL` — emerald `#1F883D`: verified and authoritative for a stated purpose.
+- `KOVA:ARCHIVE` — slate `#6E7781`: superseded, historical, or inactive material retained for context.
+- `KOVA:UNREVIEWED` — amber `#BF8700`: temporary guardrail when inspection or live verification is incomplete.
+
+Optional independent flags:
+- `SENSITIVE` — red `#CF222E`: private access, credentials, personal data, or restricted material.
+- `DUPLICATE` — violet `#8250DF`: exact, near, or semantic duplicate relationship.
+
+Registry rules:
+- Key status to an exact version: Drive file ID plus revision/version, repository path plus blob SHA, Library file identity plus version, or SHA-256 for stored/local binaries.
+- A content or revision change creates a new `KOVA:UNREVIEWED` version; the previous version keeps its recorded status.
+- `KOVA:ARCHIVE` records `superseded_by` when a replacement is known.
+- Folder status never applies automatically to every child. A ZIP/package status covers only the package unless its members were inspected.
+- Color is always shown with status text for accessibility.
+- Platform-native labels are convenience mirrors; the private KOVA File Status Registry is authoritative.
+- Private file locators and sensitive inventory records must not be committed to a public repository.
+
 ## Connector policy
 KOVA owns the orchestration. Every external service is an interchangeable connector/adaptor.
 
