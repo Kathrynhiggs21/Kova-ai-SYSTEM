@@ -64,6 +64,10 @@ This system coordinates these Kova AI repositories:
 
 ### Quick Multi-Repo Commands
 
+All KOVA routes except `/health`, documentation, metrics, and the signed GitHub
+webhook require the owner key in the `X-Kova-API-Key` header. Keep that key in a
+server-side secret store; never embed it in browser JavaScript.
+
 ```bash
 # Check status of all repos
 curl http://localhost:8000/multi-repo/status
@@ -511,8 +515,10 @@ docker-compose exec postgres psql -U kova -d kova < scripts/init.sql
 
 #### API key errors
 ```bash
-# Verify .env file
-cat kova-ai/.env | grep API_KEY
+# Verify that the owner key is present without printing it
+grep -q '^KOVA_OWNER_API_KEY=.' kova-ai/.env \
+  && echo 'KOVA owner key is configured' \
+  || echo 'KOVA owner key is missing'
 
 # Restart services after changing .env
 docker-compose restart

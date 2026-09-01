@@ -1,5 +1,9 @@
 # Kova AI Multi-Repository Management Guide
 
+> Security note: all examples targeting `/multi-repo/*` require the configured
+> owner key in the `X-Kova-API-Key` header. Keep the API private and do not put
+> this key in client-side code.
+
 ## Overview
 
 The Kova AI System now supports **multi-repository management**, enabling you to coordinate, sync, and manage all your Kova AI projects from a single central system.

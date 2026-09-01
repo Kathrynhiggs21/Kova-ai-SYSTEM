@@ -104,18 +104,23 @@ POSTGRES_USER=kova
 POSTGRES_PASSWORD=kova_pass
 DATABASE_URL=postgresql+asyncpg://kova:kova_pass@db:5432/kova
 
-# API Keys (REQUIRED)
-API_KEY=your_api_key_here
+# Owner authentication and browser access (REQUIRED)
+KOVA_OWNER_API_KEY=replace_with_a_long_random_value
+KOVA_ALLOWED_ORIGINS=http://localhost:5173
 
 # Multi-Repository Management (REQUIRED)
 GITHUB_TOKEN=ghp_YOUR_ACTUAL_GITHUB_TOKEN_HERE
 ANTHROPIC_API_KEY=sk-ant-YOUR_ACTUAL_ANTHROPIC_KEY_HERE
 
-# Optional: Webhook Secret
-WEBHOOK_SECRET=your_webhook_secret_here
+# Required when the GitHub webhook endpoint is enabled
+GITHUB_WEBHOOK_SECRET=replace_with_a_generated_webhook_secret
 ```
 
 **Important**: Replace the placeholder values with your actual tokens!
+Owner-only API clients must send the configured value in the
+`X-Kova-API-Key` request header. Never embed this key in browser JavaScript.
+The command examples later in this guide omit the header for readability; add
+it to every request except `/health`.
 
 ### Step 3: Verify Configuration
 
