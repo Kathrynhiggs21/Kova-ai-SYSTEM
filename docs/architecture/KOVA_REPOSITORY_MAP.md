@@ -10,16 +10,20 @@ Status: Proposed canonical map for remediation v1
 | `Kathrynhiggs21/kova-ai-dash` | Authenticated Command Center | ACTIVE | Keep; target future rename to `kova-command-center` |
 | `Kathrynhiggs21/kovaos-site` | Public KOVA website / docs portal | TRANSITION | Remove duplicated app/backend responsibilities over time |
 | `Kathrynhiggs21/scribbles-by-marcy` | Scribbles by Marcy business/product repository | ACTIVE WORLD | Keep independent from KOVA Core |
-| `Kathrynhiggs21/Scribbles-Zoo-Project` | Zoo / educational-card world | TARGET WORLD | Migrate Zoo/card code here from `kova-ai` |
+| `Kathrynhiggs21/Scribbles-Zoo-Project` | Zoo / educational-card world | TARGET WORLD | Define product/data/design scope independently of the legacy renderer |
 
 ## Repositories requiring remediation
 
 | Repository | Finding | Required disposition |
 |---|---|---|
-| `Kathrynhiggs21/kova-ai` | Identity conflict: README describes KOVA assistant while current workflows/code include Zoo/card generation | Migrate Zoo/card code to `Scribbles-Zoo-Project`; archive or repurpose after migration |
+| `Kathrynhiggs21/kova-ai` | Identity conflict: README describes KOVA assistant while current workflows/code include legacy Zoo/card rendering | Inventory generic KOVA code separately; explicitly exclude renderer scripts/workflows from KOVA OS; archive or repurpose only after review |
 | `Kathrynhiggs21/kova-ai-mem0` | Memory-service concept exists but repo is minimally defined | Rebuild as provider-independent KOVA Memory service, with Mem0 as an adapter |
 | `Kathrynhiggs21/Kova-os-docengine` | Stub repository | Rebuild as docs engine only if needed; otherwise archive |
 | `Kathrynhiggs21/Kova-AI-Scribbles` | Duplicate/underspecified Scribbles identity | Archive or repurpose as a narrowly scoped Scribbles connector |
+
+## Explicit exclusion: legacy renderer
+
+The existing Zoo/card renderer implementation and renderer-specific workflows are not part of KOVA OS. They must not be migrated into KOVA Core, Command Center, connectors, memory, automation, AI gateway, infrastructure, or the canonical Zoo/educational-card World. Any future presentation/export implementation should be selected independently.
 
 ## Historical / experimental repositories
 
@@ -63,3 +67,4 @@ A World owns its own domain data and product code. It may use KOVA memory, autom
 5. Cross-repository synchronization remains disabled until ownership and tests are stable.
 6. All production changes flow through PRs with CI checks.
 7. Every new service must define owner, API contract, data classification, health endpoint, deployment target and rollback procedure.
+8. The legacy renderer is explicitly outside KOVA OS.
