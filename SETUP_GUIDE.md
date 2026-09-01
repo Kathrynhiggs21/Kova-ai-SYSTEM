@@ -112,8 +112,9 @@ POSTGRES_USER=kova
 POSTGRES_PASSWORD=kova_pass
 DATABASE_URL=postgresql+asyncpg://kova:kova_pass@db:5432/kova
 
-# Owner authentication and browser access (REQUIRED)
-KOVA_OWNER_API_KEY=replace_with_a_long_random_value
+# Owner authentication and browser access (REQUIRED). Generate a long random
+# value and store it in server-side secrets before starting the API.
+KOVA_OWNER_API_KEY=
 KOVA_ALLOWED_ORIGINS=http://localhost:5173
 
 # Multi-Repository Management (REQUIRED)
