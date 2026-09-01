@@ -157,6 +157,10 @@ class MultiRepoSyncService:
             if repo.get("enabled", True)
         ]
 
+    def is_integration_enabled(self, setting: str) -> bool:
+        """Return whether an integration is explicitly enabled in the registry."""
+        return self.config.get("integration_settings", {}).get(setting) is True
+
     async def sync_all_repositories(self) -> Dict[str, Any]:
         """Sync all enabled repositories"""
         logger.info("Starting multi-repo sync...")
@@ -334,6 +338,12 @@ class MultiRepoSyncService:
 
     async def sync_with_claude(self, repo_data: Dict[str, Any]) -> Dict[str, Any]:
         """Send repository data to Claude API for analysis"""
+        if not self.is_integration_enabled("claude_api_enabled"):
+            return {
+                "status": "disabled",
+                "error": "Claude API integration is disabled in KOVA configuration",
+            }
+
         if not self.claude_api_key:
             return {"error": "Claude API key not configured"}
 

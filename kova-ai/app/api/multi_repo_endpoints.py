@@ -59,6 +59,11 @@ async def sync_repositories(request: RepoSyncRequest):
         # Optionally sync with Claude
         claude_results = {}
         if request.include_claude:
+            if not service.is_integration_enabled("claude_api_enabled"):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Claude synchronization is disabled in KOVA configuration",
+                )
             for repo, result in sync_results.items():
                 if result.get("status") == "success" and result.get("data", {}).get(
                     "exists"
@@ -75,6 +80,8 @@ async def sync_repositories(request: RepoSyncRequest):
                 "repos_synced": len(sync_results),
             },
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

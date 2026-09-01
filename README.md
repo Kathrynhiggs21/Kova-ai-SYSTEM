@@ -53,6 +53,10 @@ Repositories from older plans are not active build components unless they are
 explicitly restored to `kova_repos_config.json`. In particular, `kova-ai` is
 currently a separate Zoo card-generator project and is not part of KOVA OS.
 
+`kova_repos_config.json` is the runtime source of truth. References elsewhere
+to older repository lists or planned automation are archival unless they match
+that registry and its disabled-by-default integration settings.
+
 ### Key Features
 
 - **Available now:** configured-repository listing, GitHub metadata retrieval,

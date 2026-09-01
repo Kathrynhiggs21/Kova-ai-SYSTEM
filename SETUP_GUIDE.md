@@ -1,5 +1,13 @@
 # Kova AI Multi-Repository System - Setup Guide
 
+> **Historical reference:** This guide contains legacy multi-repository and
+> automation examples that are not active in the current KOVA OS build. The
+> runtime source of truth is `kova_repos_config.json`, which currently enables
+> only `Kova-ai-SYSTEM` and `kova-ai-dash` and keeps discovery, Claude sync,
+> webhooks, and cross-repository automation disabled. Do not use the legacy
+> `/discover` or `/add` examples to expand the registry. Follow `README.md` and
+> the checked-in configuration until this guide is fully replaced.
+
 Complete step-by-step guide to set up and use the Kova AI multi-repository management system.
 
 ## Table of Contents

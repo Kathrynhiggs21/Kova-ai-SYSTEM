@@ -209,43 +209,10 @@ async def get_kova_repositories(github_token: str) -> Dict[str, Any]:
 
 
 async def load_kova_repos_from_config() -> list:
-    """Load Kova repository list from configuration file"""
-    import os
+    """Load enabled repositories through the canonical registry service."""
+    from app.services.multi_repo_sync_service import MultiRepoSyncService
 
-    config_path = os.path.join(
-        os.path.dirname(__file__), "../../../kova_repos_config.json"
-    )
-
-    try:
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                config = json.load(f)
-                # Extract enabled repositories
-                return [
-                    repo["full_name"]
-                    for repo in config.get("repositories", [])
-                    if repo.get("enabled", True)
-                ]
-        else:
-            # Fallback to hardcoded list if config doesn't exist
-            return [
-                "Kathrynhiggs21/Kova-ai-SYSTEM",
-                "Kathrynhiggs21/kova-ai",
-                "Kathrynhiggs21/kova-ai-site",
-                "Kathrynhiggs21/kova-ai-mem0",
-                "Kathrynhiggs21/kova-ai-docengine",
-                "Kathrynhiggs21/Kova-AI-Scribbles",
-            ]
-    except Exception:
-        # Fallback list on error
-        return [
-            "Kathrynhiggs21/Kova-ai-SYSTEM",
-            "Kathrynhiggs21/kova-ai",
-            "Kathrynhiggs21/kova-ai-site",
-            "Kathrynhiggs21/kova-ai-mem0",
-            "Kathrynhiggs21/kova-ai-docengine",
-            "Kathrynhiggs21/Kova-AI-Scribbles",
-        ]
+    return MultiRepoSyncService().get_enabled_repos()
 
 
 async def get_latest_activity(username: str, github_token: str) -> Dict[str, Any]:
