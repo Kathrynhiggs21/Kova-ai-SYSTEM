@@ -2,6 +2,8 @@
 
 Status: Proposed canonical map for remediation v1
 
+This document supersedes the older `KOVA_REPO_MAP.md` as the canonical repository map for KOVA OS remediation work. The older file remains historical context only and should not be treated as the active source of truth.
+
 ## Active production roles
 
 | Repository | Role | Status | Action |
@@ -9,8 +11,8 @@ Status: Proposed canonical map for remediation v1
 | `Kathrynhiggs21/Kova-ai-SYSTEM` | KOVA Core / backend / orchestration | ACTIVE | Keep as current core; target future rename to `kova-core` |
 | `Kathrynhiggs21/kova-ai-dash` | Authenticated Command Center | ACTIVE | Keep; target future rename to `kova-command-center` |
 | `Kathrynhiggs21/kovaos-site` | Public KOVA website / docs portal | TRANSITION | Remove duplicated app/backend responsibilities over time |
-| `Kathrynhiggs21/scribbles-by-marcy` | Scribbles by Marcy business/product repository | ACTIVE WORLD | Keep independent from KOVA Core |
-| `Kathrynhiggs21/Scribbles-Zoo-Project` | Zoo / educational-card world | TARGET WORLD | Define product/data/design scope independently of the legacy renderer |
+| `Kathrynhiggs21/scribbles-by-marcy` | Scribbles by Marcy business/product repository | WORLD | Keep independent from KOVA Core |
+| `Kathrynhiggs21/Scribbles-Zoo-Project` | Zoo / educational-card world | WORLD | Define product/data/design scope independently of the legacy renderer |
 
 ## Repositories requiring remediation
 
@@ -37,7 +39,7 @@ The following boundaries are required for a complete KOVA OS. They may begin as 
 2. `kova-connectors` — connector contracts and provider adapters for Google, GitHub, Canva, Notion, Dropbox and future services.
 3. `kova-memory` — ingestion, normalization, provenance, retrieval, retention, privacy labels and knowledge graph interfaces.
 4. `kova-automation` — jobs, schedules, triggers, workflow definitions and delivery rules.
-5. `kova-ai-gateway` — OpenAI/Gemini/Claude provider abstraction, routing, fallback, cost and reliability telemetry.
+5. `kova-ai-gateway` — OpenAI/Gemini/Anthropic provider abstraction, routing, fallback, cost and reliability telemetry.
 6. `kova-infra` — deployment manifests, infrastructure as code, environment definitions, observability bootstrap and disaster recovery.
 7. `kova-docs` — canonical architecture decisions, runbooks and system specifications.
 8. `kova-design-system` — reusable KOVA UI tokens, visual states, icons and shared components.
@@ -61,7 +63,7 @@ A World owns its own domain data and product code. It may use KOVA memory, autom
 ## Rules
 
 1. One canonical owner for each production responsibility.
-2. Runtime registry must match this map.
+2. Future automation must validate that the runtime registry and this map remain aligned before enabling sync or discovery.
 3. Disabled or experimental integrations must not be shown as live/healthy.
 4. No secrets in repositories; examples only.
 5. Cross-repository synchronization remains disabled until ownership and tests are stable.

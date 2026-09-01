@@ -115,4 +115,4 @@ KOVA OS is operational when:
 - Android/web clients can use documented APIs.
 - Secrets are externalized.
 - CI protects production branches.
-- Backups/restore and rollback are documented and tested.
+- Backup/restore and rollback are documented and tested.
