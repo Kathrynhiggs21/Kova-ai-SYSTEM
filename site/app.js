@@ -452,7 +452,20 @@ async function fetchArchive(path) {
   if (!response.ok) {
     throw new Error(`Archive request failed with HTTP ${response.status}`);
   }
-  return response.blob();
+
+  const blob = await response.blob();
+  const signature = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const isZip =
+    signature.length === 4 &&
+    signature[0] === 0x50 &&
+    signature[1] === 0x4b &&
+    ((signature[2] === 0x03 && signature[3] === 0x04) ||
+      (signature[2] === 0x05 && signature[3] === 0x06) ||
+      (signature[2] === 0x07 && signature[3] === 0x08));
+  if (!isZip) {
+    throw new Error("Archive response is not a ZIP file");
+  }
+  return blob;
 }
 
 function downloadArchive(blob, filename) {
@@ -466,7 +479,25 @@ function downloadArchive(blob, filename) {
   window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
 }
 
+function requestLocalArchive(path, filename) {
+  const link = document.createElement("a");
+  link.href = path;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
 async function downloadExport(apiPath, fallbackPath, filename) {
+  if (window.location.protocol === "file:") {
+    requestLocalArchive(fallbackPath, filename);
+    logToConsole(
+      `Opened the checked-in ${filename} download request; completion cannot be verified in local file mode.`,
+      "amber"
+    );
+    return true;
+  }
+
   try {
     const blob = await fetchArchive(apiPath);
     downloadArchive(blob, filename);
