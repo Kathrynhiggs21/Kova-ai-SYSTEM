@@ -523,11 +523,11 @@ async function downloadExport(apiPath, fallbackPath, filename) {
 }
 
 function triggerLocalExport() {
-  logToConsole("Initiating full site package compilation...", "amber");
+  logToConsole("Preparing the latest available site package download...", "amber");
   return downloadExport("/api/export/site", "../site_final.zip", "site_final.zip");
 }
 
 function triggerImagesExport() {
-  logToConsole("Initiating images package compilation for kovoas.com...", "amber");
+  logToConsole("Preparing the latest available images package download...", "amber");
   return downloadExport("/api/export/images", "../images.zip", "images.zip");
 }

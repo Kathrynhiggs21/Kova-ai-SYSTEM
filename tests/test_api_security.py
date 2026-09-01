@@ -119,20 +119,32 @@ class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
             transport=transport, base_url="http://testserver"
         ) as client:
             with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
-                response = await client.get(
-                    "/multi-repo/list",
-                    headers=[(b"X-Kova-API-Key", b"\xff")],
-                )
-
-        self.assertEqual(response.status_code, 401)
+                unsafe_headers = [
+                    b"\xff",
+                    b"\xa0" + OWNER_KEY.encode("ascii") + b"\xa0",
+                    b"\x85" + OWNER_KEY.encode("ascii") + b"\x85",
+                ]
+                for unsafe_header in unsafe_headers:
+                    with self.subTest(unsafe_header=unsafe_header):
+                        response = await client.get(
+                            "/multi-repo/list",
+                            headers=[(b"X-Kova-API-Key", unsafe_header)],
+                        )
+                        self.assertEqual(response.status_code, 401)
 
     async def test_non_ascii_configured_owner_key_fails_closed(self):
-        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": "non-ascii-\N{LATIN SMALL LETTER E WITH ACUTE}"}):
-            response = await self.request(
-                "GET", "/multi-repo/list", owner_key=OWNER_KEY
-            )
-
-        self.assertEqual(response.status_code, 503)
+        unsafe_keys = [
+            "non-ascii-\N{LATIN SMALL LETTER E WITH ACUTE}",
+            f"\N{NO-BREAK SPACE}{OWNER_KEY}\N{NO-BREAK SPACE}",
+            f"\N{NEXT LINE}{OWNER_KEY}\N{NEXT LINE}",
+        ]
+        for unsafe_key in unsafe_keys:
+            with self.subTest(unsafe_key=unsafe_key):
+                with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": unsafe_key}):
+                    response = await self.request(
+                        "GET", "/multi-repo/list", owner_key=OWNER_KEY
+                    )
+                self.assertEqual(response.status_code, 503)
 
     async def test_noncanonical_repository_is_denied_before_github_access(self):
         with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):

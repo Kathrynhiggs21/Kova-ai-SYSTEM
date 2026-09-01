@@ -12,8 +12,8 @@ owner_api_key_header = APIKeyHeader(name="X-Kova-API-Key", auto_error=False)
 
 
 def get_owner_api_key() -> str:
-    """Return the configured owner API key, if any."""
-    return os.getenv("KOVA_OWNER_API_KEY", "").strip()
+    """Return the raw configured owner API key, if any."""
+    return os.getenv("KOVA_OWNER_API_KEY", "")
 
 
 async def require_owner_api_key(
@@ -21,23 +21,22 @@ async def require_owner_api_key(
 ) -> None:
     """Require a valid owner key and reject all traffic when unconfigured."""
     configured_api_key = get_owner_api_key()
-    if not configured_api_key or not configured_api_key.strip():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="KOVA owner authentication is not configured",
-        )
-
     try:
-        configured_api_key_bytes = configured_api_key.encode("ascii")
+        configured_api_key_bytes = configured_api_key.encode("ascii").strip()
     except UnicodeEncodeError as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="KOVA owner authentication is not configured correctly",
         ) from error
 
-    normalized_supplied_api_key = (supplied_api_key or "").strip()
+    if not configured_api_key_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="KOVA owner authentication is not configured",
+        )
+
     try:
-        supplied_api_key_bytes = normalized_supplied_api_key.encode("ascii")
+        supplied_api_key_bytes = (supplied_api_key or "").encode("ascii").strip()
     except UnicodeEncodeError:
         supplied_api_key_bytes = b""
 

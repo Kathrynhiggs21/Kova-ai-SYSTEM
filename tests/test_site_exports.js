@@ -168,3 +168,20 @@ test("uses an explicitly unverified direct link in local file mode", async () =>
   assert.equal(app.links[0].clickCount, 1);
   assert.match(app.logs[0].message, /cannot be verified in local file mode/);
 });
+
+test("export buttons describe retrieval rather than compilation", async () => {
+  const app = loadApp([
+    { ok: true, status: 200, blob: zipBlob() },
+    { ok: true, status: 200, blob: zipBlob() },
+  ]);
+
+  await app.context.triggerLocalExport();
+  await app.context.triggerImagesExport();
+
+  assert.match(app.logs[0].message, /Preparing.*site package download/);
+  assert.match(app.logs[2].message, /Preparing.*images package download/);
+  assert.doesNotMatch(
+    app.logs.map(({ message }) => message).join(" "),
+    /compil/i
+  );
+});
