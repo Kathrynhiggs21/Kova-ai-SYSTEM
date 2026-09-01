@@ -39,6 +39,9 @@ def retry_on_rate_limit(max_retries: int = 3, base_delay: float = 2.0):
                             continue
                     raise
                 except httpx.RequestError as e:
+                    # Certificate trust errors are deterministic and won't succeed with retries.
+                    if "CERTIFICATE_VERIFY_FAILED" in str(e):
+                        raise
                     if attempt < max_retries - 1:
                         delay = base_delay * (2**attempt)
                         logger.warning(
@@ -60,6 +63,7 @@ class MultiRepoSyncService:
     def __init__(self, github_token: str = None, claude_api_key: str = None):
         self.github_token = github_token or os.getenv("GITHUB_TOKEN")
         self.claude_api_key = claude_api_key or os.getenv("ANTHROPIC_API_KEY")
+        self.config_path = self._resolve_config_path()
         self.config = self._load_config()
         self.base_url = "https://api.github.com"
         self.headers = {
@@ -67,14 +71,29 @@ class MultiRepoSyncService:
             "Accept": "application/vnd.github.v3+json",
         }
 
+    def _resolve_config_path(self) -> Path:
+        """Resolve config path across local and containerized runtimes."""
+        env_path = os.getenv("KOVA_REPOS_CONFIG")
+        if env_path:
+            return Path(env_path)
+
+        candidates = [
+            Path(__file__).resolve().parents[3] / "kova_repos_config.json",
+            Path("/app/kova_repos_config.json"),
+            Path("/workspace/kova_repos_config.json"),
+            Path.cwd() / "kova_repos_config.json",
+        ]
+
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+
+        return candidates[0]
+
     def _load_config(self) -> Dict[str, Any]:
         """Load multi-repo configuration"""
-        config_path = (
-            Path(__file__).parent.parent.parent.parent / "kova_repos_config.json"
-        )
-
         try:
-            with open(config_path, "r") as f:
+            with open(self.config_path, "r") as f:
                 return json.load(f)
         except Exception as e:
             logger.error(f"Failed to load config: {e}")
@@ -187,10 +206,14 @@ class MultiRepoSyncService:
         )
 
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(
-                f"{self.base_url}/users/{owner}/repos?per_page=100",
-                headers=self.headers,
-            )
+            try:
+                response = await client.get(
+                    f"{self.base_url}/users/{owner}/repos?per_page=100",
+                    headers=self.headers,
+                )
+            except httpx.RequestError as e:
+                logger.error(f"Failed to fetch repos: {e}")
+                return []
 
             if response.status_code != 200:
                 logger.error(f"Failed to fetch repos: {response.status_code}")
@@ -220,10 +243,6 @@ class MultiRepoSyncService:
         self, repo_full_name: str, repo_type: str = "service"
     ) -> bool:
         """Add a new repository to the configuration"""
-        config_path = (
-            Path(__file__).parent.parent.parent.parent / "kova_repos_config.json"
-        )
-
         try:
             # Check if repo exists on GitHub
             async with httpx.AsyncClient(timeout=30.0) as client:
@@ -242,7 +261,7 @@ class MultiRepoSyncService:
                     repo_info = response.json()
 
             # Load current config
-            with open(config_path, "r") as f:
+            with open(self.config_path, "r") as f:
                 config = json.load(f)
 
             # Check if already exists
@@ -267,7 +286,7 @@ class MultiRepoSyncService:
             config["repositories"].append(new_repo)
 
             # Save updated config
-            with open(config_path, "w") as f:
+            with open(self.config_path, "w") as f:
                 json.dump(config, f, indent=2)
 
             logger.info(f"Added {repo_full_name} to config")
