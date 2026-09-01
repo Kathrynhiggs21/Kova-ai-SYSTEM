@@ -2,6 +2,7 @@
 
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import httpx
@@ -12,6 +13,19 @@ from app.main import app, parse_allowed_origins
 
 
 OWNER_KEY = "test-owner-api-key"
+ENV_EXAMPLE = Path(__file__).resolve().parents[1] / "kova-ai" / ".env.example"
+
+
+class SecureConfigurationDefaultsTests(unittest.TestCase):
+    def test_owner_api_key_sample_is_empty(self):
+        assignments = {
+            line.partition("=")[0]: line.partition("=")[2]
+            for line in ENV_EXAMPLE.read_text(encoding="utf-8").splitlines()
+            if "=" in line and not line.lstrip().startswith("#")
+        }
+
+        self.assertIn("KOVA_OWNER_API_KEY", assignments)
+        self.assertEqual(assignments["KOVA_OWNER_API_KEY"], "")
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
