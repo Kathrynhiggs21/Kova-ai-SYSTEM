@@ -2,10 +2,13 @@
 
 import json
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kova-ai"))
 
 from fastapi import HTTPException
 
@@ -69,6 +72,27 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
                     result = await service.sync_with_claude({"name": "KOVA"})
 
         self.assertEqual(result["status"], "disabled")
+        http_client.assert_not_called()
+
+    async def test_enabled_claude_service_reports_missing_key_consistently(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "kova_repos_config.json"
+            write_config(config_path, claude_enabled=True)
+            with patch.dict(
+                os.environ,
+                {
+                    "KOVA_REPOS_CONFIG": str(config_path),
+                    "ANTHROPIC_API_KEY": "",
+                },
+            ):
+                service = MultiRepoSyncService(claude_api_key="")
+                with patch(
+                    "app.services.multi_repo_sync_service.httpx.AsyncClient"
+                ) as http_client:
+                    result = await service.sync_with_claude({"name": "KOVA"})
+
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["error"], "Claude API key not configured")
         http_client.assert_not_called()
 
     async def test_sync_endpoint_rejects_disabled_claude_request(self):
