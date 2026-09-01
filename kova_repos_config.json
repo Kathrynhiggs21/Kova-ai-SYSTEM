@@ -25,14 +25,14 @@
       "name": "scribbles-by-marcy",
       "full_name": "Kathrynhiggs21/scribbles-by-marcy",
       "type": "world",
-      "runtime_enabled": false,
+      "enabled": false,
       "relationship": "independent-domain-repository"
     },
     {
       "name": "Scribbles-Zoo-Project",
       "full_name": "Kathrynhiggs21/Scribbles-Zoo-Project",
       "type": "world",
-      "runtime_enabled": false,
+      "enabled": false,
       "relationship": "independent-domain-repository",
       "exclusions": ["legacy-renderer"]
     }
@@ -41,7 +41,7 @@
     {
       "full_name": "Kathrynhiggs21/kova-ai",
       "reason": "mixed legacy repository; renderer-specific code/workflows are not part of KOVA OS",
-      "runtime_enabled": false
+      "enabled": false
     }
   ],
   "sync_settings": {
