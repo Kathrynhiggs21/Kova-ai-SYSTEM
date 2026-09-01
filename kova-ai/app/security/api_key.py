@@ -27,9 +27,22 @@ async def require_owner_api_key(
             detail="KOVA owner authentication is not configured",
         )
 
+    try:
+        configured_api_key_bytes = configured_api_key.encode("ascii")
+    except UnicodeEncodeError as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="KOVA owner authentication is not configured correctly",
+        ) from error
+
     normalized_supplied_api_key = (supplied_api_key or "").strip()
-    if not normalized_supplied_api_key or not secrets.compare_digest(
-        normalized_supplied_api_key, configured_api_key
+    try:
+        supplied_api_key_bytes = normalized_supplied_api_key.encode("ascii")
+    except UnicodeEncodeError:
+        supplied_api_key_bytes = b""
+
+    if not supplied_api_key_bytes or not secrets.compare_digest(
+        supplied_api_key_bytes, configured_api_key_bytes
     ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

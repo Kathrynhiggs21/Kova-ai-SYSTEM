@@ -113,6 +113,27 @@ class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
 
+    async def test_non_ascii_supplied_owner_key_is_rejected_without_500(self):
+        transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://testserver"
+        ) as client:
+            with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
+                response = await client.get(
+                    "/multi-repo/list",
+                    headers=[(b"X-Kova-API-Key", b"\xff")],
+                )
+
+        self.assertEqual(response.status_code, 401)
+
+    async def test_non_ascii_configured_owner_key_fails_closed(self):
+        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": "non-ascii-\N{LATIN SMALL LETTER E WITH ACUTE}"}):
+            response = await self.request(
+                "GET", "/multi-repo/list", owner_key=OWNER_KEY
+            )
+
+        self.assertEqual(response.status_code, 503)
+
     async def test_noncanonical_repository_is_denied_before_github_access(self):
         with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
             response = await self.request(

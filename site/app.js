@@ -447,66 +447,56 @@ function submitConsoleCommand() {
 }
 
 // Download/Export triggers (direct or API integrations)
+async function fetchArchive(path) {
+  const response = await fetch(path);
+  if (!response.ok) {
+    throw new Error(`Archive request failed with HTTP ${response.status}`);
+  }
+  return response.blob();
+}
+
+function downloadArchive(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+}
+
+async function downloadExport(apiPath, fallbackPath, filename) {
+  try {
+    const blob = await fetchArchive(apiPath);
+    downloadArchive(blob, filename);
+    logToConsole(`Successfully downloaded ${filename} via local API.`, "emerald");
+    return true;
+  } catch (apiError) {
+    try {
+      const blob = await fetchArchive(fallbackPath);
+      downloadArchive(blob, filename);
+      logToConsole(
+        `Downloaded the checked-in ${filename} archive; it may be older than the current source.`,
+        "amber"
+      );
+      return true;
+    } catch (fallbackError) {
+      logToConsole(
+        `Unable to download ${filename}: neither the published API nor the checked-in archive is available.`,
+        "rose"
+      );
+      return false;
+    }
+  }
+}
+
 function triggerLocalExport() {
   logToConsole("Initiating full site package compilation...", "amber");
-  
-  // Direct file download trigger or API endpoint call
-  fetch('/api/export/site')
-    .then(res => {
-      if (res.ok) {
-        return res.blob();
-      }
-      throw new Error("Published API archive is unavailable; trying the checked-in archive");
-    })
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'site_final.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Successfully downloaded site_final.zip via local API.", "emerald");
-    })
-    .catch(err => {
-      // Fallback: direct download link if packaged locally
-      const a = document.createElement('a');
-      a.href = '../site_final.zip';
-      a.download = 'site_final.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Downloaded the checked-in site_final.zip archive; it may be older than the current source.", "amber");
-    });
+  return downloadExport("/api/export/site", "../site_final.zip", "site_final.zip");
 }
 
 function triggerImagesExport() {
   logToConsole("Initiating images package compilation for kovoas.com...", "amber");
-  
-  fetch('/api/export/images')
-    .then(res => {
-      if (res.ok) {
-        return res.blob();
-      }
-      throw new Error("Published API archive is unavailable; trying the checked-in archive");
-    })
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'images.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Successfully downloaded images.zip via local API.", "emerald");
-    })
-    .catch(err => {
-      const a = document.createElement('a');
-      a.href = '../images.zip';
-      a.download = 'images.zip';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      logToConsole("Downloaded the checked-in images.zip archive; it may be older than the current source.", "amber");
-    });
+  return downloadExport("/api/export/images", "../images.zip", "images.zip");
 }
