@@ -7,7 +7,7 @@ Create a safe, understandable, operational KOVA OS from the existing repositorie
 - Keep `Kova-ai-SYSTEM` as current Core authority.
 - Keep `kova-ai-dash` as current Command Center authority.
 - Keep cross-repo auto-sync, auto-discovery, webhook mutations and cross-repo PR automation disabled.
-- Treat `kova-ai` as migration source for Zoo/card work until content is inventoried.
+- Treat `kova-ai` as a mixed legacy repository until content is inventoried; legacy renderer code is explicitly outside KOVA OS.
 - Treat starter/template repos as non-production unless explicitly promoted.
 
 Exit criteria: repository map accepted and runtime registry matches active production roles.
@@ -17,16 +17,17 @@ Exit criteria: repository map accepted and runtime registry matches active produ
 - Standardize default branch naming where practical.
 - Add `ARCHITECTURE.md`, `SECURITY.md`, `CONTRIBUTING.md` and ownership notes to production repos.
 - Add lifecycle markers: ACTIVE, TRANSITION, WORLD, EXPERIMENT, ARCHIVED.
+- Inventory `kova-ai` for genuinely generic KOVA code while excluding renderer scripts/workflows from the KOVA architecture.
 
 Exit criteria: a developer or agent can identify the correct repo for any KOVA change without guessing.
 
-## Phase 2 — Zoo/card extraction
-- Inventory Zoo/card scripts, workflows, datasets and outputs currently in `kova-ai` and any copies in `Kova-ai-SYSTEM`.
-- Move canonical Zoo/card implementation to `Scribbles-Zoo-Project`.
-- Keep KOVA Core limited to generic image/research/automation capabilities.
-- Replace duplicate copies with API calls, packages or documented references.
+## Phase 2 — World boundaries
+- Define Scribbles by Marcy and Zoo/Educational Cards as KOVA Worlds with independent domain data and product logic.
+- Do not migrate the legacy renderer into either KOVA Core or the canonical Zoo/Educational Card World.
+- Keep KOVA Core limited to generic research, AI, storage, memory, connector, notification and automation capabilities.
+- Select any future presentation/export implementation independently.
 
-Exit criteria: no Zoo-specific workflow is required inside KOVA Core.
+Exit criteria: no renderer-specific workflow is required anywhere in KOVA OS.
 
 ## Phase 3 — Frontend separation
 - Treat `kova-ai-dash` as authenticated Command Center.
