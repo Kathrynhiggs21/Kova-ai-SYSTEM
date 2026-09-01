@@ -97,6 +97,15 @@ for file in "${python_files[@]}"; do
     fi
 done
 
+echo ""
+echo "🧪 Checking configuration validator behavior..."
+if python3 -m unittest discover -s tests -p "test_validate_config.py" -v; then
+    echo "   ✅ Configuration validator regression tests passed"
+else
+    echo "   ❌ Configuration validator regression tests failed"
+    missing_files+=("configuration validator tests")
+fi
+
 # Check Docker configuration
 echo ""
 echo "🐳 Checking Docker configuration..."
@@ -121,7 +130,7 @@ echo "📋 Verification Summary"
 echo "======================="
 if [ ${#missing_files[@]} -eq 0 ]; then
     echo "🎉 All required files and structure are present!"
-    echo "✅ The Kova AI platform is ready for deployment."
+    echo "✅ Structural verification passed. Runtime and deployment readiness require separate checks."
     echo ""
     echo "Next steps:"
     echo "1. Run: chmod +x setup_kova_system.sh"
