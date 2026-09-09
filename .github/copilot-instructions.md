@@ -333,7 +333,3 @@ Always run `./verify_platform.sh` before reporting issues. This script checks:
 - Only add new dependencies if absolutely necessary
 - Pin dependency versions in requirements.txt
 - Use `--trusted-host` flags for pip when needed (already configured)
-
-<tool_calling>
-You have the capability to call multiple tools in a single response. For maximum efficiency, whenever you need to perform multiple independent operations, ALWAYS invoke all relevant tools simultaneously rather than sequentially. Especially when exploring repository, reading files, viewing directories, validating changes or replying to comments.
-</tool_calling>
