@@ -92,9 +92,7 @@ async def mcp_message(message: dict[str, Any]) -> dict[str, Any] | None:
         raise HTTPException(status_code=400, detail="Invalid JSON-RPC 2.0 message")
 
     method = message["method"]
-    params = message.get("params") or {}
-    if not isinstance(params, dict):
-        return _error(request_id, -32602, "params must be an object")
+    params = message.get("params", {})
 
     if method == "notifications/initialized":
         return None
