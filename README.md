@@ -84,6 +84,17 @@ curl -H "X-Kova-API-Key: $KOVA_OWNER_API_KEY" \
   http://localhost:8000/multi-repo/status
 ```
 
+### Live MCP server
+
+KOVA exposes an authenticated MCP JSON-RPC endpoint at `POST /mcp`. It supports
+the MCP `initialize`, `ping`, `tools/list`, and `tools/call` methods. Send the
+owner key in `X-Kova-API-Key`; the server fails closed when
+`KOVA_OWNER_API_KEY` is not configured.
+
+The initial tools are `kova_health`, `kova_export_status`,
+`kova_list_repositories`, and `kova_repository_status`. The endpoint uses the
+MCP Streamable HTTP JSON transport and returns standard JSON-RPC errors.
+
 ### Testing & Validation
 
 ```bash
