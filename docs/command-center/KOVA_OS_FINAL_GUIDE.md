@@ -175,15 +175,17 @@ You do not need to add dozens of repos to start. In practice, you mainly need a 
 
 ## Google AI Studio, Google Cloud, and MCP: what to expect
 
-The repository does not currently contain a full MCP server implementation. That means:
+The repository includes an authenticated MCP server implementation at `POST /mcp`.
+It uses the MCP Streamable HTTP JSON transport and exposes KOVA health, export,
+repository-list, and repository-status tools.
 
 - you can absolutely build KOVA around Google AI Studio or Google Cloud services
-- you will need to add the integration layer for them
-- the repo is already a good foundation for that, but it is not yet the final “all-in-one” implementation
+- Google AI Studio or Google Cloud services still require a provider integration layer
+- external service connectors remain separate future additions
 
 If you want a truly advanced setup, the next step is to add:
 
-- a real MCP-compatible tool layer
+- additional MCP-compatible tool connectors
 - a model provider adapter for Google Gemini / Vertex AI
 - tool connectors for Google Drive, Gmail, Calendar, Docs, and other services
 - a memory layer for personal preferences and recurring decisions
