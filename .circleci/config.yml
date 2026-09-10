@@ -54,11 +54,16 @@ jobs:
             python -c "import json; json.load(open('kova_repos_config.json'))"
 
       - run:
+          name: Run Python unit tests
+          command: |
+            . kova-ai/venv/bin/activate
+            PYTHONPATH=kova-ai python -m unittest discover -s tests -p "test_*.py" -v
+
+      - run:
           name: Test imports
           command: |
-            cd kova-ai
-            . venv/bin/activate
-            python -c "from app.main import app; print('FastAPI app imported successfully')"
+            . kova-ai/venv/bin/activate
+            PYTHONPATH=kova-ai python -c "from app.main import app; print('FastAPI app imported successfully')"
 
       - store_test_results:
           path: kova-ai/test-results
@@ -79,13 +84,13 @@ jobs:
           name: Run flake8
           command: |
             cd kova-ai
-            flake8 app/ --max-line-length=100 --exclude=venv,__pycache__ --extend-ignore=E501,W503 || echo "Linting warnings found"
+            flake8 app/ --max-line-length=100 --exclude=venv,__pycache__ --extend-ignore=E501,W503
 
       - run:
           name: Check code formatting
           command: |
             cd kova-ai
-            black --check app/ || echo "Code formatting issues found"
+            black --check app/
 
   security-scan:
     docker:
@@ -103,10 +108,10 @@ jobs:
           name: Run bandit security scan
           command: |
             cd kova-ai
-            bandit -r app/ -ll || echo "Security scan completed with warnings"
+            bandit -r app/ -ll
 
       - run:
           name: Check dependencies for vulnerabilities
           command: |
             cd kova-ai
-            safety check || echo "Dependency check completed with warnings"
+            safety check
