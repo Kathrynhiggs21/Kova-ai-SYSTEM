@@ -122,8 +122,8 @@ async def mcp_message(message: dict[str, Any]) -> dict[str, Any] | None:
         result = await _call_tool(name, arguments)
     except KeyError:
         return _error(request_id, -32602, f"Unknown tool: {name}")
-    except ValueError as error:
-        return _error(request_id, -32602, str(error))
+    except ValueError:
+        return _error(request_id, -32602, "Tool arguments are not supported")
     except Exception:
         return _error(request_id, -32603, "Tool execution failed")
 
