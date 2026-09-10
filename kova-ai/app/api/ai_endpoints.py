@@ -269,7 +269,7 @@ async def get_latest_activity(username: str, github_token: str) -> Dict[str, Any
 async def send_to_claude(data: Dict[str, Any], prompt: str, anthropic_key: str) -> str:
     """Send data to Claude API"""
     headers = {
-        "Authorization": f"Bearer {anthropic_key}",
+        "x-api-key": anthropic_key,
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01",
     }
