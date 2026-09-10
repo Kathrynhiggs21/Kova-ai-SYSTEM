@@ -1,6 +1,7 @@
 """Authenticated Model Context Protocol (MCP) HTTP endpoint for KOVA."""
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -51,7 +52,7 @@ def _export_status() -> dict[str, Any]:
             "compiled": exists,
             "size_kb": round(path.stat().st_size / 1024, 2) if exists else 0.0,
             "last_modified": (
-                __import__("datetime").datetime.fromtimestamp(path.stat().st_mtime).isoformat()
+                datetime.fromtimestamp(path.stat().st_mtime).isoformat()
                 if exists
                 else None
             ),
