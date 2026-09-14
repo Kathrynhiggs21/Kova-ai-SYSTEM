@@ -260,7 +260,7 @@ class RepositoryPathTests(unittest.TestCase):
         )
 
 
-class GithubCredentialTests(unittest.TestCase):
+class GitHubCredentialTests(unittest.TestCase):
     def test_missing_github_token_is_rejected(self):
         with patch.dict(os.environ, {"GITHUB_TOKEN": ""}):
             with self.assertRaises(HTTPException) as raised:

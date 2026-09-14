@@ -73,10 +73,10 @@ async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
 async def analyze_repository(command: ClaudeCommand) -> ClaudeResponse:
     """Analyze repository structure and content"""
     repository = await require_allowed_repository(command.repository)
-    github_token = require_github_token()
     file_path = (
         validate_repository_path(command.file_path) if command.file_path else None
     )
+    github_token = require_github_token()
 
     repo_data = await fetch_repository_data(repository, github_token)
 
