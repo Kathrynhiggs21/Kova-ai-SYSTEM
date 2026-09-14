@@ -47,12 +47,12 @@ async def ai_command(command: ClaudeCommand):
 async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
     """Sync repository data with Claude"""
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    github_token = os.getenv("GITHUB_TOKEN")
 
     if not anthropic_key:
         raise HTTPException(status_code=400, detail="Anthropic API key not configured")
 
     repository = await require_allowed_repository(command.repository)
+    github_token = require_github_token()
 
     # Fetch repository data
     repo_data = await fetch_repository_data(repository, github_token)
@@ -70,8 +70,8 @@ async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
 
 async def analyze_repository(command: ClaudeCommand) -> ClaudeResponse:
     """Analyze repository structure and content"""
-    github_token = os.getenv("GITHUB_TOKEN")
     repository = await require_allowed_repository(command.repository)
+    github_token = require_github_token()
     file_path = (
         validate_repository_path(command.file_path) if command.file_path else None
     )
@@ -121,6 +121,14 @@ async def require_allowed_repository(repository: Optional[str]) -> str:
             detail="Repository is not enabled in KOVA configuration",
         )
     return resolved_repository
+
+
+def require_github_token() -> str:
+    """Return the configured GitHub token, failing closed if absent."""
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
+        raise HTTPException(status_code=400, detail="GitHub token not configured")
+    return github_token
 
 
 def validate_repository_path(file_path: str) -> str:
