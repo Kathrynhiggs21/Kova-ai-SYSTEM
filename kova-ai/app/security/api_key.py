@@ -7,7 +7,6 @@ from typing import Optional
 from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 
-
 owner_api_key_header = APIKeyHeader(name="X-Kova-API-Key", auto_error=False)
 
 
