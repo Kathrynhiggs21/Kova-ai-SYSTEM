@@ -13,7 +13,7 @@ import httpx
 from fastapi import HTTPException
 
 from app.api import export_endpoints
-from app.api.ai_endpoints import validate_repository_path
+from app.api.ai_endpoints import require_github_token, validate_repository_path
 from app.main import app, parse_allowed_origins
 
 
@@ -162,6 +162,42 @@ class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 403)
 
+    async def test_invalid_repository_is_rejected_before_missing_github_token(self):
+        with patch.dict(
+            os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY, "GITHUB_TOKEN": ""}, clear=False
+        ):
+            response = await self.request(
+                "POST",
+                "/ai/command",
+                owner_key=OWNER_KEY,
+                json={
+                    "command": "read",
+                    "action": "analyze",
+                    "repository": "someone/private-repository",
+                    "file_path": "README.md",
+                },
+            )
+
+        self.assertEqual(response.status_code, 403)
+
+    async def test_invalid_path_is_rejected_before_missing_github_token(self):
+        with patch.dict(
+            os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY, "GITHUB_TOKEN": ""}, clear=False
+        ):
+            response = await self.request(
+                "POST",
+                "/ai/command",
+                owner_key=OWNER_KEY,
+                json={
+                    "command": "read",
+                    "action": "analyze",
+                    "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+                    "file_path": "../secret",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+
     async def test_ai_errors_do_not_leak_internal_details(self):
         with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
             with patch(
@@ -250,6 +286,12 @@ class RepositoryPathTests(unittest.TestCase):
                 with self.assertRaises(HTTPException) as raised:
                     validate_repository_path(file_path)
                 self.assertEqual(raised.exception.status_code, 400)
+
+
+class GitHubTokenValidationTests(unittest.TestCase):
+    def test_github_token_is_stripped_before_use(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "  token-value  "}):
+            self.assertEqual(require_github_token(), "token-value")
 
 
 class CorsConfigurationTests(unittest.TestCase):
