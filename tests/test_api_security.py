@@ -13,7 +13,7 @@ import httpx
 from fastapi import HTTPException
 
 from app.api import export_endpoints
-from app.api.ai_endpoints import validate_repository_path
+from app.api.ai_endpoints import require_github_token, validate_repository_path
 from app.main import app, parse_allowed_origins
 
 
@@ -258,6 +258,23 @@ class RepositoryPathTests(unittest.TestCase):
             validate_repository_path("docs/KOVA OS.md"),
             "docs/KOVA%20OS.md",
         )
+
+
+class GithubCredentialTests(unittest.TestCase):
+    def test_missing_github_token_is_rejected(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": ""}):
+            with self.assertRaises(HTTPException) as raised:
+                require_github_token()
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertEqual(
+            raised.exception.detail, "GitHub API token not configured"
+        )
+
+    def test_whitespace_github_token_is_rejected(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "   "}):
+            with self.assertRaises(HTTPException):
+                require_github_token()
 
     def test_unsafe_paths_are_rejected(self):
         unsafe_paths = [
