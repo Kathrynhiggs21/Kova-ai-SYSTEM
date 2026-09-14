@@ -130,7 +130,7 @@ def require_github_token() -> str:
     github_token = os.getenv("GITHUB_TOKEN")
     if not github_token or not github_token.strip():
         raise HTTPException(status_code=400, detail="GitHub API token not configured")
-    return github_token
+    return github_token.strip()
 
 
 def validate_repository_path(file_path: str) -> str:
