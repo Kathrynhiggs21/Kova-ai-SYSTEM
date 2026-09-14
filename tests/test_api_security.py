@@ -13,7 +13,13 @@ import httpx
 from fastapi import HTTPException
 
 from app.api import export_endpoints
-from app.api.ai_endpoints import validate_repository_path
+from app.api.ai_endpoints import (
+    analyze_repository,
+    process_github_data,
+    require_github_token,
+    sync_with_claude,
+    validate_repository_path,
+)
 from app.main import app, parse_allowed_origins
 
 
@@ -277,6 +283,75 @@ class RepositoryPathTests(unittest.TestCase):
                 with self.assertRaises(HTTPException) as raised:
                     validate_repository_path(file_path)
                 self.assertEqual(raised.exception.status_code, 400)
+
+
+class GitHubCredentialTests(unittest.IsolatedAsyncioTestCase):
+    def test_require_github_token_strips_surrounding_whitespace(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "  test-token  "}):
+            self.assertEqual(require_github_token(), "test-token")
+
+    async def test_sync_denies_disallowed_repository_before_missing_token(self):
+        with patch.dict(
+            os.environ,
+            {"ANTHROPIC_API_KEY": "test-anthropic-key", "GITHUB_TOKEN": ""},
+            clear=False,
+        ):
+            with patch(
+                "app.api.ai_endpoints.load_kova_repos_from_config",
+                new=AsyncMock(return_value=["Kathrynhiggs21/Kova-ai-SYSTEM"]),
+            ):
+                with self.assertRaises(HTTPException) as raised:
+                    await sync_with_claude(
+                        type(
+                            "Command",
+                            (),
+                            {
+                                "command": "sync",
+                                "repository": "someone/private-repository",
+                                "file_path": None,
+                            },
+                        )()
+                    )
+
+        self.assertEqual(raised.exception.status_code, 403)
+
+    async def test_analyze_validates_path_before_missing_token(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": ""}, clear=False):
+            with patch(
+                "app.api.ai_endpoints.load_kova_repos_from_config",
+                new=AsyncMock(return_value=["Kathrynhiggs21/Kova-ai-SYSTEM"]),
+            ):
+                with self.assertRaises(HTTPException) as raised:
+                    await analyze_repository(
+                        type(
+                            "Command",
+                            (),
+                            {
+                                "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+                                "file_path": "../secret",
+                            },
+                        )()
+                    )
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertEqual(raised.exception.detail, "Invalid repository file path")
+
+    async def test_process_denies_disallowed_repository_before_missing_token(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": ""}, clear=False):
+            with patch(
+                "app.api.ai_endpoints.load_kova_repos_from_config",
+                new=AsyncMock(return_value=["Kathrynhiggs21/Kova-ai-SYSTEM"]),
+            ):
+                with self.assertRaises(HTTPException) as raised:
+                    await process_github_data(
+                        type(
+                            "Command",
+                            (),
+                            {"repository": "someone/private-repository"},
+                        )()
+                    )
+
+        self.assertEqual(raised.exception.status_code, 403)
 
 
 class CorsConfigurationTests(unittest.TestCase):
