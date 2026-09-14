@@ -259,23 +259,6 @@ class RepositoryPathTests(unittest.TestCase):
             "docs/KOVA%20OS.md",
         )
 
-
-class GitHubCredentialTests(unittest.TestCase):
-    def test_missing_github_token_is_rejected(self):
-        with patch.dict(os.environ, {"GITHUB_TOKEN": ""}):
-            with self.assertRaises(HTTPException) as raised:
-                require_github_token()
-
-        self.assertEqual(raised.exception.status_code, 400)
-        self.assertEqual(
-            raised.exception.detail, "GitHub API token not configured"
-        )
-
-    def test_whitespace_github_token_is_rejected(self):
-        with patch.dict(os.environ, {"GITHUB_TOKEN": "   "}):
-            with self.assertRaises(HTTPException):
-                require_github_token()
-
     def test_unsafe_paths_are_rejected(self):
         unsafe_paths = [
             "../secret",
@@ -294,6 +277,27 @@ class GitHubCredentialTests(unittest.TestCase):
                 with self.assertRaises(HTTPException) as raised:
                     validate_repository_path(file_path)
                 self.assertEqual(raised.exception.status_code, 400)
+
+
+class GitHubCredentialTests(unittest.TestCase):
+    def test_missing_github_token_is_rejected(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": ""}):
+            with self.assertRaises(HTTPException) as raised:
+                require_github_token()
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertEqual(
+            raised.exception.detail, "GitHub API token not configured"
+        )
+
+    def test_whitespace_github_token_is_rejected(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "   "}):
+            with self.assertRaises(HTTPException):
+                require_github_token()
+
+    def test_token_is_trimmed_before_return(self):
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "  abc123  "}):
+            self.assertEqual(require_github_token(), "abc123")
 
 
 class CorsConfigurationTests(unittest.TestCase):

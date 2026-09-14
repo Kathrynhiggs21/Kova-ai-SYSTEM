@@ -9,7 +9,9 @@ CANONICAL_REPOSITORIES = (
     "Kathrynhiggs21/kova-ai-dash",
 )
 
-_GITHUB_OWNER_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+_GITHUB_OWNER_PATTERN = re.compile(
+    r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"
+)
 _GITHUB_REPOSITORY_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 
 

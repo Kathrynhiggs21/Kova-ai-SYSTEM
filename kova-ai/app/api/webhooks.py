@@ -299,10 +299,11 @@ async def github_webhook(
 @router.get("/status", dependencies=[Depends(require_owner_api_key)])
 async def webhook_status():
     """Get webhook configuration status"""
+    github_token = os.getenv("GITHUB_TOKEN")
     return {
         "webhook_secret_configured": bool(get_github_webhook_secret()),
         "claude_api_configured": bool(os.getenv("ANTHROPIC_API_KEY")),
-        "github_token_configured": bool(os.getenv("GITHUB_TOKEN")),
+        "github_token_configured": bool(github_token and github_token.strip()),
         "endpoint": "/webhooks/github",
         "supported_events": [
             "push",
