@@ -197,9 +197,9 @@ class MultiRepoSyncService:
                     "features": ["orchestration", "fastapi", "ci", "deployment"],
                 },
                 {
-                    "name": "kova-ai-dash",
+                    "name": "kovaos-site",
                     "full_name": CANONICAL_REPOSITORIES[1],
-                    "description": "Current KOVA OS command-center frontend",
+                    "description": "Canonical authenticated KOVA OS web application",
                     "type": "frontend",
                     "enabled": True,
                     "sync_priority": 1,
