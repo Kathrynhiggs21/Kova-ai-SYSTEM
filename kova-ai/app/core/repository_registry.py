@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 CANONICAL_GITHUB_OWNER = "Kathrynhiggs21"
 CANONICAL_REPOSITORIES = (
     "Kathrynhiggs21/Kova-ai-SYSTEM",
-    "Kathrynhiggs21/kova-ai-dash",
+    "Kathrynhiggs21/kovaos-site",
 )
 
 _GITHUB_OWNER_PATTERN = re.compile(
