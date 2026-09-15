@@ -219,28 +219,32 @@ def source_identity(file_info: dict[str, Any]) -> str:
     return str(identity)
 
 
-def version_key(file_info: dict[str, Any]) -> str:
-    """Key an exact source version; hashes alone are duplicate evidence, not identity."""
-    if file_info.get("version_key"):
-        return str(file_info["version_key"])
-    local_hash = None
+def populate_version_metadata(file_info: dict[str, Any]) -> None:
+    """Populate revision/content metadata before deriving canonical identity."""
     local_path = file_info.get("path")
-    if local_path:
+    if local_path and not file_info.get("sha256"):
         candidate = Path(str(local_path))
         if candidate.is_file():
             digest = hashlib.sha256()
             with candidate.open("rb") as source:
                 for chunk in iter(lambda: source.read(1024 * 1024), b""):
                     digest.update(chunk)
-            local_hash = digest.hexdigest()
-    revision = next(
-        (
-            str(file_info[key])
-            for key in ("revision_id", "headRevisionId", "blob_sha", "sha256", "md5Checksum", "content_hash", "version", "modified", "modifiedTime")
-            if file_info.get(key)
-        ),
-        local_hash or "unversioned",
-    )
+            file_info["sha256"] = digest.hexdigest()
+    if not file_info.get("content_hash"):
+        file_info["content_hash"] = file_info.get("sha256") or file_info.get("md5Checksum")
+    if not file_info.get("revision_id"):
+        for key in ("headRevisionId", "blob_sha", "sha256", "md5Checksum", "content_hash", "version", "modified", "modifiedTime"):
+            if file_info.get(key):
+                file_info["revision_id"] = str(file_info[key])
+                break
+
+
+def version_key(file_info: dict[str, Any]) -> str:
+    """Key an exact source version; hashes alone are duplicate evidence, not identity."""
+    if file_info.get("version_key"):
+        return str(file_info["version_key"])
+    populate_version_metadata(file_info)
+    revision = str(file_info.get("revision_id") or "unversioned")
     raw = f"{file_info.get('source', 'unknown')}|{source_identity(file_info)}|{revision}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -283,6 +287,8 @@ def verification_for(file_info: dict[str, Any]) -> dict[str, Any]:
 
 def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     items = [dict(item) for item in inventory]
+    for item in items:
+        populate_version_metadata(item)
     exact_groups: dict[str, list[int]] = {}
     likely_groups: dict[str, list[int]] = {}
     titles: list[str] = []

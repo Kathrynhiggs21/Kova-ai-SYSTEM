@@ -80,10 +80,14 @@ class FileOrganizerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             item = Path(temp_dir) / "KOVA Notes.txt"
             item.write_text("first", encoding="utf-8")
-            first = MODULE.version_key({"source": "local", "path": str(item)})
+            first_input = {"source": "local", "path": str(item)}
+            first = MODULE.version_key(first_input)
             item.write_text("second", encoding="utf-8")
-            second = MODULE.version_key({"source": "local", "path": str(item)})
+            second_input = {"source": "local", "path": str(item)}
+            second = MODULE.version_key(second_input)
             self.assertNotEqual(first, second)
+            self.assertEqual(first_input["revision_id"], first_input["sha256"])
+            self.assertEqual(second_input["revision_id"], second_input["sha256"])
 
     def test_local_source_identity_is_preserved_in_registry(self):
         with tempfile.TemporaryDirectory() as temp_dir:
