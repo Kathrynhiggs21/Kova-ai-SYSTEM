@@ -1,8 +1,10 @@
-# 🚀 Kova AI System - Complete Setup Guide
+# KOVA OS — Orchestration Hub
 
-## AI-Powered Development Automation Platform
+## Architecture, control plane, and repository coordination
 
-Kova AI is a comprehensive, production-ready system that automatically detects and fixes code errors, processes natural language commands, and manages your entire development workflow through AI.
+This is the canonical coordination repository for KOVA OS. It contains the FastAPI control plane, MCP endpoint, architecture records, repository registry, deployment references, and validation tooling. It is not a promise that every historical integration or generated artifact is production-ready.
+
+Start with [the canonical repository map](KOVA_REPO_MAP.md). It distinguishes enabled runtime repositories from catalogued migration sources, experiments, and excluded generic starters.
 
 For the full KOVA OS vision, runtime options, integration strategy, and phased roadmap, see the [KOVA OS Final Guide](docs/command-center/KOVA_OS_FINAL_GUIDE.md).
 
@@ -38,20 +40,21 @@ chmod +x setup_kova_system.sh
 
 ## 🔗 Multi-Repository Management
 
-The canonical KOVA OS build currently spans two repositories. This service reads
-their GitHub metadata for status reporting; it does not copy code or perform a
-true cross-repository synchronization.
+The registry records the complete known KOVA portfolio, but only entries with
+`enabled: true` participate in runtime status and synchronization operations.
+This service reads GitHub metadata; it does not copy code or perform magical
+cross-repository synchronization.
 
 ### Managed Repositories
 
-This system tracks these active KOVA OS repositories:
+The currently enabled runtime repositories are:
 
 - **Kova-ai-SYSTEM** - Canonical orchestration hub and FastAPI backend (this repo)
 - **kova-ai-dash** - Current command-center frontend
 
-Repositories from older plans are not active build components unless they are
-explicitly restored to `kova_repos_config.json`. In particular, `kova-ai` is
-currently a separate Zoo card-generator project and is not part of KOVA OS.
+Other KOVA-named repositories are catalogued with `enabled: false` until their
+code, ownership boundary, tests, secrets, and deployment path are audited. See
+`KOVA_REPO_MAP.md` for their precise roles.
 
 `kova_repos_config.json` is the runtime source of truth. `MULTI_REPO_GUIDE.md`,
 `SETUP_GUIDE.md`, older repository lists, and legacy deployment scripts are
