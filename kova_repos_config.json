@@ -117,7 +117,16 @@
       "full_name": "Kathrynhiggs21/scribbles-by-marcy",
       "type": "world",
       "enabled": false,
-      "relationship": "independent-domain-repository"
+      "relationship": "independent-domain-repository",
+      "lifecycle": "review"
+    },
+    {
+      "name": "Scribblesbymarcy",
+      "full_name": "Kathrynhiggs21/Scribblesbymarcy",
+      "type": "world",
+      "enabled": false,
+      "relationship": "duplicate-name-migration-candidate",
+      "lifecycle": "unreviewed"
     },
     {
       "name": "Scribbles-Zoo-Project",
@@ -125,6 +134,7 @@
       "type": "world",
       "enabled": false,
       "relationship": "independent-domain-repository",
+      "lifecycle": "review",
       "exclusions": [
         "legacy-renderer"
       ]
@@ -166,5 +176,8 @@
     "unified_changelog": false
   },
   "architecture_mode": "modular_two_repository_system",
-  "architecture_policy_file": "config/core_modules.v1.json"
+  "repository_creation_policy": {
+    "description": "See config/core_modules.v1.json for the canonical split policy",
+    "split_policy_file": "config/core_modules.v1.json"
+  }
 }

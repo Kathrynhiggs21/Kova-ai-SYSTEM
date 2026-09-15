@@ -24,6 +24,8 @@ def valid_config():
                 "features": ["orchestration"],
             }
         ],
+        "worlds": [],
+        "excluded_repositories": [],
         "sync_settings": {
             "auto_sync_enabled": False,
             "sync_interval_minutes": 30,
@@ -42,7 +44,11 @@ def valid_config():
             "cross_repo_prs": False,
             "unified_changelog": False,
         },
-        "architecture_policy_file": "config/core_modules.v1.json",
+        "architecture_mode": "modular_two_repository_system",
+        "repository_creation_policy": {
+            "description": "Canonical split policy",
+            "split_policy_file": "config/core_modules.v1.json",
+        },
     }
 
 
@@ -50,10 +56,6 @@ def valid_architecture_policy():
     return {
         "schema_version": 1,
         "architecture": "modular_two_repository_system",
-        "active_repositories": {
-            "core": "Kathrynhiggs21/Kova-ai-SYSTEM",
-            "application": "Kathrynhiggs21/kovaos-site",
-        },
         "modules": [
             {
                 "id": "orchestration",
@@ -66,9 +68,27 @@ def valid_architecture_policy():
         "split_policy": {
             "default": "keep_as_module",
             "requires_owner_approval": True,
-            "required_controls": ["migration_plan"],
-            "qualifying_boundaries": ["independent_deployment"],
-            "non_qualifying_reasons": ["future_idea_only"],
+            "required_controls": [
+                "migration_plan",
+                "ci",
+                "deployment_ownership",
+                "versioned_interfaces",
+                "rollback",
+                "registry_update",
+            ],
+            "qualifying_boundaries": [
+                "independent_deployment",
+                "distinct_security_or_secrets_boundary",
+                "independent_scaling_profile",
+                "independent_release_cycle",
+                "external_team_or_product_ownership",
+            ],
+            "non_qualifying_reasons": [
+                "category_name_only",
+                "future_idea_only",
+                "temporary_experiment",
+                "visual_neatness",
+            ],
         },
     }
 
@@ -78,15 +98,25 @@ class ConfigValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = Path(temp_dir) / "kova_repos_config.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
-            if (
-                isinstance(config, dict)
-                and config.get("architecture_policy_file") == "config/core_modules.v1.json"
-            ):
+            policy_pointer = (
+                config.get("repository_creation_policy", {})
+                if isinstance(config, dict)
+                else {}
+            )
+            if policy_pointer.get("split_policy_file") == "config/core_modules.v1.json":
                 default_policy_path = Path(temp_dir) / "config/core_modules.v1.json"
                 default_policy_path.parent.mkdir(parents=True, exist_ok=True)
+                policy = valid_architecture_policy()
                 default_policy_path.write_text(
-                    json.dumps(valid_architecture_policy()), encoding="utf-8"
+                    json.dumps(policy), encoding="utf-8"
                 )
+                for module in policy["modules"]:
+                    if module["repository"] != "Kathrynhiggs21/Kova-ai-SYSTEM":
+                        continue
+                    for current_path in module.get("current_paths", []):
+                        local_path = Path(temp_dir) / current_path
+                        local_path.parent.mkdir(parents=True, exist_ok=True)
+                        local_path.touch()
             for relative_path, content in (extra_files or {}).items():
                 file_path = Path(temp_dir) / relative_path
                 file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -231,19 +261,21 @@ class ConfigValidatorTests(unittest.TestCase):
             "discovery_settings.repo_name_pattern cannot be empty", results["errors"]
         )
 
-    def test_missing_architecture_policy_file_is_rejected(self):
+    def test_missing_split_policy_file_is_rejected(self):
         config = valid_config()
-        config["architecture_policy_file"] = "config/missing.json"
+        config["repository_creation_policy"]["split_policy_file"] = (
+            "config/missing.json"
+        )
 
         passed, results, _ = self.validate(config)
 
         self.assertFalse(passed)
         self.assertIn(
-            "architecture_policy_file not found: config/missing.json",
+            "split_policy_file not found: config/missing.json",
             results["errors"],
         )
 
-    def test_malformed_architecture_policy_file_is_rejected(self):
+    def test_malformed_split_policy_file_is_rejected(self):
         config = valid_config()
 
         passed, results, _ = self.validate(
@@ -254,54 +286,49 @@ class ConfigValidatorTests(unittest.TestCase):
         self.assertFalse(passed)
         self.assertTrue(
             any(
-                "architecture_policy_file contains invalid JSON" in error
+                "split_policy_file contains invalid JSON" in error
                 for error in results["errors"]
             )
         )
 
-    def test_architecture_policy_file_cannot_escape_repository_root(self):
+    def test_split_policy_file_cannot_escape_repository_root(self):
         config = valid_config()
-        config["architecture_policy_file"] = "../outside.json"
+        config["repository_creation_policy"]["split_policy_file"] = "../outside.json"
 
         passed, results, _ = self.validate(config)
 
         self.assertFalse(passed)
         self.assertIn(
-            "architecture_policy_file must stay within the repository root",
+            "split_policy_file must stay within the repository root",
             results["errors"],
         )
 
-    def test_architecture_policy_file_requires_split_policy_controls(self):
-        config = valid_config()
-        invalid_policy = valid_architecture_policy()
-        del invalid_policy["split_policy"]["required_controls"]
+    def test_split_policy_file_requires_all_controls(self):
+        policy = valid_architecture_policy()
+        policy["split_policy"]["required_controls"].remove("rollback")
 
         passed, results, _ = self.validate(
-            config,
-            extra_files={
-                "config/core_modules.v1.json": json.dumps(invalid_policy),
-            },
+            valid_config(),
+            extra_files={"config/core_modules.v1.json": json.dumps(policy)},
         )
 
         self.assertFalse(passed)
-        self.assertIn(
-            "architecture_policy_file split_policy missing required field: "
-            "required_controls",
-            results["errors"],
+        self.assertTrue(
+            any("required_controls missing required values: rollback" in e for e in results["errors"])
         )
 
-    def test_architecture_policy_file_symlink_target_outside_repo_is_rejected(self):
+    def test_split_policy_symlink_outside_repo_is_rejected(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
+            config = valid_config()
             config_path = temp_path / "kova_repos_config.json"
-            config_path.write_text(json.dumps(valid_config()), encoding="utf-8")
+            config_path.write_text(json.dumps(config), encoding="utf-8")
 
             outside_policy_path = temp_path.parent / f"{temp_path.name}-outside.json"
             try:
                 outside_policy_path.write_text(
                     json.dumps(valid_architecture_policy()), encoding="utf-8"
                 )
-
                 policy_path = temp_path / "config" / "core_modules.v1.json"
                 policy_path.parent.mkdir(parents=True, exist_ok=True)
                 policy_path.symlink_to(outside_policy_path)
@@ -313,11 +340,71 @@ class ConfigValidatorTests(unittest.TestCase):
 
                 self.assertFalse(passed)
                 self.assertIn(
-                    "architecture_policy_file must stay within the repository root",
+                    "split_policy_file must stay within the repository root",
                     results["errors"],
                 )
             finally:
                 outside_policy_path.unlink(missing_ok=True)
+
+    def test_duplicate_active_repository_list_is_rejected(self):
+        policy = valid_architecture_policy()
+        policy["active_repositories"] = {"core": "duplicate"}
+
+        passed, results, _ = self.validate(
+            valid_config(),
+            extra_files={"config/core_modules.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any("must not duplicate the active repository set" in e for e in results["errors"])
+        )
+
+    def test_policy_must_require_owner_approval(self):
+        policy = valid_architecture_policy()
+        policy["split_policy"]["requires_owner_approval"] = False
+
+        passed, results, _ = self.validate(
+            valid_config(),
+            extra_files={"config/core_modules.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "split_policy_file must require owner approval", results["errors"]
+        )
+
+    def test_policy_rejects_missing_core_path(self):
+        policy = valid_architecture_policy()
+        policy["modules"][0]["current_paths"] = ["missing/module.py"]
+
+        passed, results, _ = self.validate(
+            valid_config(),
+            extra_files={"config/core_modules.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(any("path not found" in e for e in results["errors"]))
+
+    def test_world_cannot_be_enabled_in_core_registry(self):
+        config = valid_config()
+        config["worlds"] = [
+            {
+                "name": "Scribbles-Zoo-Project",
+                "full_name": "Kathrynhiggs21/Scribbles-Zoo-Project",
+                "type": "world",
+                "enabled": True,
+                "relationship": "independent-domain-repository",
+                "lifecycle": "review",
+            }
+        ]
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any("must remain disabled in the Core registry" in e for e in results["errors"])
+        )
 
 
 if __name__ == "__main__":

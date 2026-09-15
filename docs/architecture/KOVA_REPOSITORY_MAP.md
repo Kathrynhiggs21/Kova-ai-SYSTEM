@@ -4,6 +4,15 @@ Status: Canonical remediation map v2 · 2026-09-15
 
 This document and `kova_repos_config.json` supersede older repository maps. The runtime active set is exactly the registry entries whose `enabled` value is `true`.
 
+## Superseded documents
+
+This document supersedes:
+
+- `docs/architecture/KOVA_REMEDIATION_ROADMAP.md` for repository and frontend ownership; that roadmap is historical and no longer treats `kova-ai-dash` as the canonical Command Center.
+- Root `KOVA_REPO_MAP.md`; it is now a pointer retained for compatible links only.
+
+Contributors should use this map, `kova_repos_config.json`, and `config/core_modules.v1.json` as the authoritative repository, active-set, and module-split sources respectively.
+
 ## Active repositories
 
 | Repository | Responsibility | Status |
@@ -14,6 +23,16 @@ This document and `kova_repos_config.json` supersede older repository maps. The 
 `kova-ai-dash` is a disabled feature donor. `kova-ai`, `kova-ai-mem0`, `Kova-os-docengine`, `Kova-AI-Scribbles` and `kova-ai-site` remain disabled migration, experimental or legacy sources until the registry explicitly promotes one.
 
 Scribbles and Zoo/educational-card repositories are independent Worlds/products. They may integrate with KOVA but do not become Core repositories.
+
+## World repositories
+
+| Repository | Relationship to KOVA | Lifecycle |
+|---|---|---|
+| `Kathrynhiggs21/scribbles-by-marcy` | Independent Scribbles product; possible KOVA consumer | REVIEW |
+| `Kathrynhiggs21/Scribblesbymarcy` | Same-name migration candidate; audit unique content before archive or consolidation | UNREVIEWED |
+| `Kathrynhiggs21/Scribbles-Zoo-Project` | Independent Zoo/educational-card World; legacy renderer excluded | REVIEW |
+
+World repositories are catalogued here for coordination only. They stay outside the Core runtime and do not become active merely because KOVA may connect to them.
 
 ## Modular Core
 

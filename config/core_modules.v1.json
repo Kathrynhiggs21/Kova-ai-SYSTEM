@@ -1,10 +1,6 @@
 {
   "schema_version": 1,
   "architecture": "modular_two_repository_system",
-  "active_repositories": {
-    "core": "Kathrynhiggs21/Kova-ai-SYSTEM",
-    "application": "Kathrynhiggs21/kovaos-site"
-  },
   "modules": [
     {
       "id": "orchestration",
@@ -21,11 +17,8 @@
     {
       "id": "assistant",
       "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
-      "current_paths": [
-        "kova-ai/app/api/ai_endpoints.py",
-        "kova-ai/app/services/claude_connector.py"
-      ],
-      "responsibility": "AI commands and current Anthropic handling; future providers must use this module boundary",
+      "current_paths": ["kova-ai/app/api/ai_endpoints.py"],
+      "responsibility": "AI commands and assistant-facing contracts; provider adapters remain in the connectors module",
       "separate_repository": false
     },
     {
@@ -38,34 +31,45 @@
     {
       "id": "connectors",
       "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
-      "current_paths": ["kova-ai/app/integrations", "kova-ai/app/api/webhooks.py"],
-      "responsibility": "replaceable adapters, OAuth boundaries, and webhook intake",
+      "current_paths": [
+        "kova-ai/app/integrations",
+        "kova-ai/app/services/claude_connector.py",
+        "kova-ai/app/services/claude_bridge_service.py",
+        "kova-ai/app/api/webhooks.py"
+      ],
+      "responsibility": "replaceable provider adapters, OAuth boundaries, and webhook intake",
       "separate_repository": false
     },
     {
       "id": "automation",
       "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
       "current_paths": [
-        "kova-ai/app/tasks",
         "scripts/file_organizer.py",
         "scripts/setup_kova_organization.sh",
         "scripts/gdrive_import.py"
       ],
-      "excluded_paths": ["scripts/batch_renderer.py"],
-      "responsibility": "jobs, schedules, retries, and steward policies",
+      "excluded_paths": [
+        "scripts/batch_renderer.py",
+        ".github/workflows/v7_1_renderer.yml"
+      ],
+      "responsibility": "implemented lifecycle jobs and steward policies; runtime scheduling and retries remain future work",
       "separate_repository": false
     },
     {
       "id": "memory_data",
       "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
       "current_paths": ["kova-ai/app/database"],
-      "responsibility": "operational records, memory interfaces, and persistence contracts",
+      "responsibility": "operational records and persistence contracts; memory interface design is future work",
       "separate_repository": false
     },
     {
       "id": "files_artifacts",
       "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
-      "current_paths": ["kova-ai/app/api/artifacts_endpoints.py", "kova-ai/app/api/export_endpoints.py"],
+      "current_paths": [
+        "kova-ai/app/api/artifacts_endpoints.py",
+        "kova-ai/app/api/export_endpoints.py",
+        "scripts/export_kova_os.py"
+      ],
       "responsibility": "file metadata, generated artifacts, and safe exports",
       "separate_repository": false
     },
@@ -79,7 +83,11 @@
     {
       "id": "observability",
       "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
-      "current_paths": ["kova-ai/app/api/health.py"],
+      "current_paths": [
+        "kova-ai/app/api/health.py",
+        "kova-ai/app/main.py",
+        "kova-ai/monitoring"
+      ],
       "responsibility": "health, telemetry, audit events, and operational evidence",
       "separate_repository": false
     },

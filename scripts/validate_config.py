@@ -98,9 +98,13 @@ class ConfigValidator:
         required_fields = {
             "github_owner": str,
             "repositories": list,
+            "worlds": list,
+            "excluded_repositories": list,
             "sync_settings": dict,
             "discovery_settings": dict,
-            "integration_settings": dict
+            "integration_settings": dict,
+            "architecture_mode": str,
+            "repository_creation_policy": dict,
         }
 
         all_valid = True
@@ -312,94 +316,176 @@ class ConfigValidator:
 
         return all_valid
 
-    def validate_architecture_policy_file(self) -> bool:
-        """Validate the optional architecture policy file reference."""
-        policy_reference = self.config.get("architecture_policy_file")
-        if policy_reference is None:
-            self.success("No architecture policy file configured")
-            return True
+    def validate_catalog_collections(self) -> bool:
+        """Validate disabled World and excluded repository catalog entries."""
+        all_valid = True
+        for index, world in enumerate(self.config.get("worlds", []), start=1):
+            if not isinstance(world, dict):
+                self.error(f"World entry #{index} must be an object")
+                all_valid = False
+                continue
+            required = {
+                "name": str,
+                "full_name": str,
+                "type": str,
+                "enabled": bool,
+                "relationship": str,
+                "lifecycle": str,
+            }
+            for field, expected_type in required.items():
+                if type(world.get(field)) is not expected_type:
+                    self.error(
+                        f"World entry #{index} field '{field}' should be "
+                        f"{expected_type.__name__}"
+                    )
+                    all_valid = False
+            parsed_repository = parse_github_repository(world.get("full_name"))
+            if parsed_repository is None:
+                self.error(f"World entry #{index} has an invalid repository coordinate")
+                all_valid = False
+            else:
+                if parsed_repository[0].casefold() != self.config.get(
+                    "github_owner", ""
+                ).casefold():
+                    self.error(f"World entry #{index} owner does not match github_owner")
+                    all_valid = False
+                if world.get("name") != parsed_repository[1]:
+                    self.error(f"World entry #{index} name does not match full_name")
+                    all_valid = False
+            if world.get("type") != "world":
+                self.error(f"World entry #{index} type must be world")
+                all_valid = False
+            if world.get("enabled") is not False:
+                self.error(
+                    f"World entry #{index} must remain disabled in the Core registry"
+                )
+                all_valid = False
+            if world.get("lifecycle") not in {
+                "active",
+                "final",
+                "review",
+                "archive",
+                "unreviewed",
+            }:
+                self.error(f"World entry #{index} has an invalid lifecycle")
+                all_valid = False
 
+        for index, repository in enumerate(
+            self.config.get("excluded_repositories", []), start=1
+        ):
+            if not isinstance(repository, dict):
+                self.error(f"Excluded repository entry #{index} must be an object")
+                all_valid = False
+                continue
+            if parse_github_repository(repository.get("full_name")) is None:
+                self.error(
+                    f"Excluded repository entry #{index} has an invalid coordinate"
+                )
+                all_valid = False
+            if not isinstance(repository.get("reason"), str) or not repository[
+                "reason"
+            ].strip():
+                self.error(f"Excluded repository entry #{index} needs a reason")
+                all_valid = False
+            if repository.get("enabled") is not False:
+                self.error(f"Excluded repository entry #{index} must be disabled")
+                all_valid = False
+
+        if all_valid:
+            self.success("World and excluded repository catalogs valid")
+        return all_valid
+
+    def validate_repository_creation_policy(self) -> bool:
+        """Validate the canonical repository-split policy and its local paths."""
+        policy_pointer = self.config.get("repository_creation_policy")
+        if not isinstance(policy_pointer, dict):
+            self.error("repository_creation_policy must be an object")
+            return False
+
+        description = policy_pointer.get("description")
+        policy_reference = policy_pointer.get("split_policy_file")
+        if not isinstance(description, str) or not description.strip():
+            self.error("repository_creation_policy.description must be non-empty")
+            return False
         if not isinstance(policy_reference, str) or not policy_reference.strip():
             self.error(
-                "architecture_policy_file must be a non-empty repository-root-relative path"
+                "repository_creation_policy.split_policy_file must be a non-empty "
+                "repository-root-relative path"
             )
             return False
 
         relative_policy_path = Path(policy_reference)
         repository_root = self.get_repository_root()
         if relative_policy_path.is_absolute():
-            self.error("architecture_policy_file must be repository-root-relative")
+            self.error("split_policy_file must be repository-root-relative")
             return False
 
-        policy_path = repository_root / relative_policy_path
-        normalized_policy_path = policy_path.resolve(strict=False)
-        if not normalized_policy_path.is_relative_to(repository_root):
-            self.error("architecture_policy_file must stay within the repository root")
+        policy_path = (repository_root / relative_policy_path).resolve()
+        if not policy_path.is_relative_to(repository_root):
+            self.error("split_policy_file must stay within the repository root")
             return False
         if not policy_path.is_file():
-            self.error(f"architecture_policy_file not found: {policy_reference}")
+            self.error(f"split_policy_file not found: {policy_reference}")
             return False
 
         resolved_policy_path = policy_path.resolve(strict=False)
         if not resolved_policy_path.is_relative_to(repository_root):
-            self.error("architecture_policy_file must stay within the repository root")
+            self.error("split_policy_file must stay within the repository root")
             return False
 
         try:
             with open(resolved_policy_path, "r", encoding="utf-8") as file_handle:
                 policy = json.load(file_handle)
         except json.JSONDecodeError as e:
-            self.error(f"architecture_policy_file contains invalid JSON: {e}")
+            self.error(f"split_policy_file contains invalid JSON: {e}")
             return False
         except OSError as e:
-            self.error(f"Failed to read architecture_policy_file: {e}")
+            self.error(f"Failed to read split_policy_file: {e}")
             return False
 
         if not isinstance(policy, dict):
-            self.error("architecture_policy_file top-level JSON value must be an object")
+            self.error("split_policy_file top-level JSON value must be an object")
+            return False
+
+        if "active_repositories" in policy:
+            self.error(
+                "split_policy_file must not duplicate the active repository set; "
+                "use repositories[].enabled"
+            )
             return False
 
         all_valid = True
         required_policy_fields = {
             "schema_version": int,
             "architecture": str,
-            "active_repositories": dict,
             "modules": list,
             "split_policy": dict,
         }
         for field, expected_type in required_policy_fields.items():
             if field not in policy:
-                self.error(f"architecture_policy_file missing required field: {field}")
+                self.error(f"split_policy_file missing required field: {field}")
                 all_valid = False
             elif type(policy[field]) is not expected_type:
                 self.error(
-                    "architecture_policy_file field "
+                    "split_policy_file field "
                     f"'{field}' should be {expected_type.__name__}"
                 )
                 all_valid = False
 
-        active_repositories = policy.get("active_repositories")
-        if isinstance(active_repositories, dict):
-            required_active_repository_fields = {
-                "core": str,
-                "application": str,
-            }
-            for field, expected_type in required_active_repository_fields.items():
-                if field not in active_repositories:
-                    self.error(
-                        "architecture_policy_file active_repositories missing required "
-                        f"field: {field}"
-                    )
-                    all_valid = False
-                elif type(active_repositories[field]) is not expected_type:
-                    self.error(
-                        "architecture_policy_file active_repositories field "
-                        f"'{field}' should be {expected_type.__name__}"
-                    )
-                    all_valid = False
-
         modules = policy.get("modules", [])
         if isinstance(modules, list):
+            registry_repositories = {
+                repository.get("full_name", "").casefold(): repository
+                for repository in self.config.get("repositories", [])
+                if isinstance(repository, dict)
+                and isinstance(repository.get("full_name"), str)
+            }
+            core_repositories = {
+                full_name
+                for full_name, repository in registry_repositories.items()
+                if repository.get("type") == "core" and repository.get("enabled") is True
+            }
+            seen_module_ids = set()
             required_module_fields = {
                 "id": str,
                 "repository": str,
@@ -410,24 +496,47 @@ class ConfigValidator:
             for index, module in enumerate(modules, start=1):
                 if not isinstance(module, dict):
                     self.error(
-                        f"architecture_policy_file module #{index} must be an object"
+                        f"split_policy_file module #{index} must be an object"
                     )
                     all_valid = False
                     continue
                 for field, expected_type in required_module_fields.items():
                     if field not in module:
                         self.error(
-                            "architecture_policy_file module "
+                            "split_policy_file module "
                             f"#{index} missing required field: {field}"
                         )
                         all_valid = False
                     elif type(module[field]) is not expected_type:
                         self.error(
-                            "architecture_policy_file module "
+                            "split_policy_file module "
                             f"#{index} field '{field}' should be "
                             f"{expected_type.__name__}"
                         )
                         all_valid = False
+
+                module_id = module.get("id")
+                if isinstance(module_id, str):
+                    normalized_module_id = module_id.casefold()
+                    if normalized_module_id in seen_module_ids:
+                        self.error(f"split_policy_file duplicate module id: {module_id}")
+                        all_valid = False
+                    seen_module_ids.add(normalized_module_id)
+
+                module_repository = module.get("repository")
+                normalized_repository = (
+                    module_repository.casefold()
+                    if isinstance(module_repository, str)
+                    else ""
+                )
+                if normalized_repository not in registry_repositories:
+                    self.error(
+                        "split_policy_file module "
+                        f"#{index} references an unregistered repository: "
+                        f"{module_repository}"
+                    )
+                    all_valid = False
+
                 if "current_paths" in module and (
                     not isinstance(module["current_paths"], list)
                     or not all(
@@ -436,10 +545,33 @@ class ConfigValidator:
                     )
                 ):
                     self.error(
-                        "architecture_policy_file module "
+                        "split_policy_file module "
                         f"#{index} current_paths must contain non-empty strings"
                     )
                     all_valid = False
+
+                if normalized_repository in core_repositories:
+                    for field in ("current_paths", "excluded_paths"):
+                        for current_path in module.get(field, []):
+                            if not isinstance(current_path, str) or not current_path:
+                                continue
+                            relative_path = Path(current_path)
+                            resolved_path = (repository_root / relative_path).resolve()
+                            if relative_path.is_absolute() or not resolved_path.is_relative_to(
+                                repository_root
+                            ):
+                                self.error(
+                                    "split_policy_file module "
+                                    f"#{index} {field} contains an unsafe path: "
+                                    f"{current_path}"
+                                )
+                                all_valid = False
+                            elif not resolved_path.exists():
+                                self.error(
+                                    "split_policy_file module "
+                                    f"#{index} {field} path not found: {current_path}"
+                                )
+                                all_valid = False
                 excluded_paths = module.get("excluded_paths")
                 if excluded_paths is not None and (
                     not isinstance(excluded_paths, list)
@@ -448,7 +580,7 @@ class ConfigValidator:
                     )
                 ):
                     self.error(
-                        "architecture_policy_file module "
+                        "split_policy_file module "
                         f"#{index} excluded_paths must contain non-empty strings"
                     )
                     all_valid = False
@@ -465,13 +597,13 @@ class ConfigValidator:
             for field, expected_type in required_split_policy_fields.items():
                 if field not in split_policy:
                     self.error(
-                        "architecture_policy_file split_policy missing required field: "
+                        "split_policy_file split_policy missing required field: "
                         f"{field}"
                     )
                     all_valid = False
                 elif type(split_policy[field]) is not expected_type:
                     self.error(
-                        "architecture_policy_file split_policy field "
+                        "split_policy_file split_policy field "
                         f"'{field}' should be {expected_type.__name__}"
                     )
                     all_valid = False
@@ -485,22 +617,64 @@ class ConfigValidator:
                     isinstance(value, str) and value for value in values
                 ):
                     self.error(
-                        "architecture_policy_file split_policy "
+                        "split_policy_file split_policy "
                         f"{field} must contain non-empty strings"
                     )
                     all_valid = False
 
+            required_values = {
+                "required_controls": {
+                    "migration_plan",
+                    "ci",
+                    "deployment_ownership",
+                    "versioned_interfaces",
+                    "rollback",
+                    "registry_update",
+                },
+                "qualifying_boundaries": {
+                    "independent_deployment",
+                    "distinct_security_or_secrets_boundary",
+                    "independent_scaling_profile",
+                    "independent_release_cycle",
+                    "external_team_or_product_ownership",
+                },
+                "non_qualifying_reasons": {
+                    "category_name_only",
+                    "future_idea_only",
+                    "temporary_experiment",
+                    "visual_neatness",
+                },
+            }
+            if split_policy.get("default") != "keep_as_module":
+                self.error("split_policy_file default must be keep_as_module")
+                all_valid = False
+            if split_policy.get("requires_owner_approval") is not True:
+                self.error("split_policy_file must require owner approval")
+                all_valid = False
+            for field, required in required_values.items():
+                values = split_policy.get(field)
+                if isinstance(values, list):
+                    missing = sorted(required.difference(values))
+                    if missing:
+                        self.error(
+                            f"split_policy_file {field} missing required values: "
+                            + ", ".join(missing)
+                        )
+                        all_valid = False
+
         if all_valid:
-            self.success(f"architecture_policy_file valid: {policy_reference}")
+            self.success(f"repository split policy valid: {policy_reference}")
         return all_valid
 
     def check_duplicates(self) -> bool:
         """Check for duplicate repositories"""
-        repos = [
-            repo
-            for repo in self.config.get("repositories", [])
-            if isinstance(repo, dict)
-        ]
+        repos = []
+        for collection in ("repositories", "worlds", "excluded_repositories"):
+            repos.extend(
+                repo
+                for repo in self.config.get(collection, [])
+                if isinstance(repo, dict)
+            )
         names = [
             repo.get("name")
             for repo in repos
@@ -569,7 +743,8 @@ class ConfigValidator:
                 ("Sync Settings", self.validate_sync_settings),
                 ("Discovery Settings", self.validate_discovery_settings),
                 ("Integration Settings", self.validate_integration_settings),
-                ("Architecture Policy File", self.validate_architecture_policy_file),
+                ("Repository Catalogs", self.validate_catalog_collections),
+                ("Repository Creation Policy", self.validate_repository_creation_policy),
                 ("Duplicate Check", self.check_duplicates),
             ]
             for name, validator in validations:

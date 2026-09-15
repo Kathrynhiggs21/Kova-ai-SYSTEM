@@ -4,7 +4,7 @@
 
 This is the canonical coordination repository for KOVA OS. It contains the FastAPI control plane, MCP endpoint, architecture records, repository registry, deployment references, and validation tooling. It is not a promise that every historical integration or generated artifact is production-ready.
 
-Start with [the canonical repository map](KOVA_REPO_MAP.md). It distinguishes enabled runtime repositories from catalogued migration sources, experiments, and excluded generic starters.
+Start with [the canonical repository map](docs/architecture/KOVA_REPOSITORY_MAP.md). It distinguishes enabled runtime repositories from catalogued migration sources, experiments, and excluded generic starters.
 
 For the full KOVA OS vision, runtime options, integration strategy, and phased roadmap, see the [KOVA OS Final Guide](docs/command-center/KOVA_OS_FINAL_GUIDE.md).
 
@@ -54,7 +54,7 @@ The currently enabled runtime repositories are:
 
 Other KOVA-named repositories are catalogued with `enabled: false` until their
 code, ownership boundary, tests, secrets, and deployment path are audited. See
-`KOVA_REPO_MAP.md` for their precise roles.
+`docs/architecture/KOVA_REPOSITORY_MAP.md` for their precise roles.
 
 `kova_repos_config.json` is the runtime source of truth. `MULTI_REPO_GUIDE.md`,
 `SETUP_GUIDE.md`, older repository lists, and legacy deployment scripts are
