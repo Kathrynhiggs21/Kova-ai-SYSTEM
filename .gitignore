@@ -65,3 +65,7 @@ Thumbs.db
 *.temp
 tmp/
 temp/
+
+# KOVA generated/private state
+kova_file_inventory/
+.private/
