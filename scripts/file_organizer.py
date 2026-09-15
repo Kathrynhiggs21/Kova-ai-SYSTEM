@@ -91,7 +91,7 @@ def short_title(file_info: dict[str, Any], limit: int = 80) -> str:
     raw = re.sub(r"[_-]+", " ", raw)
     raw = canonicalize_kova(raw)
     raw = re.sub(r"\s*\(\d+\)\s*$", "", raw)
-    raw = re.sub(r"(?:[-_ ]+(?:copy|final|draft|v?\d+(?:\.\d+)*))+\s*$", "", raw, flags=re.I)
+    raw = re.sub(r"(?:[-_ ]+(?:copy|final|draft|v\d+(?:\.\d+)*))+\s*$", "", raw, flags=re.I)
     words = [word for word in raw.split() if word.lower() not in NOISE_WORDS]
     title = " ".join(words).strip() or "KOVA Item"
     return title if len(title) <= limit else title[: limit - 1].rstrip() + "…"
@@ -218,13 +218,23 @@ def version_key(file_info: dict[str, Any]) -> str:
     """Key an exact source version; hashes alone are duplicate evidence, not identity."""
     if file_info.get("version_key"):
         return str(file_info["version_key"])
+    local_hash = None
+    local_path = file_info.get("path")
+    if local_path:
+        candidate = Path(str(local_path))
+        if candidate.is_file():
+            digest = hashlib.sha256()
+            with candidate.open("rb") as source:
+                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            local_hash = digest.hexdigest()
     revision = next(
         (
             str(file_info[key])
-            for key in ("revision_id", "headRevisionId", "version", "modified", "modifiedTime", "blob_sha", "sha256", "md5Checksum")
+            for key in ("revision_id", "headRevisionId", "blob_sha", "sha256", "md5Checksum", "content_hash", "version", "modified", "modifiedTime")
             if file_info.get(key)
         ),
-        "unversioned",
+        local_hash or "unversioned",
     )
     raw = f"{file_info.get('source', 'unknown')}|{source_identity(file_info)}|{revision}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
