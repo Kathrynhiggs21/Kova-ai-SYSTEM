@@ -69,6 +69,7 @@
     "spend_money_or_commit_to_purchase",
     "send_external_messages",
     "merge_or_deploy_code",
+    "create_repository",
     "move_or_rename_ambiguous_items",
     "create_physical_folder_without_demonstrated_need"
   ],
