@@ -8,25 +8,44 @@
       "type": "core",
       "enabled": true,
       "sync_priority": 1,
-      "features": ["orchestration", "fastapi", "ci", "deployment"]
+      "features": [
+        "orchestration",
+        "fastapi",
+        "ci",
+        "deployment"
+      ]
     },
     {
       "name": "kova-ai-dash",
       "full_name": "Kathrynhiggs21/kova-ai-dash",
-      "description": "Current KOVA OS command-center frontend",
+      "description": "Feature donor for migration into kovaos-site; archive after verified migration",
       "type": "frontend",
-      "enabled": true,
-      "sync_priority": 1,
-      "features": ["dashboard", "integration-ui", "authentication", "persistence", "storage"]
+      "enabled": false,
+      "sync_priority": 2,
+      "features": [
+        "dashboard",
+        "integration-ui",
+        "authentication",
+        "persistence",
+        "storage"
+      ]
     },
     {
       "name": "kovaos-site",
       "full_name": "Kathrynhiggs21/kovaos-site",
-      "description": "Primary kovaos.com web implementation; pending build and deployment audit",
+      "description": "Canonical authenticated KOVA OS web application for kovaos.com",
       "type": "frontend",
-      "enabled": false,
-      "sync_priority": 2,
-      "features": ["website", "routing", "kovaos.com"]
+      "enabled": true,
+      "sync_priority": 1,
+      "features": [
+        "website",
+        "pwa",
+        "dashboard",
+        "assistant",
+        "authentication",
+        "routing",
+        "kovaos.com"
+      ]
     },
     {
       "name": "kova-ai",
@@ -35,7 +54,11 @@
       "type": "experimental",
       "enabled": false,
       "sync_priority": 3,
-      "features": ["assistant", "automation", "historical-assets"]
+      "features": [
+        "assistant",
+        "automation",
+        "historical-assets"
+      ]
     },
     {
       "name": "kova-ai-mem0",
@@ -44,7 +67,10 @@
       "type": "service",
       "enabled": false,
       "sync_priority": 4,
-      "features": ["memory", "provider-adapter"]
+      "features": [
+        "memory",
+        "provider-adapter"
+      ]
     },
     {
       "name": "Kova-os-docengine",
@@ -53,7 +79,11 @@
       "type": "service",
       "enabled": false,
       "sync_priority": 4,
-      "features": ["documents", "ingestion", "transformation"]
+      "features": [
+        "documents",
+        "ingestion",
+        "transformation"
+      ]
     },
     {
       "name": "Kova-AI-Scribbles",
@@ -62,7 +92,10 @@
       "type": "experimental",
       "enabled": false,
       "sync_priority": 5,
-      "features": ["scribbles", "integration"]
+      "features": [
+        "scribbles",
+        "integration"
+      ]
     },
     {
       "name": "kova-ai-site",
@@ -71,7 +104,11 @@
       "type": "frontend",
       "enabled": false,
       "sync_priority": 5,
-      "features": ["legacy-site", "documentation", "redirects"]
+      "features": [
+        "legacy-site",
+        "documentation",
+        "redirects"
+      ]
     }
   ],
   "worlds": [
@@ -88,7 +125,9 @@
       "type": "world",
       "enabled": false,
       "relationship": "independent-domain-repository",
-      "exclusions": ["legacy-renderer"]
+      "exclusions": [
+        "legacy-renderer"
+      ]
     }
   ],
   "excluded_repositories": [
