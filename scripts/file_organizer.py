@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Build KOVA's non-destructive file metadata registry.
+"""Build KOVA's non-destructive metadata registry.
 
-The legacy organizer created a large folder tree and moved or renamed files.
-KOVA now organizes with metadata first. This script reads an inventory and
-writes lifecycle, topic, duplicate, and sensitivity decisions without touching
-the governed files.
+The registry describes governed items; it never moves, renames, overwrites, or
+deletes them. Labels stay deliberately small: area, topic, lifecycle, and flags.
 """
 
 from __future__ import annotations
@@ -12,33 +10,44 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
 
-LIFECYCLE_COLORS = {
-    "ACTIVE": "#0969DA",
-    "FINAL": "#1F883D",
-    "REVIEW": "#BF8700",
-    "ARCHIVE": "#6E7781",
-}
+PROJECT_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_POLICY_PATH = Path(
+    os.environ.get("KOVA_AUTOMATION_POLICY_PATH", PROJECT_DIR / "config" / "automation_policy.v1.json")
+)
+DEFAULT_PRIVATE_DIR = Path(
+    os.environ.get(
+        "KOVA_PRIVATE_STATE_DIR",
+        Path.home() / ".local" / "share" / "kova" / "private",
+    )
+)
+DEFAULT_REGISTRY_PATH = DEFAULT_PRIVATE_DIR / "status_registry.json"
 
-FLAG_COLORS = {
-    "SENSITIVE": "#CF222E",
-    "DUPLICATE": "#8250DF",
-}
 
-CATEGORY_KEYWORDS = {
-    "KOVA Operating System": ("operating system", "architecture", "roadmap", "core"),
-    "KOVA AI Assistant": ("assistant", "agent", "model", "prompt", "openai", "claude", "gemini"),
-    "KOVA Automation": ("automation", "workflow", "zapier", "make.com", "n8n", "schedule", "trigger"),
-    "KOVA Connectors": ("connector", "mcp", "oauth", "integration", "webhook", "api"),
-    "KOVA Interface": ("dashboard", "command center", "site", "orb", "mobile", "android"),
-    "KOVA Memory": ("memory", "mem0", "knowledge", "registry", "index"),
-    "KOVA Worlds": ("scribbles", "reagan", "family", "travel", "health", "education", "zoo"),
-}
+def load_policy(path: Path = DEFAULT_POLICY_PATH) -> dict[str, Any]:
+    """Load and validate the single machine-readable labeling policy."""
+    policy = json.loads(path.read_text(encoding="utf-8"))
+    required = ("lifecycle", "flags", "areas", "topics", "content_origins", "record_roles")
+    missing = [key for key in required if key not in policy]
+    if missing:
+        raise ValueError(f"automation policy missing: {', '.join(missing)}")
+    return policy
+
+
+POLICY = load_policy()
+LIFECYCLE_COLORS = POLICY["lifecycle"]
+FLAG_COLORS = POLICY["flags"]
+AREAS = tuple(POLICY["areas"])
+TOPICS = POLICY["topics"]
+CONTENT_ORIGINS = tuple(POLICY["content_origins"])
+RECORD_ROLES = tuple(POLICY["record_roles"])
+
 
 SENSITIVE_MARKERS = (
     "credential",
@@ -49,29 +58,34 @@ SENSITIVE_MARKERS = (
     "refresh token",
     "config url",
     "secret",
+    "medical",
+    "tax",
 )
 
-NOISE_WORDS = {
-    "copy",
-    "document",
-    "file",
-    "new",
-    "old",
-    "untitled",
-    "unknown",
-}
+NOISE_WORDS = {"copy", "document", "file", "new", "old", "untitled", "unknown"}
+
+
+def normalized_words(value: str) -> str:
+    """Normalize separators while retaining word boundaries."""
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def contains_phrase(haystack: str, phrase: str) -> bool:
+    """Match whole tokens/phrases so `api` does not match `capital`."""
+    words = normalized_words(haystack)
+    target = normalized_words(phrase)
+    return bool(target and re.search(rf"(?:^| ){re.escape(target)}(?: |$)", words))
 
 
 def canonicalize_kova(value: str) -> str:
     """Normalize common KOVA spellings without changing the source file."""
     value = re.sub(r"\b(?:k9va|kiva|kova)[-_ ]?os\b", "KOVA Operating System", value, flags=re.I)
     value = re.sub(r"\b(?:k9va|kiva|kova)[-_ ]?ai\b", "KOVA AI", value, flags=re.I)
-    value = re.sub(r"\b(?:k9va|kiva|kova)\b", "KOVA", value, flags=re.I)
-    return value
+    return re.sub(r"\b(?:k9va|kiva|kova)\b", "KOVA", value, flags=re.I)
 
 
 def short_title(file_info: dict[str, Any], limit: int = 80) -> str:
-    """Return a readable topic/subtopic title; keep identifiers as metadata."""
+    """Return a readable display title while retaining the source name."""
     explicit = file_info.get("suggested_title") or file_info.get("title")
     raw = str(explicit or Path(str(file_info.get("name", "KOVA Item"))).stem)
     raw = re.sub(r"[_-]+", " ", raw)
@@ -80,33 +94,93 @@ def short_title(file_info: dict[str, Any], limit: int = 80) -> str:
     raw = re.sub(r"(?:[-_ ]+(?:copy|final|draft|v?\d+(?:\.\d+)*))+\s*$", "", raw, flags=re.I)
     words = [word for word in raw.split() if word.lower() not in NOISE_WORDS]
     title = " ".join(words).strip() or "KOVA Item"
-    if len(title) <= limit:
-        return title
-    return title[: limit - 1].rstrip() + "…"
+    return title if len(title) <= limit else title[: limit - 1].rstrip() + "…"
 
 
-def category_for(file_info: dict[str, Any]) -> str:
+def area_for(file_info: dict[str, Any]) -> str:
+    explicit = str(file_info.get("area") or "").title()
+    if explicit in AREAS:
+        return explicit
+    haystack = " ".join(str(file_info.get(key, "")) for key in ("name", "title", "description"))
+    if contains_phrase(haystack, "Reagan"):
+        return "Reagan"
+    if any(contains_phrase(haystack, word) for word in ("KOVA", "K9VA", "Kiva")):
+        return "KOVA"
+    return "Other"
+
+
+def topic_for(file_info: dict[str, Any]) -> str:
+    explicit = str(file_info.get("topic") or "")
+    if explicit in TOPICS:
+        return explicit
     haystack = " ".join(
         str(file_info.get(key, "")) for key in ("name", "title", "description", "path")
-    ).lower()
-    for category, keywords in CATEGORY_KEYWORDS.items():
-        if any(keyword in haystack for keyword in keywords):
-            return category
+    )
+    for topic, keywords in TOPICS.items():
+        if any(contains_phrase(haystack, keyword) for keyword in keywords):
+            return topic
     return "KOVA Reference"
 
 
-def is_sensitive(file_info: dict[str, Any]) -> bool:
+def file_type_for(file_info: dict[str, Any]) -> str:
+    explicit = file_info.get("file_type")
+    if explicit:
+        return str(explicit)
+    mime = str(file_info.get("mime_type") or file_info.get("mimeType") or "").lower()
+    name = str(file_info.get("name") or "").lower()
+    if "folder" in mime:
+        return "Folder"
+    if "spreadsheet" in mime or name.endswith((".xlsx", ".xls", ".csv")):
+        return "Spreadsheet"
+    if "presentation" in mime or name.endswith((".pptx", ".ppt")):
+        return "Presentation"
+    if mime.startswith("image/"):
+        return "Image"
+    if mime.startswith("video/"):
+        return "Video"
+    if mime.startswith("audio/"):
+        return "Audio"
+    if name.endswith((".zip", ".tar", ".gz", ".7z")):
+        return "Archive"
+    if name.endswith((".py", ".js", ".ts", ".tsx", ".jsx", ".sh", ".json", ".yml", ".yaml")):
+        return "Code"
+    if name.endswith((".doc", ".docx", ".pdf", ".txt", ".md")) or "document" in mime:
+        return "Document"
+    return "Other"
+
+
+def content_origin_for(file_info: dict[str, Any]) -> str:
+    origin = str(file_info.get("content_origin") or "Unknown")
+    normalized = {value.casefold(): value for value in CONTENT_ORIGINS}
+    return normalized.get(origin.casefold(), "Unknown")
+
+
+def record_role_for(file_info: dict[str, Any]) -> str:
+    """Classify a chat/reference as an input type, never infer approval from prose."""
+    role = str(file_info.get("record_role") or "Unknown")
+    normalized = {value.casefold(): value for value in RECORD_ROLES}
+    return normalized.get(role.casefold(), "Unknown")
+
+
+def sensitivity_for(file_info: dict[str, Any]) -> tuple[str, str]:
+    """Return SENSITIVE, CLEAR, or UNKNOWN plus the evidence basis."""
     if file_info.get("sensitive") is True:
-        return True
+        return "SENSITIVE", "Explicit source flag"
     haystack = " ".join(
         str(file_info.get(key, "")) for key in ("name", "title", "description", "text")
-    ).lower()
-    return any(marker in haystack for marker in SENSITIVE_MARKERS)
+    )
+    if any(contains_phrase(haystack, marker) for marker in SENSITIVE_MARKERS):
+        return "SENSITIVE", "Metadata/content marker"
+    if file_info.get("sensitivity_checked") is True or file_info.get("content_inspected") is True:
+        return "CLEAR", "Inspected with no sensitive marker"
+    return "UNKNOWN", "Content not inspected"
 
 
 def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
     """Classify lifecycle conservatively and explain the decision."""
     explicit = str(file_info.get("lifecycle") or file_info.get("status") or "").upper()
+    if explicit == "UNREVIEWED":
+        explicit = "REVIEW"
     if explicit in LIFECYCLE_COLORS:
         return explicit, "Explicit source status"
     if file_info.get("superseded_by"):
@@ -115,7 +189,6 @@ def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
         r"\b(final|approved|locked|canonical)\b", str(file_info.get("name", "")), re.I
     ):
         return "FINAL", "Verified final/canonical marker"
-
     modified = file_info.get("modified") or file_info.get("modifiedTime")
     if modified:
         try:
@@ -123,77 +196,183 @@ def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
             if when.tzinfo is None:
                 when = when.replace(tzinfo=timezone.utc)
             age_days = (datetime.now(timezone.utc) - when.astimezone(timezone.utc)).days
-            if age_days <= 90 and category_for(file_info) != "KOVA Reference":
-                return "ACTIVE", "Recent KOVA work"
+            if age_days <= 90 and topic_for(file_info) != "KOVA Reference":
+                return "ACTIVE", "Recent relevant work"
         except ValueError:
             pass
     return "REVIEW", "Needs current verification"
 
 
-def version_key(file_info: dict[str, Any]) -> str:
-    """Create a stable key for an exact version without exposing private data."""
-    for key in ("version_key", "sha256", "blob_sha", "md5Checksum"):
-        if file_info.get(key):
-            return str(file_info[key])
-    identity = "|".join(
-        str(file_info.get(key, ""))
-        for key in ("id", "file_id", "name", "size", "modified", "modifiedTime")
+def source_identity(file_info: dict[str, Any]) -> str:
+    return str(
+        file_info.get("source_identity")
+        or file_info.get("id")
+        or file_info.get("file_id")
+        or file_info.get("path")
+        or file_info.get("name")
+        or "unknown-source"
     )
-    return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
 
-def duplicate_key(file_info: dict[str, Any], title: str) -> str:
-    content_hash = file_info.get("sha256") or file_info.get("md5Checksum")
-    if content_hash:
-        return f"hash:{content_hash}"
+def version_key(file_info: dict[str, Any]) -> str:
+    """Key an exact source version; hashes alone are duplicate evidence, not identity."""
+    if file_info.get("version_key"):
+        return str(file_info["version_key"])
+    revision = next(
+        (
+            str(file_info[key])
+            for key in ("revision_id", "headRevisionId", "version", "modified", "modifiedTime", "blob_sha", "sha256", "md5Checksum")
+            if file_info.get(key)
+        ),
+        "unversioned",
+    )
+    raw = f"{file_info.get('source', 'unknown')}|{source_identity(file_info)}|{revision}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def exact_duplicate_key(file_info: dict[str, Any]) -> str | None:
+    content_hash = file_info.get("sha256") or file_info.get("md5Checksum") or file_info.get("content_hash")
+    return f"hash:{content_hash}" if content_hash else None
+
+
+def likely_duplicate_key(file_info: dict[str, Any], title: str) -> str:
     normalized = re.sub(r"\W+", "", title).lower()
     return f"title-size:{normalized}:{file_info.get('size', '')}"
 
 
-def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    seen: dict[str, int] = {}
+def canonical_rank(file_info: dict[str, Any]) -> tuple[int, int, int, str, str]:
+    """Deterministically prefer explicit/verified/current items, then a stable ID."""
+    lifecycle = str(file_info.get("lifecycle") or file_info.get("status") or "").upper()
+    if lifecycle == "UNREVIEWED":
+        lifecycle = "REVIEW"
+    explicit_rank = {"FINAL": 3, "ACTIVE": 2, "REVIEW": 1, "ARCHIVE": 0}.get(lifecycle, 0)
+    modified = str(file_info.get("modified") or file_info.get("modifiedTime") or "")
+    return (
+        1 if file_info.get("canonical") is True else 0,
+        1 if file_info.get("verified") is True else 0,
+        explicit_rank,
+        modified,
+        source_identity(file_info),
+    )
 
-    for file_info in inventory:
-        title = short_title(file_info)
+
+def verification_for(file_info: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "verified": file_info.get("verified") is True,
+        "source_status": file_info.get("lifecycle") or file_info.get("status"),
+        "evidence": file_info.get("verification_evidence") or file_info.get("evidence"),
+        "reference": file_info.get("verification_reference") or file_info.get("decision_reference"),
+        "checked_at": file_info.get("verified_at") or file_info.get("checked_at"),
+    }
+
+
+def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
+    items = [dict(item) for item in inventory]
+    exact_groups: dict[str, list[int]] = {}
+    likely_groups: dict[str, list[int]] = {}
+    titles: list[str] = []
+    for index, item in enumerate(items):
+        title = short_title(item)
+        titles.append(title)
+        exact = exact_duplicate_key(item)
+        if exact:
+            exact_groups.setdefault(exact, []).append(index)
+        likely_groups.setdefault(likely_duplicate_key(item, title), []).append(index)
+
+    canonical_indexes = {
+        key: max(indexes, key=lambda idx: canonical_rank(items[idx]))
+        for key, indexes in exact_groups.items()
+        if len(indexes) > 1
+    }
+    likely_canonical_indexes = {
+        key: max(indexes, key=lambda idx: canonical_rank(items[idx]))
+        for key, indexes in likely_groups.items()
+        if len(indexes) > 1
+    }
+    version_keys = [version_key(item) for item in items]
+    rows: list[dict[str, Any]] = []
+
+    for index, file_info in enumerate(items):
+        title = titles[index]
         lifecycle, reason = lifecycle_for(file_info)
-        flags = ["SENSITIVE"] if is_sensitive(file_info) else []
-        dup_key = duplicate_key(file_info, title)
-        canonical_row = seen.get(dup_key)
-        if canonical_row is None:
-            seen[dup_key] = len(rows)
-        else:
+        sensitivity, sensitivity_basis = sensitivity_for(file_info)
+        flags = ["SENSITIVE"] if sensitivity == "SENSITIVE" else []
+        exact = exact_duplicate_key(file_info)
+        exact_canonical = canonical_indexes.get(exact) if exact else None
+        if exact_canonical is not None and exact_canonical != index:
             flags.append("DUPLICATE")
+        likely = likely_duplicate_key(file_info, title)
+        likely_canonical = likely_canonical_indexes.get(likely)
+        possible_duplicate_of = None
+        if exact is None and likely_canonical is not None and likely_canonical != index:
+            possible_duplicate_of = version_keys[likely_canonical]
+            if lifecycle not in ("FINAL", "ARCHIVE"):
+                lifecycle, reason = "REVIEW", "Possible duplicate; content hash unavailable"
 
         rows.append(
             {
-                "version_key": version_key(file_info),
+                "version_key": version_keys[index],
                 "source_name": file_info.get("name"),
                 "display_title": title,
-                "topic": category_for(file_info),
+                "area": area_for(file_info),
+                "topic": topic_for(file_info),
+                "subtopic": file_info.get("subtopic") or file_info.get("suggested_subtopic"),
+                "file_type": file_type_for(file_info),
+                "content_origin": content_origin_for(file_info),
+                "record_role": record_role_for(file_info),
                 "lifecycle": lifecycle,
                 "lifecycle_color": LIFECYCLE_COLORS[lifecycle],
                 "flags": flags,
                 "flag_colors": [FLAG_COLORS[flag] for flag in flags],
-                "reason": reason,
+                "sensitivity": sensitivity,
+                "sensitivity_basis": sensitivity_basis,
+                "decision_reason": reason,
+                "verification": verification_for(file_info),
                 "source_id": file_info.get("id") or file_info.get("file_id"),
                 "source_link": file_info.get("web_link") or file_info.get("url"),
                 "source_chat_id": file_info.get("chat_id") or file_info.get("agent_id"),
-                "canonical_version_key": rows[canonical_row]["version_key"] if canonical_row is not None else None,
+                "canonical_version_key": (
+                    version_keys[exact_canonical]
+                    if exact_canonical is not None and exact_canonical != index
+                    else None
+                ),
+                "possible_duplicate_of": possible_duplicate_of,
                 "superseded_by": file_info.get("superseded_by"),
+                "observed_current": True,
             }
         )
     return rows
 
 
+def merge_history(current: list[dict[str, Any]], previous: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Retain exact-version history and prior decisions across scanner runs."""
+    merged = {row["version_key"]: {**row, "observed_current": False} for row in previous}
+    for row in current:
+        prior = merged.get(row["version_key"], {})
+        combined = {**prior, **row}
+        if prior.get("verification", {}).get("verified") and not row.get("verification", {}).get("verified"):
+            combined["verification"] = prior["verification"]
+            if prior.get("lifecycle") in ("ACTIVE", "FINAL", "ARCHIVE"):
+                combined["lifecycle"] = prior["lifecycle"]
+                combined["lifecycle_color"] = LIFECYCLE_COLORS[prior["lifecycle"]]
+                combined["decision_reason"] = prior.get("decision_reason", combined["decision_reason"])
+        merged[row["version_key"]] = combined
+    return sorted(merged.values(), key=lambda row: row["version_key"])
+
+
 def write_registry(rows: list[dict[str, Any]], output: Path) -> None:
+    previous: list[dict[str, Any]] = []
+    if output.exists():
+        payload = json.loads(output.read_text(encoding="utf-8"))
+        previous = payload.get("items", []) if isinstance(payload, dict) else []
+    items = merge_history(rows, previous)
     output.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "organization_mode": "metadata-first",
         "physical_changes": False,
-        "items": rows,
+        "items": items,
     }
     output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
@@ -202,21 +381,20 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build KOVA's non-destructive file status registry")
     parser.add_argument("base_path", nargs="?", help="Deprecated legacy argument; files are never moved")
     parser.add_argument("--inventory", required=True, type=Path, help="Inventory JSON produced by a source scanner")
-    parser.add_argument("--registry", type=Path, default=Path("kova_file_inventory/status_registry.json"))
+    parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY_PATH)
     parser.add_argument("--dry-run", action="store_true", help="Print the registry without writing it")
-    parser.add_argument("--execute", action="store_true", help="Deprecated; metadata output is always non-destructive")
+    parser.add_argument("--execute", action="store_true", help="Deprecated; output is always non-destructive")
     args = parser.parse_args()
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
     if not isinstance(inventory, list):
         parser.error("inventory must be a JSON array")
-
     rows = build_registry(inventory)
     if args.dry_run:
         print(json.dumps(rows, indent=2))
     else:
         write_registry(rows, args.registry)
-        print(f"Wrote {len(rows)} metadata records to {args.registry}")
+        print(f"Wrote {len(rows)} current metadata records to {args.registry}")
     if args.base_path or args.execute:
         print("Legacy move/folder arguments were ignored; governed files were not changed.")
     return 0
