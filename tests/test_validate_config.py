@@ -42,14 +42,50 @@ def valid_config():
             "cross_repo_prs": False,
             "unified_changelog": False,
         },
+        "architecture_policy_file": "config/core_modules.v1.json",
+    }
+
+
+def valid_architecture_policy():
+    return {
+        "schema_version": 1,
+        "architecture": "modular_two_repository_system",
+        "modules": [
+            {
+                "id": "orchestration",
+                "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+                "current_paths": ["kova-ai/app/main.py"],
+                "responsibility": "runtime composition",
+                "separate_repository": False,
+            }
+        ],
+        "split_policy": {
+            "default": "keep_as_module",
+            "requires_owner_approval": True,
+            "qualifying_boundaries": ["independent_deployment"],
+            "non_qualifying_reasons": ["future_idea_only"],
+        },
     }
 
 
 class ConfigValidatorTests(unittest.TestCase):
-    def validate(self, config):
+    def validate(self, config, extra_files=None):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = Path(temp_dir) / "kova_repos_config.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
+            if (
+                isinstance(config, dict)
+                and config.get("architecture_policy_file") == "config/core_modules.v1.json"
+            ):
+                default_policy_path = Path(temp_dir) / "config/core_modules.v1.json"
+                default_policy_path.parent.mkdir(parents=True, exist_ok=True)
+                default_policy_path.write_text(
+                    json.dumps(valid_architecture_policy()), encoding="utf-8"
+                )
+            for relative_path, content in (extra_files or {}).items():
+                file_path = Path(temp_dir) / relative_path
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text(content, encoding="utf-8")
             validator = ConfigValidator(config_path)
             output = io.StringIO()
             with contextlib.redirect_stdout(output):
@@ -188,6 +224,34 @@ class ConfigValidatorTests(unittest.TestCase):
         self.assertFalse(passed)
         self.assertIn(
             "discovery_settings.repo_name_pattern cannot be empty", results["errors"]
+        )
+
+    def test_missing_architecture_policy_file_is_rejected(self):
+        config = valid_config()
+        config["architecture_policy_file"] = "config/missing.json"
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "architecture_policy_file not found: config/missing.json",
+            results["errors"],
+        )
+
+    def test_malformed_architecture_policy_file_is_rejected(self):
+        config = valid_config()
+
+        passed, results, _ = self.validate(
+            config,
+            extra_files={"config/core_modules.v1.json": '{"schema_version": 1'},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any(
+                "architecture_policy_file contains invalid JSON" in error
+                for error in results["errors"]
+            )
         )
 
 
