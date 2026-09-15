@@ -59,7 +59,7 @@ File Type and Content Origin remain separate descriptive fields. Legacy `UNREVIE
 
 KOVA-related chats are included as inputs and linked to their source. Each chat is classified as a decision, requirement, idea, evidence, historical reference, mixed record, or unknown. Only confirmed decisions update the canonical specification; inaccessible share links remain `REVIEW` until their content is available.
 
-Routine automation does not move, rename, overwrite, or delete originals. Matching names are review candidates, not proof of duplication. A private registry stores exact-version identity, canonical relationships, verification evidence, and history.
+Routine automation does not move, rename, overwrite, or delete originals. Matching names are non-destructive review candidates, not proof of duplication. A private registry stores exact-version identity, canonical relationships, lifecycle and duplicate flags, verification evidence, and history.
 
 AI agent folders and general AI-platform content stay in AI World. KOVA links to them when useful instead of copying them into KOVA.
 
