@@ -1,7 +1,46 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "policy": "automate-by-default",
   "organization_mode": "metadata-first",
+  "label_model": [
+    "area",
+    "topic",
+    "lifecycle",
+    "flags"
+  ],
+  "areas": [
+    "KOVA",
+    "Personal",
+    "Reagan",
+    "Other"
+  ],
+  "topics": {
+    "KOVA Operating System": ["operating system", "architecture", "roadmap", "kova core"],
+    "KOVA AI Assistant": ["assistant", "agent", "model", "prompt", "openai", "claude", "gemini"],
+    "KOVA Automation": ["automation", "workflow", "zapier", "make.com", "n8n", "schedule", "trigger"],
+    "KOVA Connectors": ["connector", "mcp", "oauth", "integration", "webhook", "api"],
+    "KOVA Interface": ["dashboard", "command center", "site", "orb", "mobile", "android"],
+    "KOVA Memory": ["memory", "mem0", "knowledge", "registry", "index"],
+    "KOVA Worlds": ["scribbles", "reagan", "family", "travel", "health", "education", "zoo"],
+    "KOVA Reference": []
+  },
+  "content_origins": [
+    "Uploaded",
+    "Ai Generated",
+    "Imported Export",
+    "Native",
+    "Derived",
+    "Unknown"
+  ],
+  "record_roles": [
+    "Decision",
+    "Requirement",
+    "Idea",
+    "Evidence",
+    "Historical",
+    "Mixed",
+    "Unknown"
+  ],
   "connector_preference": [
     "native_connector",
     "mcp",
@@ -12,11 +51,14 @@
   "automatic_actions": [
     "inventory_new_or_changed_items",
     "normalize_kova_display_names",
-    "generate_short_topic_subtopic_titles",
-    "classify_active_final_review_archive",
-    "flag_sensitive_content",
-    "detect_exact_and_likely_duplicates",
+    "generate_short_display_titles",
+    "classify_area_topic_and_lifecycle",
+    "record_file_type_and_content_origin_separately",
+    "classify_chat_record_role_without_promoting_ideas_to_decisions",
+    "flag_sensitive_content_or_unknown_inspection_state",
+    "verify_exact_duplicates_and_queue_likely_duplicates",
     "link_source_chat_agent_and_version",
+    "preserve_registry_history",
     "update_canonical_registry",
     "produce_exception_only_digest"
   ],
@@ -36,10 +78,15 @@
     "REVIEW": "#BF8700",
     "ARCHIVE": "#6E7781"
   },
+  "legacy_lifecycle_aliases": {
+    "UNREVIEWED": "REVIEW"
+  },
   "flags": {
     "SENSITIVE": "#CF222E",
     "DUPLICATE": "#8250DF"
   },
+  "world_boundary_rule": "AI agent folders and AI-platform content remain in AI World. KOVA stores only purposeful links or relationship metadata and does not duplicate that material into KOVA storage.",
+  "repository_boundary_rule": "Keep Kova-ai-SYSTEM and kovaos-site as the active pair. Add modules inside Core before adding repositories; split a repository only for a distinct deployment, security, scaling, or release boundary.",
   "folder_rule": "Do not create a physical folder unless new material cannot be represented clearly in an existing location or the folder is operationally required.",
   "notification_rule": "Stay quiet when automation succeeds; group true exceptions into one concise report."
 }
