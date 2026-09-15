@@ -30,7 +30,7 @@ Use exactly one lifecycle tag for each exact asset version:
 
 Optional independent flags:
 - `SENSITIVE` — red `#CF222E`: private access, credentials, personal data, or restricted material.
-- `DUPLICATE` — violet `#8250DF`: exact, near, or semantic duplicate relationship.
+- `DUPLICATE` — violet `#8250DF`: verified exact-content or exact-revision duplicate relationship. Near or semantic matches stay `REVIEW` candidates.
 
 Registry rules:
 - Key status to an exact version: Drive file ID plus revision/version, repository path plus blob SHA, Library file identity plus version, or SHA-256 for stored/local binaries.
@@ -40,6 +40,18 @@ Registry rules:
 - Color is always shown with status text for accessibility.
 - Platform-native labels are convenience mirrors; the private KOVA File Status Registry is authoritative.
 - Private file locators and sensitive inventory records must not be committed to a public repository.
+
+## Chat record rule
+
+KOVA-related chats are valid inputs, but not every chat is authoritative. Classify each as `Decision`, `Requirement`, `Idea`, `Evidence`, `Historical`, `Mixed`, or `Unknown`. Only a confirmed decision updates the canonical specification. If a shared-chat transcript cannot be retrieved, keep its link as `REVIEW` and do not infer its contents.
+
+## AI World boundary
+
+AI agent folders and general AI-platform content stay in AI World. KOVA stores purposeful relationships or source links only; it does not create mirrored copies or move AI World content into KOVA.
+
+## Core module rule
+
+Assistant/model routing, MCP, connectors, automation, memory/data, files/artifacts, security/identity, jobs and observability remain internal modules of `Kova-ai-SYSTEM`. Create a separate repository only for an independent deployment, security/secrets boundary, materially different scaling profile, independent release cycle, or separately owned product/team—and only with owner approval.
 
 ## Connector policy
 KOVA owns the orchestration. Every external service is an interchangeable connector/adaptor.
