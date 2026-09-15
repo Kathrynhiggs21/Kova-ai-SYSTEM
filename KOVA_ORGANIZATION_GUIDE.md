@@ -27,7 +27,7 @@ File Type and Content Origin are descriptive fields. Legacy `UNREVIEWED` maps to
    scripts/setup_kova_organization.sh
    ```
 
-   By default, the registry is written to `${XDG_DATA_HOME:-$HOME/.local/share}/kova/private/status_registry.json`, outside the repository. Set `KOVA_PRIVATE_STATE_DIR` to another approved private location when needed.
+   By default, the registry is written to `${XDG_DATA_HOME:-$HOME/.local/share}/kova/private/status_registry.json`, outside the repository. A smaller `status_registry.exceptions.json` groups only items that need attention. Both files use user-only permissions. Set `KOVA_PRIVATE_STATE_DIR` to another approved private location when needed.
 
 3. Review only exceptions:
 
