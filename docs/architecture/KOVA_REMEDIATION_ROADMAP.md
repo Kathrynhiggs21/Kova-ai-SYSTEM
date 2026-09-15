@@ -1,11 +1,13 @@
 # KOVA OS Remediation Roadmap
 
+Status: Historical implementation roadmap. Repository and frontend ownership are superseded by `KOVA_REPOSITORY_MAP.md`, `ADR-002-CANONICAL-WEB-APP.md`, and `kova_repos_config.json`.
+
 ## Goal
 Create a safe, understandable, operational KOVA OS from the existing repositories without deleting working code or enabling unsafe automation prematurely.
 
 ## Phase 0 — Freeze ambiguity
 - Keep `Kova-ai-SYSTEM` as current Core authority.
-- Keep `kova-ai-dash` as current Command Center authority.
+- Keep `kovaos-site` as the current authenticated application authority; use `kova-ai-dash` only as a disabled feature donor.
 - Keep cross-repo auto-sync, auto-discovery, webhook mutations and cross-repo PR automation disabled.
 - Treat `kova-ai` as a mixed legacy repository until content is inventoried; legacy renderer code is explicitly outside KOVA OS.
 - Treat starter/template repos as non-production unless explicitly promoted.
@@ -30,12 +32,11 @@ Exit criteria: a developer or agent can identify the correct repo for any KOVA c
 Exit criteria: no renderer-specific workflow is required anywhere in KOVA OS.
 
 ## Phase 3 — Frontend separation
-- Treat `kova-ai-dash` as authenticated Command Center.
-- Treat `kovaos-site` as public site/docs/entry portal.
-- Remove duplicate full-stack responsibilities from the public site.
-- Define API boundary from Command Center to KOVA Core.
+- Treat `kovaos-site` as the authenticated KOVA application and canonical home of the Command Center.
+- Migrate only verified, unique features from disabled donor `kova-ai-dash` through reviewed pull requests.
+- Define the versioned API boundary from `kovaos-site` to KOVA Core.
 
-Exit criteria: public web and private command center deploy independently and have distinct responsibilities.
+Exit criteria: `kovaos-site` owns one authenticated application surface and uses a versioned, tested boundary to KOVA Core.
 
 ## Phase 4 — Platform services
 Establish clear service boundaries for:

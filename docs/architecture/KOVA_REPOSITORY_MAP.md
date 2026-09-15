@@ -1,72 +1,70 @@
 # KOVA OS Repository Map
 
-Status: Proposed canonical map for remediation v1
+Status: Canonical remediation map v2 · 2026-09-15
 
-This document supersedes the older `KOVA_REPO_MAP.md` as the canonical repository map for KOVA OS remediation work. The older file remains historical context only and should not be treated as the active source of truth.
+This document and `kova_repos_config.json` supersede older repository maps. The runtime active set is exactly the registry entries whose `enabled` value is `true`.
 
-## Active production roles
+## Superseded documents
 
-| Repository | Role | Status | Action |
-|---|---|---|---|
-| `Kathrynhiggs21/Kova-ai-SYSTEM` | KOVA Core / backend / orchestration | ACTIVE | Keep as current core; target future rename to `kova-core` |
-| `Kathrynhiggs21/kova-ai-dash` | Authenticated Command Center | ACTIVE | Keep; target future rename to `kova-command-center` |
-| `Kathrynhiggs21/kovaos-site` | Public KOVA website / docs portal | TRANSITION | Remove duplicated app/backend responsibilities over time |
-| `Kathrynhiggs21/scribbles-by-marcy` | Scribbles by Marcy business/product repository | WORLD | Keep independent from KOVA Core |
-| `Kathrynhiggs21/Scribbles-Zoo-Project` | Zoo / educational-card world | WORLD | Define product/data/design scope independently of the legacy renderer |
+This document supersedes:
 
-## Repositories requiring remediation
+- `docs/architecture/KOVA_REMEDIATION_ROADMAP.md` for repository and frontend ownership; that roadmap is historical and no longer treats `kova-ai-dash` as the canonical Command Center.
+- Root `KOVA_REPO_MAP.md`; it is now a pointer retained for compatible links only.
 
-| Repository | Finding | Required disposition |
+Contributors should use this map, `kova_repos_config.json`, and `config/core_modules.v1.json` as the authoritative repository, active-set, and module-split sources respectively.
+
+## Active repositories
+
+| Repository | Responsibility | Status |
 |---|---|---|
-| `Kathrynhiggs21/kova-ai` | Identity conflict: README describes KOVA assistant while current workflows/code include legacy Zoo/card rendering | Inventory generic KOVA code separately; explicitly exclude renderer scripts/workflows from KOVA OS; archive or repurpose only after review |
-| `Kathrynhiggs21/kova-ai-mem0` | Memory-service concept exists but repo is minimally defined | Rebuild as provider-independent KOVA Memory service, with Mem0 as an adapter |
-| `Kathrynhiggs21/Kova-os-docengine` | Stub repository | Rebuild as docs engine only if needed; otherwise archive |
-| `Kathrynhiggs21/Kova-AI-Scribbles` | Duplicate/underspecified Scribbles identity | Archive or repurpose as a narrowly scoped Scribbles connector |
+| `Kathrynhiggs21/Kova-ai-SYSTEM` | Core, backend, orchestration, MCP, shared contracts and internal service modules | ACTIVE |
+| `Kathrynhiggs21/kovaos-site` | Canonical web application for `kovaos.com` | ACTIVE |
 
-## Explicit exclusion: legacy renderer
+`kova-ai-dash` is a disabled feature donor. `kova-ai`, `kova-ai-mem0`, `Kova-os-docengine`, `Kova-AI-Scribbles` and `kova-ai-site` remain disabled migration, experimental or legacy sources until the registry explicitly promotes one.
 
-The existing Zoo/card renderer implementation and renderer-specific workflows are not part of KOVA OS. They must not be migrated into KOVA Core, Command Center, connectors, memory, automation, AI gateway, infrastructure, or the canonical Zoo/educational-card World. Any future presentation/export implementation should be selected independently.
+Scribbles and Zoo/educational-card repositories are independent Worlds/products. They may integrate with KOVA but do not become Core repositories.
 
-## Historical / experimental repositories
+## World repositories
 
-Starter, generated, `sb1-*`, `TheCenter*`, generic Next/Vite templates, and similar repositories are not production KOVA components unless explicitly promoted through this map and the runtime registry.
+| Repository | Relationship to KOVA | Lifecycle |
+|---|---|---|
+| `Kathrynhiggs21/scribbles-by-marcy` | Independent Scribbles product; possible KOVA consumer | REVIEW |
+| `Kathrynhiggs21/Scribblesbymarcy` | Same-name migration candidate; audit unique content before archive or consolidation | UNREVIEWED |
+| `Kathrynhiggs21/Scribbles-Zoo-Project` | Independent Zoo/educational-card World; legacy renderer excluded | REVIEW |
 
-## Missing logical services
+World repositories are catalogued here for coordination only. They stay outside the Core runtime and do not become active merely because KOVA may connect to them.
 
-The following boundaries are required for a complete KOVA OS. They may begin as folders/packages and later become repositories when independent deployment or ownership justifies it.
+## Modular Core
 
-1. `kova-mobile-android` — native Android assistant, notifications, voice, share/capture and permission-aware device integrations.
-2. `kova-connectors` — connector contracts and provider adapters for Google, GitHub, Canva, Notion, Dropbox and future services.
-3. `kova-memory` — ingestion, normalization, provenance, retrieval, retention, privacy labels and knowledge graph interfaces.
-4. `kova-automation` — jobs, schedules, triggers, workflow definitions and delivery rules.
-5. `kova-ai-gateway` — OpenAI/Gemini/Anthropic provider abstraction, routing, fallback, cost and reliability telemetry.
-6. `kova-infra` — deployment manifests, infrastructure as code, environment definitions, observability bootstrap and disaster recovery.
-7. `kova-docs` — canonical architecture decisions, runbooks and system specifications.
-8. `kova-design-system` — reusable KOVA UI tokens, visual states, icons and shared components.
-9. `kova-sdk` — typed clients/contracts used across apps and Worlds.
-10. `kova-labs` — explicitly non-production experiments.
+The following are internal modules in `Kova-ai-SYSTEM`, not repositories by default:
 
-## KOVA Worlds
+- orchestration and shared contracts;
+- AI Assistant and current/future provider adapters;
+- MCP transport and tools;
+- connectors and webhooks;
+- automation and jobs;
+- memory and operational data;
+- files, artifacts and exports;
+- security and identity; and
+- health and observability.
 
-KOVA Core must remain domain-neutral. Specialized products consume Core capabilities through APIs/connectors.
+The exact current ownership paths and the single machine-readable split policy are in `config/core_modules.v1.json`.
 
-- Personal / Family
-- Scribbles by Marcy
-- Zoo / Educational Cards
-- Education
-- Creative
-- Travel
-- Future verticals
+## Repository split rule
 
-A World owns its own domain data and product code. It may use KOVA memory, automation, research, AI gateway, connectors and notifications without placing domain-specific rendering/business logic in Core.
+A module can become a repository only when an independent deployment, security/secrets boundary, materially different scaling profile, independent release cycle, or separate product/team ownership exists. The split also requires owner approval, CI, deployment ownership, versioned interfaces, rollback and a registry update.
+
+A category name, future idea, temporary experiment or visual neatness is not enough.
+
+## Explicit exclusion
+
+The existing Zoo/card renderer and `scripts/batch_renderer.py` are not KOVA Core automation. Its former GitHub Actions workflow is disabled under `archive/legacy-renderer/` and cannot be dispatched from this repository. Do not migrate renderer code into Assistant, MCP, connectors, memory, automation, infrastructure or the canonical site.
 
 ## Rules
 
-1. One canonical owner for each production responsibility.
-2. Future automation must validate that the runtime registry and this map remain aligned before enabling sync or discovery.
-3. Disabled or experimental integrations must not be shown as live/healthy.
-4. No secrets in repositories; examples only.
-5. Cross-repository synchronization remains disabled until ownership and tests are stable.
-6. All production changes flow through PRs with CI checks.
-7. Every new service must define owner, API contract, data classification, health endpoint, deployment target and rollback procedure.
-8. The legacy renderer is explicitly outside KOVA OS.
+1. Keep one canonical owner per production responsibility.
+2. Prefer modules before repositories.
+3. Do not show disabled or unverified integrations as live.
+4. Keep secrets out of repositories.
+5. Keep cross-repository writes disabled until ownership, authentication and tests are proven.
+6. Use pull requests and exact-head checks for production work.

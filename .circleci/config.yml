@@ -52,6 +52,14 @@ jobs:
           name: Validate JSON configs
           command: |
             python -c "import json; json.load(open('kova_repos_config.json'))"
+            python -c "import json; json.load(open('config/core_modules.v1.json'))"
+
+      - run:
+          name: Validate repository architecture
+          command: |
+            . kova-ai/venv/bin/activate
+            python scripts/validate_config.py
+            python -m unittest -q tests.test_validate_config
 
       - run:
           name: Test imports

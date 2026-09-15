@@ -119,10 +119,10 @@ This document summarizes the comprehensive enhancements made to the Kova AI Syst
 - Caching for faster builds
 - Test results storage
 
-### 6. Cross-Repository Deployment
+### 6. Cross-Repository Maintenance
 
 **Files Created:**
-- `scripts/deploy_all_repos.sh` - Multi-repo deployment script
+- `scripts/deploy_all_repos.sh` - Registry-driven repository maintenance helper
 - `deployment_templates/common/env.template` - Shared environment template
 - `deployment_templates/README.md` - Deployment documentation
 
@@ -280,21 +280,23 @@ curl -X POST http://localhost:8000/artifacts/diagram/generate \
   }'
 ```
 
-### 6. Deploy to All Repos
+### 6. Inspect or Update Canonical Repositories
 
 ```bash
-# Interactive mode
+# Show enabled repository checkout status (safe default)
 ./scripts/deploy_all_repos.sh
 
-# Deploy to all repos non-interactively
-./scripts/deploy_all_repos.sh deploy
+# Include disabled and historical registry entries in the status view
+./scripts/deploy_all_repos.sh status --all
 
-# Show status of all repos
-./scripts/deploy_all_repos.sh status
-
-# Sync configurations
-./scripts/deploy_all_repos.sh sync
+# Clone or fast-forward enabled repositories only
+./scripts/deploy_all_repos.sh update
 ```
+
+The legacy `deploy` and `sync` commands were retired: they did not perform a
+real application deployment and duplicated canonical configuration into stale
+repositories. Repository creation requires both explicit owner approval and a
+reviewed `creation_approved: true` registry entry.
 
 ## 📊 Database Schema
 
