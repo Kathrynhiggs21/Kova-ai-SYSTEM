@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 import re
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -98,9 +99,10 @@ def short_title(file_info: dict[str, Any], limit: int = 80) -> str:
 
 
 def area_for(file_info: dict[str, Any]) -> str:
-    explicit = str(file_info.get("area") or "").title()
-    if explicit in AREAS:
-        return explicit
+    explicit = str(file_info.get("area") or "")
+    normalized_areas = {value.casefold(): value for value in AREAS}
+    if explicit.casefold() in normalized_areas:
+        return normalized_areas[explicit.casefold()]
     haystack = " ".join(str(file_info.get(key, "")) for key in ("name", "title", "description"))
     if contains_phrase(haystack, "Reagan"):
         return "Reagan"
@@ -338,7 +340,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
                 "sensitivity_basis": sensitivity_basis,
                 "decision_reason": reason,
                 "verification": verification_for(file_info),
-                "source_id": file_info.get("id") or file_info.get("file_id"),
+                "source_id": source_identity(file_info),
                 "source_link": file_info.get("web_link") or file_info.get("url"),
                 "source_chat_id": file_info.get("chat_id") or file_info.get("agent_id"),
                 "canonical_version_key": (
@@ -384,7 +386,25 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> None:
         "physical_changes": False,
         "items": items,
     }
-    output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    serialized = json.dumps(payload, indent=2) + "\n"
+    temp_name: str | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w",
+            encoding="utf-8",
+            dir=output.parent,
+            prefix=f".{output.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temp_file:
+            temp_name = temp_file.name
+            temp_file.write(serialized)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())
+        os.replace(temp_name, output)
+    finally:
+        if temp_name and os.path.exists(temp_name):
+            os.unlink(temp_name)
 
 
 def main() -> int:
