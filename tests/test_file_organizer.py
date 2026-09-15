@@ -18,6 +18,10 @@ class FileOrganizerTests(unittest.TestCase):
         item = {"name": "K9va_OS_Automation_Plan_FINAL (2).docx"}
         self.assertEqual(MODULE.short_title(item), "KOVA Operating System Automation Plan")
 
+    def test_short_title_keeps_meaningful_trailing_year(self):
+        self.assertEqual(MODULE.short_title({"name": "KOVA Roadmap 2026.docx"}), "KOVA Roadmap 2026")
+        self.assertEqual(MODULE.short_title({"name": "KOVA Roadmap v2.docx"}), "KOVA Roadmap")
+
     def test_final_requires_verification_and_legacy_status_maps_to_review(self):
         self.assertEqual(MODULE.lifecycle_for({"name": "KOVA Final Guide.docx"})[0], "REVIEW")
         self.assertEqual(
@@ -67,6 +71,15 @@ class FileOrganizerTests(unittest.TestCase):
         a = MODULE.version_key({"id": "a", "md5Checksum": "same"})
         b = MODULE.version_key({"id": "b", "md5Checksum": "same"})
         self.assertNotEqual(a, b)
+
+    def test_local_version_identity_uses_content(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            item = Path(temp_dir) / "KOVA Notes.txt"
+            item.write_text("first", encoding="utf-8")
+            first = MODULE.version_key({"source": "local", "path": str(item)})
+            item.write_text("second", encoding="utf-8")
+            second = MODULE.version_key({"source": "local", "path": str(item)})
+            self.assertNotEqual(first, second)
 
     def test_chat_record_role_does_not_infer_a_decision(self):
         self.assertEqual(MODULE.record_role_for({"name": "KOVA ideas chat"}), "Unknown")
