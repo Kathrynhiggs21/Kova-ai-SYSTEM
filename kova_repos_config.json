@@ -164,5 +164,26 @@
     "github_webhooks_enabled": false,
     "cross_repo_prs": false,
     "unified_changelog": false
+  },
+  "architecture_mode": "modular_two_repository_system",
+  "active_runtime_pair": [
+    "Kathrynhiggs21/Kova-ai-SYSTEM",
+    "Kathrynhiggs21/kovaos-site"
+  ],
+  "repository_creation_policy": {
+    "default": "keep_as_core_module",
+    "owner_approval_required": true,
+    "split_criteria": [
+      "independent_deployment",
+      "security_or_secrets_boundary",
+      "materially_different_scaling_profile",
+      "independent_release_cycle",
+      "external_product_or_team_ownership"
+    ],
+    "non_reasons": [
+      "category_name",
+      "future_idea",
+      "visual_neatness"
+    ]
   }
 }
