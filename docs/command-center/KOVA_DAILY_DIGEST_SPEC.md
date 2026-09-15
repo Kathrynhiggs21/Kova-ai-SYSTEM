@@ -93,4 +93,4 @@ Recommended v1:
 
 ## First MVP
 
-Use Calendar + GitHub + manual project status first. Add Gmail/Drive once OAuth and labels are stable.
+Use verified Calendar, GitHub, Gmail and Drive reads. Omit a source that cannot pass a current live read instead of substituting manually copied status.
