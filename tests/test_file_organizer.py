@@ -109,6 +109,23 @@ class FileOrganizerTests(unittest.TestCase):
             self.assertEqual(len(payload["items"]), 1)
             self.assertFalse(payload["items"][0]["observed_current"])
             self.assertEqual(payload["items"][0]["verification"]["evidence"], "Owner approved")
+            self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(output.parent.stat().st_mode & 0o777, 0o700)
+            self.assertTrue(output.with_name("registry.exceptions.json").exists())
+
+    def test_history_preserves_superseded_relationship(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "registry.json"
+            original = MODULE.build_registry([{"id": "1", "name": "KOVA Old Guide.docx", "superseded_by": "source:2"}])
+            MODULE.write_registry(original, output)
+            refresh = MODULE.build_registry([{"id": "1", "name": "KOVA Old Guide.docx"}])
+            MODULE.write_registry(refresh, output)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(payload["items"][0]["superseded_by"], "source:2")
+
+    def test_missing_stable_source_identity_fails_closed(self):
+        with self.assertRaises(ValueError):
+            MODULE.build_registry([{"name": "KOVA Notes.txt"}])
 
     def test_cli_does_not_modify_governed_source(self):
         with tempfile.TemporaryDirectory() as temp_dir:
