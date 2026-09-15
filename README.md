@@ -50,7 +50,7 @@ cross-repository synchronization.
 The currently enabled runtime repositories are:
 
 - **Kova-ai-SYSTEM** - Canonical orchestration hub and FastAPI backend (this repo)
-- **kova-ai-dash** - Current command-center frontend
+- **kovaos-site** - Canonical authenticated web application for `kovaos.com`
 
 Other KOVA-named repositories are catalogued with `enabled: false` until their
 code, ownership boundary, tests, secrets, and deployment path are audited. See
