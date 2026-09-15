@@ -15,7 +15,14 @@ if [[ -z "$inventory_path" ]]; then
     echo "No inventory found. Run the source scanner or provide an inventory JSON path." >&2
     exit 1
   fi
-  inventory_path="$(find "$inventory_dir" -maxdepth 1 -type f -name 'inventory_*.json' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2- || true)"
+  inventory_path="$(python3 - "$inventory_dir" <<'PY'
+from pathlib import Path
+import sys
+
+files = sorted(Path(sys.argv[1]).glob("inventory_*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
+print(files[0] if files else "")
+PY
+)"
 fi
 
 if [[ -z "$inventory_path" || ! -f "$inventory_path" ]]; then
