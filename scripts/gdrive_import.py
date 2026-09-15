@@ -33,7 +33,7 @@ except ImportError:
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 KOVA_KEYWORDS = [
     'kova', 'kova-ai', 'kova ai', 'kovaai',
-    'k9va', 'purgatory', 'claude', 'multi-repo',
+    'k9va', 'kiva os', 'kiva-ai', 'purgatory', 'claude', 'multi-repo',
     'appsheet', 'webhook'
 ]
 
