@@ -114,4 +114,4 @@ jobs:
           name: Check dependencies for vulnerabilities
           command: |
             cd kova-ai
-            safety check
+            safety check -r requirements.txt

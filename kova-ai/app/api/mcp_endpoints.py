@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.security.api_key import require_owner_api_key
 from services.multi_repo_sync_service import MultiRepoSyncService
 
-
 router = APIRouter(
     prefix="/mcp",
     tags=["mcp"],
@@ -25,22 +24,38 @@ TOOLS = [
     {
         "name": "kova_health",
         "description": "Return the health status of the KOVA API.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
     {
         "name": "kova_export_status",
         "description": "Return the status of the published KOVA export archives.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
     {
         "name": "kova_list_repositories",
         "description": "List repositories enabled in the KOVA registry.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
     {
         "name": "kova_repository_status",
         "description": "Return live GitHub metadata for configured KOVA repositories.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
 ]
 
@@ -81,7 +96,11 @@ def _success(request_id: Any, result: Any) -> dict[str, Any]:
 
 
 def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "error": {"code": code, "message": message},
+    }
 
 
 @router.post("")
@@ -117,7 +136,9 @@ async def mcp_message(message: dict[str, Any]) -> dict[str, Any] | None:
     name = params.get("name")
     arguments = params.get("arguments") or {}
     if not isinstance(name, str) or not isinstance(arguments, dict):
-        return _error(request_id, -32602, "tools/call requires a name and object arguments")
+        return _error(
+            request_id, -32602, "tools/call requires a name and object arguments"
+        )
     try:
         result = await _call_tool(name, arguments)
     except KeyError:
