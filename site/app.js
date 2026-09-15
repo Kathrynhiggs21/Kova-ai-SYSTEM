@@ -2,125 +2,93 @@
 
 // Fallback data in case config fetch is blocked by CORS (common in local file access)
 const fallbackDashboardData = {
-  "dashboard_date": "2026-07-23",
-  "system_status": "foundation_active_live_integrations_partial",
+  "dashboard_date": "2026-09-15",
+  "system_status": "architecture_aligned_runtime_integrations_unverified",
   "source_of_truth": "Kathrynhiggs21/Kova-ai-SYSTEM",
+  "canonical_application": "Kathrynhiggs21/kovaos-site",
   "tagline": "You clearly need me.",
   "top_priorities": [
     {
-      "id": "p1-dashboard-shell",
-      "title": "Build Dashboard v1 shell from static JSON",
-      "status": "completed",
-      "owner": "KOVA",
-      "reason": "The dashboard spec supports static config first. This is now fully created and ready."
-    },
-    {
-      "id": "p2-calendar-digest",
-      "title": "Wire Google Calendar into Daily Digest v1",
-      "status": "ready",
-      "owner": "KOVA",
-      "reason": "Calendar access is readable and should be the first live digest source."
-    },
-    {
-      "id": "p3-integration-seeds",
-      "title": "Create integration seed files for Contacts, Dropbox, Notion, Manus, and OpenAI Platform",
+      "id": "p1-api-contract",
+      "title": "Define the versioned Core-to-site API",
       "status": "next",
       "owner": "KOVA",
-      "reason": "Unavailable or empty connectors still need declared targets, scopes, owners, and expected outputs."
+      "reason": "The canonical repositories are settled; their authenticated runtime contract still needs implementation and proof."
+    },
+    {
+      "id": "p2-connector-proof",
+      "title": "Verify one connector end to end",
+      "status": "blocked",
+      "owner": "KOVA",
+      "reason": "Configured or documented integrations must not appear live until authentication, health, and last-success evidence exist."
+    },
+    {
+      "id": "p3-donor-migration",
+      "title": "Audit dashboard donor features",
+      "status": "review",
+      "owner": "KOVA",
+      "reason": "Move only unique, verified features from kova-ai-dash into kovaos-site before archiving the donor."
     }
   ],
   "integrations": [
     {
       "name": "GitHub",
       "status": "active",
-      "evidence": "Repo metadata readable and command-center files writable.",
-      "next_action": "Use Kova-ai-SYSTEM as canonical command center and add implementation backlog files."
+      "evidence": "Canonical repositories and reviewed change workflow are available.",
+      "next_action": "Keep Core and site changes behind exact-head CI and review gates."
     },
     {
-      "name": "Google Calendar",
-      "status": "active_read_ready",
-      "evidence": "Upcoming calendar events are readable through the connected calendar integration.",
-      "next_action": "Turn calendar reads into the Today Card and Daily Digest agenda section."
+      "name": "KOVA Core API",
+      "status": "implemented_unverified_in_production",
+      "evidence": "FastAPI, health, MCP, repository status, and export routes exist in Core.",
+      "next_action": "Verify the protected production health and authenticated API boundary."
     },
     {
-      "name": "Google Contacts",
-      "status": "connected_but_unseeded",
-      "evidence": "Contacts search ran, but broad VIP query returned no matching contacts.",
-      "next_action": "Create a VIP/entity seed list: Katy, Reagan, Marcy, Blake, medical providers, school, vendors, collaborators."
+      "name": "KOVA Web Application",
+      "status": "canonical",
+      "evidence": "kovaos-site is the sole canonical authenticated application repository.",
+      "next_action": "Connect it to a versioned Core API and verify private deployment behavior."
     },
     {
-      "name": "Manus",
-      "status": "blocked_external",
-      "evidence": "No live Manus connector is available in this runtime.",
-      "next_action": "Export Manus project docs/assets into Drive or GitHub and track links in integrations/manus_sources.md."
-    },
-    {
-      "name": "Dropbox",
-      "status": "blocked_no_connector",
-      "evidence": "No Dropbox connector is available in this runtime.",
-      "next_action": "Pick a canonical Dropbox folder and define file-index rules before connecting OAuth/API."
-    },
-    {
-      "name": "Notion",
-      "status": "blocked_no_connector",
-      "evidence": "No Notion connector is available in this runtime.",
-      "next_action": "Define the Notion database schema or choose GitHub docs as source of truth to avoid duplicate dashboards."
-    },
-    {
-      "name": "OpenAI Platform",
-      "status": "ready_for_secret_setup",
-      "evidence": "Config template exists, but real secrets must not be committed.",
-      "next_action": "Create an OpenAI project/API key and store it only in deployment/local secrets."
+      "name": "External Connectors",
+      "status": "disabled_or_unverified",
+      "evidence": "No repository evidence currently proves production health for optional providers.",
+      "next_action": "Enable one least-privilege connector only after authentication, health, audit, and revocation tests pass."
     }
   ],
   "blockers": [
-    "No live Manus connector in runtime.",
-    "No Dropbox connector in runtime.",
-    "No Notion connector in runtime.",
-    "OpenAI Platform needs private API key/project setup outside the repo.",
-    "Google Contacts needs a seed/entity list because broad contact search returned no matches.",
-    "Dashboard deployment target still needs a final repo decision: kovaos-site vs kova-ai-site."
+    "No verified production Core-to-site API contract.",
+    "No proof-backed end-to-end connector path.",
+    "Durable run history, queueing, retries, and connector telemetry remain incomplete.",
+    "The duplicate legacy Core Vercel project still creates configuration-drift risk."
   ],
   "next_actions": [
-    "Create a static dashboard shell that reads config/dashboard.v1.json.",
-    "Create reports/digests/2026-07-08.md as the first manual/live hybrid digest artifact.",
-    "Create integrations/contact_entity_seed.csv for VIP/contact routing.",
-    "Create integrations/external_source_targets.md for Manus, Dropbox, Notion, and OpenAI Platform setup instructions.",
-    "Choose the dashboard implementation repo and wire it to this command-center config."
+    "Merge architecture changes only after exact-head CI and review pass.",
+    "Implement and test the versioned Core-to-site API.",
+    "Verify one authenticated connector path with audit evidence.",
+    "Migrate unique donor features before archiving any repository."
   ]
 };
 
 // Fallback Digest text
-const fallbackDigestText = `<h3>KOVA Daily Digest — 2026-07-23</h3>
-<p><strong>Status:</strong> KOVA OS command-center foundation is active. GitHub is readable/writable. Google Calendar is readable. Google Contacts is connected but needs a clean seed/entity list. Manus, Dropbox, and Notion are not directly connected in this runtime yet.</p>
-
-<h4 class="font-bold text-indigo-400 mt-3">Calendar Lookahead</h4>
-<ul class="list-disc list-inside space-y-1 text-slate-300">
-  <li><strong>2026-07-24 12:00 PM</strong> — 45-minute Session with Nathan Fite / Appointment with Nathan Fite</li>
-  <li><strong>2026-07-25 01:15 PM</strong> — CEI Perez</li>
-  <li><strong>2026-07-28 10:00 AM</strong> — Dream to Me Premiere</li>
-</ul>
-<p class="text-xs text-slate-400 mt-2"><em>Note: Nathan Fite appears twice at the same time, likely one recurring/manual calendar item and one Gmail-created event. This should be deduplicated in the digest engine so KOVA does not nag twice like a caffeinated parrot.</em></p>
+const fallbackDigestText = `<h3>KOVA Architecture Status — 2026-09-15</h3>
+<p><strong>Status:</strong> The Core and application repository roles are aligned. External integrations remain disabled or unverified until production evidence exists.</p>
 
 <h4 class="font-bold text-indigo-400 mt-3">Project Pulse</h4>
 <div class="space-y-1.5 text-slate-300">
-  <p><strong>KOVA OS:</strong> Command-center docs, integration matrix, dashboard v1 spec, daily digest spec, and static JSON dashboard config are now complete. Live exports are successfully packaged!</p>
-  <p><strong>Dashboard v1:</strong> This premium static HTML dashboard has been successfully implemented and is ready for production hosting at <code>kovoas.com</code>.</p>
+  <p><strong>KOVA Core:</strong> Owns backend orchestration, MCP, connectors, automation, data, security, files, and observability.</p>
+  <p><strong>KOVA application:</strong> <code>kovaos-site</code> is the sole canonical authenticated application for <code>kovaos.com</code>.</p>
 </div>`;
 
 // Calendar Agenda Fallback
-const fallbackCalendarEvents = [
-  { time: "12:00 PM", title: "Session with Nathan Fite", date: "Tomorrow" },
-  { time: "01:15 PM", title: "CEI Perez", date: "Friday" },
-  { time: "All Day", title: "Dream to Me Premiere", date: "Monday" }
-];
+const fallbackCalendarEvents = [];
 
 // Memory list
 const fallbackMemory = [
   { key: "Preferred Timezone", val: "America/New_York (Eastern Time)" },
-  { key: "Primary Owner", val: "Katy (Kathrynhiggs21)" },
+  { key: "Access Model", val: "Private by default" },
   { key: "Orchestrator Path", val: "Kova-ai-SYSTEM" },
-  { key: "Deployment Goal", val: "kovoas.com (static and API routes)" },
+  { key: "Deployment Goal", val: "kovaos.com" },
   { key: "Tone and Voice", val: "Slightly playful, helpful, says 'You clearly need me.'" }
 ];
 
@@ -433,7 +401,7 @@ function submitConsoleCommand() {
   setTimeout(() => {
     const lower = cmd.toLowerCase();
     if (lower.includes("hello") || lower.includes("hi")) {
-      logToConsole("KOVA: Hello Katy. How can I help organize your life today?", "indigo");
+      logToConsole("KOVA: Ready. How can I help organize things today?", "indigo");
     } else if (lower.includes("status")) {
       logToConsole("KOVA: System status: ACTIVE. Integrations partially active. 6 blockers identified.", "indigo");
     } else if (lower.includes("export") || lower.includes("zip")) {

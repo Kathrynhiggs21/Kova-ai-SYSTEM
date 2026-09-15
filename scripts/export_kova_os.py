@@ -64,7 +64,7 @@ def export_kova_os():
         
     # 3. Package images.zip (only the compiled SVGs/images)
     images_zip = PROJECT_ROOT / "images.zip"
-    log(f"Compiling image assets into {images_zip} for kovoas.com...")
+    log(f"Compiling image assets into {images_zip} for kovaos.com...")
     if package_zip(IMAGES_DIR, images_zip):
         log(f"Successfully packaged images.zip ({images_zip.stat().st_size / 1024:.1f} KB)")
     else:

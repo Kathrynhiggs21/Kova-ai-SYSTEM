@@ -100,4 +100,4 @@ Katy. Secondary users later may include collaborators, family, or project agents
 
 ## First Implementation Recommendation
 
-Use the existing `kovaos-site` or `kova-ai-site` repo for the public-facing dashboard shell, while this repo remains the system command center and documentation source of truth.
+Use `kovaos-site` as the sole canonical authenticated application and dashboard. Keep this repository as the Core orchestration, architecture, policy, and API source of truth.
