@@ -5,10 +5,12 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import json
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 router = APIRouter(prefix="/ai")
 logger = logging.getLogger(__name__)
+HTTP_TIMEOUT = 10.0
 
 
 class ClaudeCommand(BaseModel):
@@ -145,7 +147,7 @@ async def fetch_repository_data(repository: str, github_token: str) -> Dict[str,
 
     headers = {"Authorization": f"token {github_token}"}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         # Basic repo info
         repo_response = await client.get(
             f"https://api.github.com/repos/{repository}", headers=headers
@@ -163,7 +165,7 @@ async def fetch_repository_data(repository: str, github_token: str) -> Dict[str,
         return {
             "repository": repo_data,
             "contents": contents_data,
-            "timestamp": "2025-10-20 14:38:05",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
 
@@ -173,7 +175,7 @@ async def get_repository_structure(
     """Get repository file structure"""
     headers = {"Authorization": f"token {github_token}"}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         tree_response = await client.get(
             f"https://api.github.com/repos/{repository}/git/trees/main?recursive=1",
             headers=headers,
@@ -185,7 +187,7 @@ async def get_recent_commits(repository: str, github_token: str) -> Dict[str, An
     """Get recent commits"""
     headers = {"Authorization": f"token {github_token}"}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         commits_response = await client.get(
             f"https://api.github.com/repos/{repository}/commits?per_page=10",
             headers=headers,
@@ -199,7 +201,7 @@ async def get_file_content(
     """Get specific file content"""
     headers = {"Authorization": f"token {github_token}"}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         file_response = await client.get(
             f"https://api.github.com/repos/{repository}/contents/{file_path}",
             headers=headers,
@@ -211,7 +213,7 @@ async def get_user_repositories(username: str, github_token: str) -> Dict[str, A
     """Get all user repositories"""
     headers = {"Authorization": f"token {github_token}"}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         repos_response = await client.get(
             f"https://api.github.com/users/{username}/repos?per_page=100",
             headers=headers,
@@ -227,7 +229,7 @@ async def get_kova_repositories(github_token: str) -> Dict[str, Any]:
     kova_repos = await load_kova_repos_from_config()
 
     repo_data = {}
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         for repo in kova_repos:
             response = await client.get(
                 f"https://api.github.com/repos/{repo}", headers=headers
@@ -256,7 +258,7 @@ async def get_latest_activity(username: str, github_token: str) -> Dict[str, Any
     """Get latest user activity"""
     headers = {"Authorization": f"token {github_token}"}
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         events_response = await client.get(
             f"https://api.github.com/users/{username}/events?per_page=20",
             headers=headers,
@@ -267,7 +269,7 @@ async def get_latest_activity(username: str, github_token: str) -> Dict[str, Any
 async def send_to_claude(data: Dict[str, Any], prompt: str, anthropic_key: str) -> str:
     """Send data to Claude API"""
     headers = {
-        "Authorization": f"Bearer {anthropic_key}",
+        "x-api-key": anthropic_key,
         "Content-Type": "application/json",
         "anthropic-version": "2023-06-01",
     }
@@ -283,7 +285,7 @@ async def send_to_claude(data: Dict[str, Any], prompt: str, anthropic_key: str) 
         ],
     }
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         response = await client.post(
             "https://api.anthropic.com/v1/messages", headers=headers, json=payload
         )

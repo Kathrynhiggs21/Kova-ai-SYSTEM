@@ -97,6 +97,33 @@ class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.status_code, 200)
 
+    async def test_mcp_requires_owner_key(self):
+        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
+            response = await self.request(
+                "POST",
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 1, "method": "ping"},
+            )
+
+        self.assertEqual(response.status_code, 401)
+
+    async def test_mcp_rejects_non_object_params(self):
+        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
+            response = await self.request(
+                "POST",
+                "/mcp",
+                owner_key=OWNER_KEY,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "tools/call",
+                    "params": [],
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["error"]["code"], -32602)
+
     async def test_configured_owner_key_ignores_surrounding_whitespace(self):
         with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": f"  {OWNER_KEY}  "}):
             response = await self.request(

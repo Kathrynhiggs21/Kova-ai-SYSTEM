@@ -58,7 +58,7 @@ echo "🩺 Testing API health..."
 max_attempts=10
 attempt=1
 while [ $attempt -le $max_attempts ]; do
-    if curl -s http://localhost:8000/health > /dev/null; then
+    if curl --fail --silent --show-error http://localhost:8000/health > /dev/null; then
         echo "✅ API is healthy!"
         break
     else
