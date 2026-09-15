@@ -18,6 +18,60 @@
       "enabled": true,
       "sync_priority": 1,
       "features": ["dashboard", "integration-ui", "authentication", "persistence", "storage"]
+    },
+    {
+      "name": "kovaos-site",
+      "full_name": "Kathrynhiggs21/kovaos-site",
+      "description": "Primary kovaos.com web implementation; pending build and deployment audit",
+      "type": "frontend",
+      "enabled": false,
+      "sync_priority": 2,
+      "features": ["website", "routing", "kovaos.com"]
+    },
+    {
+      "name": "kova-ai",
+      "full_name": "Kathrynhiggs21/kova-ai",
+      "description": "Mixed assistant/application migration source; audit before enabling",
+      "type": "experimental",
+      "enabled": false,
+      "sync_priority": 3,
+      "features": ["assistant", "automation", "historical-assets"]
+    },
+    {
+      "name": "kova-ai-mem0",
+      "full_name": "Kathrynhiggs21/kova-ai-mem0",
+      "description": "Experimental memory provider adapter",
+      "type": "service",
+      "enabled": false,
+      "sync_priority": 4,
+      "features": ["memory", "provider-adapter"]
+    },
+    {
+      "name": "Kova-os-docengine",
+      "full_name": "Kathrynhiggs21/Kova-os-docengine",
+      "description": "Experimental document processing component",
+      "type": "service",
+      "enabled": false,
+      "sync_priority": 4,
+      "features": ["documents", "ingestion", "transformation"]
+    },
+    {
+      "name": "Kova-AI-Scribbles",
+      "full_name": "Kathrynhiggs21/Kova-AI-Scribbles",
+      "description": "Optional Scribbles integration placeholder",
+      "type": "experimental",
+      "enabled": false,
+      "sync_priority": 5,
+      "features": ["scribbles", "integration"]
+    },
+    {
+      "name": "kova-ai-site",
+      "full_name": "Kathrynhiggs21/kova-ai-site",
+      "description": "Legacy public site and documentation migration source",
+      "type": "frontend",
+      "enabled": false,
+      "sync_priority": 5,
+      "features": ["legacy-site", "documentation", "redirects"]
     }
   ],
   "worlds": [
@@ -39,8 +93,18 @@
   ],
   "excluded_repositories": [
     {
-      "full_name": "Kathrynhiggs21/kova-ai",
-      "reason": "mixed legacy repository; renderer-specific code/workflows are not part of KOVA OS",
+      "full_name": "Kathrynhiggs21/mem0",
+      "reason": "generic private placeholder; not a canonical KOVA component",
+      "enabled": false
+    },
+    {
+      "full_name": "Kovaos-com/vite-react",
+      "reason": "unmodified framework starter; not a KOVA production application",
+      "enabled": false
+    },
+    {
+      "full_name": "Kathrynhiggs21/platforms-starter-kit",
+      "reason": "generic platform starter retained only as a reference",
       "enabled": false
     }
   ],
