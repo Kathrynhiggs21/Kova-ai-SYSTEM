@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,35 +18,90 @@ class FileOrganizerTests(unittest.TestCase):
         item = {"name": "K9va_OS_Automation_Plan_FINAL (2).docx"}
         self.assertEqual(MODULE.short_title(item), "KOVA Operating System Automation Plan")
 
-    def test_final_requires_verification(self):
-        unverified = {"name": "KOVA Final Guide.docx"}
-        verified = {"name": "KOVA Final Guide.docx", "verified": True}
-        self.assertEqual(MODULE.lifecycle_for(unverified)[0], "REVIEW")
-        self.assertEqual(MODULE.lifecycle_for(verified)[0], "FINAL")
+    def test_final_requires_verification_and_legacy_status_maps_to_review(self):
+        self.assertEqual(MODULE.lifecycle_for({"name": "KOVA Final Guide.docx"})[0], "REVIEW")
+        self.assertEqual(
+            MODULE.lifecycle_for({"name": "KOVA Final Guide.docx", "verified": True})[0],
+            "FINAL",
+        )
+        self.assertEqual(MODULE.lifecycle_for({"status": "UNREVIEWED"})[0], "REVIEW")
 
-    def test_registry_flags_sensitive_duplicate_without_changing_source(self):
+    def test_boundary_matching_does_not_call_capital_an_api_topic(self):
+        self.assertEqual(MODULE.topic_for({"name": "KOVA Capital Budget.txt"}), "KOVA Reference")
+        self.assertEqual(MODULE.topic_for({"name": "KOVA API Plan.txt"}), "KOVA Connectors")
+
+    def test_separator_sensitive_and_uninspected_state(self):
+        self.assertEqual(MODULE.sensitivity_for({"name": "private-config-url.txt"})[0], "SENSITIVE")
+        self.assertEqual(MODULE.sensitivity_for({"name": "ordinary-notes.txt"})[0], "UNKNOWN")
+        self.assertEqual(
+            MODULE.sensitivity_for({"name": "ordinary-notes.txt", "content_inspected": True})[0],
+            "CLEAR",
+        )
+
+    def test_exact_duplicate_requires_hash_and_is_deterministic(self):
+        items = [
+            {"id": "older", "name": "KOVA Plan.docx", "md5Checksum": "same", "modified": "2026-01-01T00:00:00Z"},
+            {"id": "newer", "name": "KOVA Plan.docx", "md5Checksum": "same", "modified": "2026-02-01T00:00:00Z"},
+        ]
+        rows = MODULE.build_registry(items)
+        self.assertIn("DUPLICATE", rows[0]["flags"])
+        self.assertNotIn("DUPLICATE", rows[1]["flags"])
+        self.assertEqual(rows[0]["canonical_version_key"], rows[1]["version_key"])
+
+        reversed_rows = MODULE.build_registry(list(reversed(items)))
+        canonical_ids = [row["source_id"] for row in reversed_rows if "DUPLICATE" not in row["flags"]]
+        self.assertEqual(canonical_ids, ["newer"])
+
+    def test_same_title_without_hash_is_only_a_review_candidate(self):
+        rows = MODULE.build_registry([
+            {"id": "1", "name": "KOVA Plan.docx", "size": 9},
+            {"id": "2", "name": "KOVA Plan.docx", "size": 9},
+        ])
+        self.assertNotIn("DUPLICATE", rows[0]["flags"])
+        self.assertNotIn("DUPLICATE", rows[1]["flags"])
+        candidates = [row for row in rows if row["possible_duplicate_of"] is not None]
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["lifecycle"], "REVIEW")
+
+    def test_version_identity_includes_source(self):
+        a = MODULE.version_key({"id": "a", "md5Checksum": "same"})
+        b = MODULE.version_key({"id": "b", "md5Checksum": "same"})
+        self.assertNotEqual(a, b)
+
+    def test_chat_record_role_does_not_infer_a_decision(self):
+        self.assertEqual(MODULE.record_role_for({"name": "KOVA ideas chat"}), "Unknown")
+        self.assertEqual(MODULE.record_role_for({"record_role": "decision"}), "Decision")
+
+    def test_history_and_verified_decision_are_preserved(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            original = Path(temp_dir) / "private-config-url.txt"
-            original.write_text("unchanged", encoding="utf-8")
-            items = [
-                {"id": "1", "name": original.name, "size": 9, "description": "private config URL"},
-                {"id": "2", "name": original.name, "size": 9, "description": "private config URL"},
-            ]
-
-            rows = MODULE.build_registry(items)
-
-            self.assertEqual(rows[0]["flags"], ["SENSITIVE"])
-            self.assertEqual(rows[1]["flags"], ["SENSITIVE", "DUPLICATE"])
-            self.assertEqual(rows[1]["canonical_version_key"], rows[0]["version_key"])
-            self.assertEqual(original.read_text(encoding="utf-8"), "unchanged")
-
-    def test_write_registry_is_metadata_only(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "nested" / "registry.json"
-            MODULE.write_registry([], output)
+            output = Path(temp_dir) / "registry.json"
+            old = MODULE.build_registry([{
+                "id": "1", "name": "KOVA Guide.docx", "modified": "2026-01-01T00:00:00Z",
+                "lifecycle": "FINAL", "verified": True, "verification_evidence": "Owner approved"
+            }])
+            MODULE.write_registry(old, output)
+            MODULE.write_registry(MODULE.build_registry([]), output)
             payload = json.loads(output.read_text(encoding="utf-8"))
-            self.assertEqual(payload["organization_mode"], "metadata-first")
-            self.assertFalse(payload["physical_changes"])
+            self.assertEqual(len(payload["items"]), 1)
+            self.assertFalse(payload["items"][0]["observed_current"])
+            self.assertEqual(payload["items"][0]["verification"]["evidence"], "Owner approved")
+
+    def test_cli_does_not_modify_governed_source(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            original = root / "private-config-url.txt"
+            original.write_text("unchanged", encoding="utf-8")
+            inventory = root / "inventory.json"
+            registry = root / "private" / "registry.json"
+            inventory.write_text(json.dumps([{"id": "1", "name": original.name}]), encoding="utf-8")
+            subprocess.run(
+                ["python3", str(SCRIPT), "--inventory", str(inventory), "--registry", str(registry)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(original.read_text(encoding="utf-8"), "unchanged")
+            self.assertTrue(registry.exists())
 
 
 if __name__ == "__main__":
