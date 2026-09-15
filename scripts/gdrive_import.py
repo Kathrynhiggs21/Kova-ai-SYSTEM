@@ -131,7 +131,7 @@ class GoogleDriveImporter:
                     q=query,
                     pageSize=100,
                     pageToken=page_token,
-                    fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, createdTime, owners, parents, webViewLink)"
+                    fields="nextPageToken, files(id, name, description, mimeType, size, modifiedTime, createdTime, owners, parents, webViewLink, md5Checksum, headRevisionId, version, appProperties)"
                 ).execute()
 
                 files = results.get('files', [])
@@ -199,6 +199,14 @@ class GoogleDriveImporter:
             'owners': file_info.get('owners', []),
             'parents': file_info.get('parents', []),
             'web_link': file_info.get('webViewLink'),
+            'description': file_info.get('description'),
+            'md5Checksum': file_info.get('md5Checksum'),
+            'headRevisionId': file_info.get('headRevisionId'),
+            'version': file_info.get('version'),
+            'appProperties': file_info.get('appProperties', {}),
+            'source': 'google_drive',
+            'content_inspected': False,
+            'sensitivity_checked': False,
             'relevance_score': min(relevance_score, 10),
             'category': category,
             'keywords_found': [kw for kw in KOVA_KEYWORDS if kw in name]
@@ -227,12 +235,12 @@ class GoogleDriveImporter:
                 by_name[name] = []
             by_name[name].append(f)
 
-        # Find exact name duplicates
+        # Same names are review candidates, not verified duplicates
         exact_duplicates = []
         for name, file_list in by_name.items():
             if len(file_list) > 1:
                 exact_duplicates.append({
-                    'type': 'exact_name',
+                    'type': 'same_name_candidate',
                     'name': name,
                     'count': len(file_list),
                     'files': file_list
@@ -253,7 +261,7 @@ class GoogleDriveImporter:
                         'files': by_name[name1] + by_name[name2]
                     })
 
-        self.log(f"  Found {len(exact_duplicates)} exact name duplicates", Colors.YELLOW)
+        self.log(f"  Found {len(exact_duplicates)} same-name review candidates", Colors.YELLOW)
         self.log(f"  Found {len(similar_duplicates)} similar name duplicates", Colors.YELLOW)
 
         return exact_duplicates + similar_duplicates
@@ -332,8 +340,8 @@ class GoogleDriveImporter:
         self.log(f"\n🔁 Duplicates Found: {len(duplicates)}", Colors.BOLD)
         if duplicates:
             for dup in duplicates[:10]:  # Show first 10
-                if dup['type'] == 'exact_name':
-                    self.log(f"  Exact: '{dup['name']}' ({dup['count']} copies)", Colors.YELLOW)
+                if dup['type'] == 'same_name_candidate':
+                    self.log(f"  Same name: '{dup['name']}' ({dup['count']} candidates)", Colors.YELLOW)
                 else:
                     self.log(f"  Similar: {dup['similarity']:.0%} - '{dup['name1']}' & '{dup['name2']}'", Colors.YELLOW)
 
@@ -345,10 +353,10 @@ class GoogleDriveImporter:
 
         low_relevance = sum(1 for f in analyzed_files if f['relevance_score'] < 5)
         if low_relevance > 0:
-            self.log(f"  • Review {low_relevance} low-relevance files for deletion", Colors.CYAN)
+            self.log(f"  • Review {low_relevance} low-relevance files; do not delete automatically", Colors.CYAN)
 
         if duplicates:
-            self.log(f"  • Resolve {len(duplicates)} duplicate file groups", Colors.CYAN)
+            self.log(f"  • Verify {len(duplicates)} possible duplicate groups with hashes or revision evidence", Colors.CYAN)
 
         unknown_cat = category_counts.get('UNKNOWN', 0)
         if unknown_cat > 0:
