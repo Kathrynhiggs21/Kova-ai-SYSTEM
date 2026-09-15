@@ -14,6 +14,10 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_explicit_area_is_case_insensitive_and_canonical(self):
+        self.assertEqual(MODULE.area_for({"area": "KOVA", "name": "Notes.txt"}), "KOVA")
+        self.assertEqual(MODULE.area_for({"area": "reagan", "name": "Notes.txt"}), "Reagan")
+
     def test_short_title_normalizes_kova_and_removes_copy_noise(self):
         item = {"name": "K9va_OS_Automation_Plan_FINAL (2).docx"}
         self.assertEqual(MODULE.short_title(item), "KOVA Operating System Automation Plan")
@@ -80,6 +84,13 @@ class FileOrganizerTests(unittest.TestCase):
             item.write_text("second", encoding="utf-8")
             second = MODULE.version_key({"source": "local", "path": str(item)})
             self.assertNotEqual(first, second)
+
+    def test_local_source_identity_is_preserved_in_registry(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            item = Path(temp_dir) / "Notes.txt"
+            item.write_text("notes", encoding="utf-8")
+            row = MODULE.build_registry([{"source": "local", "path": str(item), "name": item.name}])[0]
+            self.assertEqual(row["source_id"], str(item))
 
     def test_chat_record_role_does_not_infer_a_decision(self):
         self.assertEqual(MODULE.record_role_for({"name": "KOVA ideas chat"}), "Unknown")
