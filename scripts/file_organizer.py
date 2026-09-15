@@ -198,7 +198,7 @@ def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
             if when.tzinfo is None:
                 when = when.replace(tzinfo=timezone.utc)
             age_days = (datetime.now(timezone.utc) - when.astimezone(timezone.utc)).days
-            if age_days <= 90 and topic_for(file_info) != "KOVA Reference":
+            if 0 <= age_days <= 90 and topic_for(file_info) != "KOVA Reference":
                 return "ACTIVE", "Recent relevant work"
         except ValueError:
             pass
@@ -206,14 +206,17 @@ def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
 
 
 def source_identity(file_info: dict[str, Any]) -> str:
-    return str(
+    identity = (
         file_info.get("source_identity")
         or file_info.get("id")
         or file_info.get("file_id")
         or file_info.get("path")
-        or file_info.get("name")
-        or "unknown-source"
+        or file_info.get("web_link")
+        or file_info.get("url")
     )
+    if not identity:
+        raise ValueError("inventory item needs a stable source identity, ID, path, or URL")
+    return str(identity)
 
 
 def version_key(file_info: dict[str, Any]) -> str:
@@ -362,6 +365,8 @@ def merge_history(current: list[dict[str, Any]], previous: list[dict[str, Any]])
     for row in current:
         prior = merged.get(row["version_key"], {})
         combined = {**prior, **row}
+        if row.get("superseded_by") is None and prior.get("superseded_by") is not None:
+            combined["superseded_by"] = prior["superseded_by"]
         if prior.get("verification", {}).get("verified") and not row.get("verification", {}).get("verified"):
             combined["verification"] = prior["verification"]
             if prior.get("lifecycle") in ("ACTIVE", "FINAL", "ARCHIVE"):
@@ -372,20 +377,10 @@ def merge_history(current: list[dict[str, Any]], previous: list[dict[str, Any]])
     return sorted(merged.values(), key=lambda row: row["version_key"])
 
 
-def write_registry(rows: list[dict[str, Any]], output: Path) -> None:
-    previous: list[dict[str, Any]] = []
-    if output.exists():
-        payload = json.loads(output.read_text(encoding="utf-8"))
-        previous = payload.get("items", []) if isinstance(payload, dict) else []
-    items = merge_history(rows, previous)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "schema_version": 2,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "organization_mode": "metadata-first",
-        "physical_changes": False,
-        "items": items,
-    }
+def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
+    """Atomically publish private JSON with user-only filesystem permissions."""
+    output.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    os.chmod(output.parent, 0o700)
     serialized = json.dumps(payload, indent=2) + "\n"
     temp_name: str | None = None
     try:
@@ -398,13 +393,49 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> None:
             delete=False,
         ) as temp_file:
             temp_name = temp_file.name
+            os.chmod(temp_name, 0o600)
             temp_file.write(serialized)
             temp_file.flush()
             os.fsync(temp_file.fileno())
         os.replace(temp_name, output)
+        os.chmod(output, 0o600)
     finally:
         if temp_name and os.path.exists(temp_name):
             os.unlink(temp_name)
+
+
+def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
+    previous: list[dict[str, Any]] = []
+    if output.exists():
+        payload = json.loads(output.read_text(encoding="utf-8"))
+        previous = payload.get("items", []) if isinstance(payload, dict) else []
+    items = merge_history(rows, previous)
+    payload = {
+        "schema_version": 2,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "organization_mode": "metadata-first",
+        "physical_changes": False,
+        "items": items,
+    }
+    atomic_write_private(output, payload)
+    exceptions = [
+        row for row in items
+        if row.get("lifecycle") == "REVIEW"
+        or row.get("sensitivity") in ("SENSITIVE", "UNKNOWN")
+        or row.get("flags")
+        or row.get("possible_duplicate_of")
+    ]
+    exception_output = output.with_name(f"{output.stem}.exceptions.json")
+    atomic_write_private(
+        exception_output,
+        {
+            "schema_version": 1,
+            "generated_at": payload["generated_at"],
+            "exception_count": len(exceptions),
+            "items": exceptions,
+        },
+    )
+    return len(exceptions)
 
 
 def main() -> int:
@@ -423,8 +454,9 @@ def main() -> int:
     if args.dry_run:
         print(json.dumps(rows, indent=2))
     else:
-        write_registry(rows, args.registry)
+        exception_count = write_registry(rows, args.registry)
         print(f"Wrote {len(rows)} current metadata records to {args.registry}")
+        print(f"Wrote {exception_count} review exceptions to {args.registry.with_name(args.registry.stem + '.exceptions.json')}")
     if args.base_path or args.execute:
         print("Legacy move/folder arguments were ignored; governed files were not changed.")
     return 0
