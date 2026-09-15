@@ -10,6 +10,8 @@ KOVA uses two active repositories:
 1. `Kathrynhiggs21/Kova-ai-SYSTEM` for Core, backend, orchestration, MCP, shared contracts, connectors, automation, data, security, files, and observability.
 2. `Kathrynhiggs21/kovaos-site` for the authenticated application served through `kovaos.com`.
 
+The active set is derived from `kova_repos_config.json` entries where `enabled` is true; no second active-pair list is maintained.
+
 Inside Core, major capabilities are explicit modules. They do not become separate repositories merely because they have different names or menu sections.
 
 ## Why
@@ -55,5 +57,6 @@ AI Assistant, MCP, connectors, automation, memory/data, files/artifacts, securit
 
 - KOVA keeps one Core release and one app release.
 - Module boundaries are machine-readable and reviewable.
+- `config/core_modules.v1.json` is the single machine-readable split policy; the repository registry points to it instead of duplicating its rules.
 - New repositories are deliberate architecture decisions, not organizational decoration.
 - Future service extraction remains possible without committing to premature multi-repo complexity.
