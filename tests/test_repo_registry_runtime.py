@@ -19,7 +19,7 @@ from app.services.multi_repo_sync_service import MultiRepoSyncService
 
 CANONICAL_REPOSITORIES = [
     "Kathrynhiggs21/Kova-ai-SYSTEM",
-    "Kathrynhiggs21/kova-ai-dash",
+    "Kathrynhiggs21/kovaos-site",
 ]
 
 
@@ -39,9 +39,9 @@ def write_config(path: Path, *, claude_enabled: bool = False) -> None:
                         "features": ["orchestration"],
                     },
                     {
-                        "name": "kova-ai-dash",
+                        "name": "kovaos-site",
                         "full_name": CANONICAL_REPOSITORIES[1],
-                        "description": "KOVA OS command center",
+                        "description": "Canonical KOVA OS web app",
                         "type": "frontend",
                         "enabled": True,
                         "sync_priority": 1,

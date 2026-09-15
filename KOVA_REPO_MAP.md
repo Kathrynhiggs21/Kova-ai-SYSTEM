@@ -13,11 +13,11 @@ The runtime registry is `kova_repos_config.json`. An entry with `enabled: false`
 | Repository | Clear role | Portfolio status | Runtime |
 | --- | --- | --- | --- |
 | `Kathrynhiggs21/Kova-ai-SYSTEM` | Architecture, FastAPI control plane, MCP endpoint, deployment coordination, repository registry | Canonical hub | Enabled |
-| `Kathrynhiggs21/kovaos-site` | Primary web implementation for `kovaos.com` | Active web candidate; private and requires a dedicated build/deployment audit | Catalogued |
-| `Kathrynhiggs21/kova-ai-dash` | React dashboard and integration hub | Active dashboard candidate; authentication hardened in PR #5 | Enabled |
-| `Kathrynhiggs21/kova-ai` | Mixed assistant/application code plus historical generated assets | Migration source; audit directories before promoting any code | Catalogued |
+| `Kathrynhiggs21/kovaos-site` | Canonical authenticated web application for `kovaos.com` | Active web application; authentication and CI hardened in PR #5 | Enabled |
+| `Kathrynhiggs21/kova-ai-dash` | Dashboard/integration feature donor | Transition; migrate unique features into `kovaos-site`, then archive | Catalogued |
+| `Kathrynhiggs21/kova-ai` | Mixed assistant/application code plus historical Zoo/Milli Miles assets | Split product assets into their real product repository; not a canonical KOVA runtime | Catalogued |
 | `Kathrynhiggs21/kova-ai-mem0` | Memory-provider adapter placeholder | Experimental component; no production data authority | Catalogued |
-| `Kathrynhiggs21/Kova-os-docengine` | Document ingestion/transformation placeholder | Experimental component | Catalogued |
+| `Kathrynhiggs21/Kova-os-docengine` | Early document-engine placeholder | Preserve provenance, then archive; rebuild only as a Core package when needed | Catalogued |
 | `Kathrynhiggs21/Kova-AI-Scribbles` | Optional Scribbles integration | Specialized placeholder; Scribbles itself remains an independent world | Catalogued |
 | `Kathrynhiggs21/kova-ai-site` | Older public site, redirect, and documentation material | Legacy migration source | Catalogued |
 | `Kathrynhiggs21/mem0` | Generic private placeholder | Not a KOVA product repo; inspect before archive | Excluded |
