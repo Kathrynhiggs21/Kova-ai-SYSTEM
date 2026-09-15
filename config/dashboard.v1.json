@@ -51,31 +51,41 @@
       "name": "GitHub",
       "assistant_access": "verified",
       "kova_runtime": "partial",
-      "next_action": "Require green checks on both active repositories."
+      "next_action": "Require green checks on both active repositories.",
+      "status": "partial",
+      "evidence": "Assistant access: verified. KOVA runtime: partial."
     },
     {
       "name": "Google Drive",
       "assistant_access": "verified",
       "kova_runtime": "unverified",
-      "next_action": "Run metadata inventory with readback and no source mutation."
+      "next_action": "Run metadata inventory with readback and no source mutation.",
+      "status": "unverified",
+      "evidence": "Assistant access: verified. KOVA runtime: unverified."
     },
     {
       "name": "Notion",
       "assistant_access": "verified",
       "kova_runtime": "unverified",
-      "next_action": "Use as a view, not a competing canonical store."
+      "next_action": "Use as a view, not a competing canonical store.",
+      "status": "unverified",
+      "evidence": "Assistant access: verified. KOVA runtime: unverified."
     },
     {
       "name": "MCP",
       "assistant_access": "n/a",
       "kova_runtime": "implemented_not_production_verified",
-      "next_action": "Merge hardening and verify authenticated production calls."
+      "next_action": "Merge hardening and verify authenticated production calls.",
+      "status": "implemented_not_production_verified",
+      "evidence": "Assistant access: n/a. KOVA runtime: implemented_not_production_verified."
     },
     {
       "name": "Zapier/Make/n8n",
       "assistant_access": "optional",
       "kova_runtime": "disabled_until_named_gap",
-      "next_action": "Use only when a direct connector or official API is insufficient."
+      "next_action": "Use only when a direct connector or official API is insufficient.",
+      "status": "disabled_until_named_gap",
+      "evidence": "Assistant access: optional. KOVA runtime: disabled_until_named_gap."
     }
   ],
   "blockers": [
