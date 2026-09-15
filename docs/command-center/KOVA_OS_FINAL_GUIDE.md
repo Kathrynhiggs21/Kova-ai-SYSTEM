@@ -255,7 +255,7 @@ The repository already includes tools that are designed for this:
 - Integrations and credentials docs
 - Active work files
 - Archives and backups
-- Purgatory / review queue
+- Review queue
 - Meta and operating docs
 
 This is much healthier than trying to keep 700 files in one giant pile.

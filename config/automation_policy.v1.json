@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "policy": "automate-by-default",
+  "organization_mode": "metadata-first",
+  "connector_preference": [
+    "native_connector",
+    "mcp",
+    "official_api_oauth",
+    "automation_bridge",
+    "webhook_or_import"
+  ],
+  "automatic_actions": [
+    "inventory_new_or_changed_items",
+    "normalize_kova_display_names",
+    "generate_short_topic_subtopic_titles",
+    "classify_active_final_review_archive",
+    "flag_sensitive_content",
+    "detect_exact_and_likely_duplicates",
+    "link_source_chat_agent_and_version",
+    "update_canonical_registry",
+    "produce_exception_only_digest"
+  ],
+  "approval_required": [
+    "delete_or_overwrite_content",
+    "change_sharing_or_access",
+    "expose_or_rotate_credentials",
+    "spend_money_or_commit_to_purchase",
+    "send_external_messages",
+    "merge_or_deploy_code",
+    "move_or_rename_ambiguous_items",
+    "create_physical_folder_without_demonstrated_need"
+  ],
+  "lifecycle": {
+    "ACTIVE": "#0969DA",
+    "FINAL": "#1F883D",
+    "REVIEW": "#BF8700",
+    "ARCHIVE": "#6E7781"
+  },
+  "flags": {
+    "SENSITIVE": "#CF222E",
+    "DUPLICATE": "#8250DF"
+  },
+  "folder_rule": "Do not create a physical folder unless new material cannot be represented clearly in an existing location or the folder is operationally required.",
+  "notification_rule": "Stay quiet when automation succeeds; group true exceptions into one concise report."
+}

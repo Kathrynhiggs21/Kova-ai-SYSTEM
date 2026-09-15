@@ -11,22 +11,22 @@ KOVA OS at `kovaos.com` is the single personal operating system, AI assistant, c
 - DNS/edge: Cloudflare for `kovaos.com`
 
 ## Master Drive states
-`00_MASTER_KOVA_OS` contains five lifecycle buckets:
-1. `01_ACTIVE_CANONICAL` — current authoritative artifacts
-2. `02_REFERENCE` — useful supporting material that is not authoritative
-3. `03_PURGATORY_REVIEW_MERGE` — duplicates, conflicts, unclear ownership, or material awaiting merge
-4. `04_ARCHIVE_SUPERSEDED` — confirmed obsolete/superseded material retained for history
-5. `05_SECURITY_QUARANTINE` — credentials, tokens, API-key references, private access records, and other sensitive material
+`00_MASTER_KOVA_OS` uses metadata views rather than a mandatory physical folder for every state:
+1. `ACTIVE` — current work or an authoritative artifact in active use
+2. `FINAL` — verified and authoritative for a stated purpose
+3. `REVIEW` — duplicates, conflicts, unclear ownership, or material awaiting a decision
+4. `ARCHIVE` — confirmed obsolete/superseded material retained for history
 
-Nothing is deleted merely because it is old or duplicated. Ambiguous items go to Purgatory first.
+`SENSITIVE` and `DUPLICATE` are independent flags. Nothing is deleted merely because it is old or duplicated, and no folder is created unless it is demonstrably necessary.
 
 ## Non-destructive lifecycle tagging
 KOVA records lifecycle status as metadata while leaving the governed file's contents, filename, and location unchanged by default.
 
 Use exactly one lifecycle tag for each exact asset version:
+- `KOVA:ACTIVE` — blue `#0969DA`: current work or an authoritative artifact in active use.
 - `KOVA:FINAL` — emerald `#1F883D`: verified and authoritative for a stated purpose.
+- `KOVA:REVIEW` — amber `#BF8700`: temporary guardrail when inspection or live verification is incomplete.
 - `KOVA:ARCHIVE` — slate `#6E7781`: superseded, historical, or inactive material retained for context.
-- `KOVA:UNREVIEWED` — amber `#BF8700`: temporary guardrail when inspection or live verification is incomplete.
 
 Optional independent flags:
 - `SENSITIVE` — red `#CF222E`: private access, credentials, personal data, or restricted material.
@@ -34,7 +34,7 @@ Optional independent flags:
 
 Registry rules:
 - Key status to an exact version: Drive file ID plus revision/version, repository path plus blob SHA, Library file identity plus version, or SHA-256 for stored/local binaries.
-- A content or revision change creates a new `KOVA:UNREVIEWED` version; the previous version keeps its recorded status.
+- A content or revision change creates a new `KOVA:REVIEW` version unless current evidence qualifies it as `ACTIVE`; the previous version keeps its recorded status.
 - `KOVA:ARCHIVE` records `superseded_by` when a replacement is known.
 - Folder status never applies automatically to every child. A ZIP/package status covers only the package unless its members were inspected.
 - Color is always shown with status text for accessibility.
@@ -93,7 +93,7 @@ The owner should not be required to code for normal KOVA use. Codex/agents may m
 1. Inventory every reachable KOVA artifact and connected storage source.
 2. Build the live connector/account registry.
 3. Merge current product requirements into one Master KOVA specification.
-4. Move exact/near duplicates into Purgatory or Archive only after canonical selection.
+4. Mark exact/near duplicates `REVIEW` or `ARCHIVE` only after canonical selection; do not move them by default.
 5. Quarantine security-sensitive references.
 6. Consolidate repo code into the smallest sensible active repository set.
 7. Make `kovaos.com` the primary user interface: orb + waves, command bar, dashboard, modules, accounts, projects, connections, status, tasks, family, work, Scribbles, finance, pets, travel and Android companion access.

@@ -33,7 +33,7 @@ except ImportError:
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 KOVA_KEYWORDS = [
     'kova', 'kova-ai', 'kova ai', 'kovaai',
-    'purgatory', 'claude', 'multi-repo',
+    'k9va', 'kiva', 'claude', 'multi-repo',
     'appsheet', 'webhook'
 ]
 
@@ -354,8 +354,8 @@ class GoogleDriveImporter:
         if unknown_cat > 0:
             self.log(f"  • Categorize {unknown_cat} unknown files", Colors.CYAN)
 
-        self.log(f"  • Move questionable files to Purgatory folder", Colors.CYAN)
-        self.log(f"  • Archive files older than 6 months", Colors.CYAN)
+        self.log(f"  • Mark unclear files REVIEW in the metadata registry", Colors.CYAN)
+        self.log(f"  • Archive only when a replacement or explicit decision is recorded", Colors.CYAN)
 
     def format_size(self, size: int) -> str:
         """Format file size"""

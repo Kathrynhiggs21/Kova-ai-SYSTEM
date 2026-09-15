@@ -116,14 +116,14 @@ python3 scripts/test_multi_repo.py
 
 ## 📂 File Organization System
 
-**NEW**: Comprehensive file management system for organizing all Kova-related files from Google Drive and other sources!
+KOVA organizes files with non-destructive metadata rather than manufacturing a large folder tree or moving originals.
 
 ### What It Does
 
 - **Imports** all Kova-related files from Google Drive
 - **Analyzes** files for relevance, duplicates, and categorization
-- **Organizes** files into a structured Master Hub
-- **Maintains** clean organization with automated workflows
+- **Generates** short topic/subtopic display titles while preserving source names
+- **Maintains** lifecycle, sensitivity, duplicate, source-chat and version metadata
 
 ### Key Features
 
@@ -131,52 +131,30 @@ python3 scripts/test_multi_repo.py
 ✅ **Smart Categorization** - Auto-categorize files by type and purpose
 ✅ **Duplicate Detection** - Find exact and similar duplicates
 ✅ **Relevance Scoring** - Score files 1-10 for importance
-✅ **Purgatory System** - Isolate questionable files for review
-✅ **Standardized Naming** - Consistent file naming convention
-✅ **Folder Structure** - 10 main categories with subcategories
-
-### Folder Structure
-
-```
-Kova-Master-Hub/
-├── 01-Core-System/          # Architecture, docs, configs
-├── 02-Repositories/         # All Kova repos
-├── 03-Integrations/         # Google Drive, Claude, GitHub, etc.
-├── 04-Data-Management/      # Active data, archives, backups
-├── 05-Development/          # Prototypes, experiments
-├── 06-Operations/           # Monitoring, maintenance, security
-├── 07-Communication/        # Email, meetings, collaboration
-├── 08-Resources/            # Learning, assets, references
-├── 09-Purgatory/            # Files needing review
-└── 10-Meta/                 # Organization tools & docs
-```
+✅ **Lifecycle States** - ACTIVE, FINAL, REVIEW and ARCHIVE with accessible colors
+✅ **Source Preservation** - No automatic rename, move, overwrite or deletion
+✅ **Minimal Folders** - Create a physical folder only when operationally necessary
 
 ### Quick Start
 
 ```bash
-# 1. Set up (interactive)
-./scripts/setup_kova_organization.sh
-
-# 2. Or run manually:
-# Import from Google Drive
+# Create or refresh an inventory from a configured source
 python3 scripts/gdrive_import.py
 
-# Organize files (dry run first!)
-python3 scripts/file_organizer.py ~/Kova-Master-Hub \
-  --inventory kova_file_inventory/inventory_*.json \
-  --dry-run
+# Build the registry from the newest inventory
+./scripts/setup_kova_organization.sh
 
-# Execute organization
-python3 scripts/file_organizer.py ~/Kova-Master-Hub \
-  --inventory kova_file_inventory/inventory_*.json \
-  --execute
+# Or select exact input/output paths
+python3 scripts/file_organizer.py \
+  --inventory path/to/inventory.json \
+  --registry path/to/status_registry.json
 ```
 
 ### Tools Included
 
 - **`gdrive_import.py`** - Import and analyze Google Drive files
-- **`file_organizer.py`** - Organize files into Master Hub structure
-- **`setup_kova_organization.sh`** - Interactive setup wizard
+- **`file_organizer.py`** - Build the non-destructive metadata registry
+- **`setup_kova_organization.sh`** - Refresh the registry without prompts
 
 ### Analysis Features
 
@@ -212,14 +190,15 @@ The system provides comprehensive file analysis:
 
 ### Maintenance Workflows
 
-- **Daily**: Import new files from Google Drive
-- **Weekly**: Review purgatory folder
-- **Monthly**: Archive files older than 6 months
-- **Quarterly**: Full cleanup and reorganization
+- **Daily**: Inventory changed items and update high-confidence metadata
+- **On change**: Reclassify the exact new version while preserving prior version status
+- **Exceptions only**: Group ambiguous conflicts for review
+- **Never by age alone**: Archive only after a replacement or explicit disposition is recorded
 
 📚 **Documentation:**
 - **[File Organization Reference](KOVA_FILE_ORGANIZATION.md)** - Complete structure details
 - **[Organization Guide](KOVA_ORGANIZATION_GUIDE.md)** - Step-by-step usage guide
+- **[Automation Policy](docs/architecture/KOVA_AUTOMATION_POLICY.md)** - Canonical automatic and approval boundaries
 
 ---
 

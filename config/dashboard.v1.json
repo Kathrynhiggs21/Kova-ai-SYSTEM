@@ -80,7 +80,7 @@
   ],
   "next_actions": [
     "Create a static dashboard shell that reads config/dashboard.v1.json.",
-    "Create reports/digests/2026-07-08.md as the first manual/live hybrid digest artifact.",
+    "Generate the next digest automatically from verified live sources and label unavailable sources explicitly.",
     "Create integrations/contact_entity_seed.csv for VIP/contact routing.",
     "Create integrations/external_source_targets.md for Manus, Dropbox, Notion, and OpenAI Platform setup instructions.",
     "Choose the dashboard implementation repo and wire it to this command-center config."
