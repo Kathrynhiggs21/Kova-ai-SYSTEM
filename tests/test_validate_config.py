@@ -50,6 +50,10 @@ def valid_architecture_policy():
     return {
         "schema_version": 1,
         "architecture": "modular_two_repository_system",
+        "active_repositories": {
+            "core": "Kathrynhiggs21/Kova-ai-SYSTEM",
+            "application": "Kathrynhiggs21/kovaos-site",
+        },
         "modules": [
             {
                 "id": "orchestration",
@@ -62,6 +66,7 @@ def valid_architecture_policy():
         "split_policy": {
             "default": "keep_as_module",
             "requires_owner_approval": True,
+            "required_controls": ["migration_plan"],
             "qualifying_boundaries": ["independent_deployment"],
             "non_qualifying_reasons": ["future_idea_only"],
         },
@@ -253,6 +258,66 @@ class ConfigValidatorTests(unittest.TestCase):
                 for error in results["errors"]
             )
         )
+
+    def test_architecture_policy_file_cannot_escape_repository_root(self):
+        config = valid_config()
+        config["architecture_policy_file"] = "../outside.json"
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "architecture_policy_file must stay within the repository root",
+            results["errors"],
+        )
+
+    def test_architecture_policy_file_requires_split_policy_controls(self):
+        config = valid_config()
+        invalid_policy = valid_architecture_policy()
+        del invalid_policy["split_policy"]["required_controls"]
+
+        passed, results, _ = self.validate(
+            config,
+            extra_files={
+                "config/core_modules.v1.json": json.dumps(invalid_policy),
+            },
+        )
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "architecture_policy_file split_policy missing required field: "
+            "required_controls",
+            results["errors"],
+        )
+
+    def test_architecture_policy_file_symlink_target_outside_repo_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            config_path = temp_path / "kova_repos_config.json"
+            config_path.write_text(json.dumps(valid_config()), encoding="utf-8")
+
+            outside_policy_path = temp_path.parent / f"{temp_path.name}-outside.json"
+            try:
+                outside_policy_path.write_text(
+                    json.dumps(valid_architecture_policy()), encoding="utf-8"
+                )
+
+                policy_path = temp_path / "config" / "core_modules.v1.json"
+                policy_path.parent.mkdir(parents=True, exist_ok=True)
+                policy_path.symlink_to(outside_policy_path)
+
+                validator = ConfigValidator(config_path)
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    passed, results = validator.validate_all()
+
+                self.assertFalse(passed)
+                self.assertIn(
+                    "architecture_policy_file must stay within the repository root",
+                    results["errors"],
+                )
+            finally:
+                outside_policy_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

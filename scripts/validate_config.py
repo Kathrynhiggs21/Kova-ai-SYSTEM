@@ -58,6 +58,16 @@ class ConfigValidator:
         """Log a success"""
         self.log(f"  ✓ {message}", Colors.GREEN)
 
+    def get_repository_root(self) -> Path:
+        """Resolve the repository root for the current config path."""
+        config_root = self.config_path.parent.resolve()
+        for candidate in (config_root, *config_root.parents):
+            if (candidate / ".git").exists():
+                return candidate
+        if self.config_path.resolve().is_relative_to(PROJECT_ROOT):
+            return PROJECT_ROOT
+        return config_root
+
     def validate_file_exists(self) -> bool:
         """Check if config file exists"""
         if not self.config_path.exists():
@@ -316,21 +326,27 @@ class ConfigValidator:
             return False
 
         relative_policy_path = Path(policy_reference)
-        repository_root = self.config_path.parent.resolve()
+        repository_root = self.get_repository_root()
         if relative_policy_path.is_absolute():
             self.error("architecture_policy_file must be repository-root-relative")
             return False
 
-        policy_path = (repository_root / relative_policy_path).resolve()
-        if not policy_path.is_relative_to(repository_root):
+        policy_path = repository_root / relative_policy_path
+        normalized_policy_path = policy_path.resolve(strict=False)
+        if not normalized_policy_path.is_relative_to(repository_root):
             self.error("architecture_policy_file must stay within the repository root")
             return False
         if not policy_path.is_file():
             self.error(f"architecture_policy_file not found: {policy_reference}")
             return False
 
+        resolved_policy_path = policy_path.resolve(strict=False)
+        if not resolved_policy_path.is_relative_to(repository_root):
+            self.error("architecture_policy_file must stay within the repository root")
+            return False
+
         try:
-            with open(policy_path, "r", encoding="utf-8") as file_handle:
+            with open(resolved_policy_path, "r", encoding="utf-8") as file_handle:
                 policy = json.load(file_handle)
         except json.JSONDecodeError as e:
             self.error(f"architecture_policy_file contains invalid JSON: {e}")
@@ -347,6 +363,7 @@ class ConfigValidator:
         required_policy_fields = {
             "schema_version": int,
             "architecture": str,
+            "active_repositories": dict,
             "modules": list,
             "split_policy": dict,
         }
@@ -360,6 +377,26 @@ class ConfigValidator:
                     f"'{field}' should be {expected_type.__name__}"
                 )
                 all_valid = False
+
+        active_repositories = policy.get("active_repositories")
+        if isinstance(active_repositories, dict):
+            required_active_repository_fields = {
+                "core": str,
+                "application": str,
+            }
+            for field, expected_type in required_active_repository_fields.items():
+                if field not in active_repositories:
+                    self.error(
+                        "architecture_policy_file active_repositories missing required "
+                        f"field: {field}"
+                    )
+                    all_valid = False
+                elif type(active_repositories[field]) is not expected_type:
+                    self.error(
+                        "architecture_policy_file active_repositories field "
+                        f"'{field}' should be {expected_type.__name__}"
+                    )
+                    all_valid = False
 
         modules = policy.get("modules", [])
         if isinstance(modules, list):
@@ -421,6 +458,7 @@ class ConfigValidator:
             required_split_policy_fields = {
                 "default": str,
                 "requires_owner_approval": bool,
+                "required_controls": list,
                 "qualifying_boundaries": list,
                 "non_qualifying_reasons": list,
             }
@@ -437,7 +475,11 @@ class ConfigValidator:
                         f"'{field}' should be {expected_type.__name__}"
                     )
                     all_valid = False
-            for field in ("qualifying_boundaries", "non_qualifying_reasons"):
+            for field in (
+                "required_controls",
+                "qualifying_boundaries",
+                "non_qualifying_reasons",
+            ):
                 values = split_policy.get(field)
                 if isinstance(values, list) and not all(
                     isinstance(value, str) and value for value in values
