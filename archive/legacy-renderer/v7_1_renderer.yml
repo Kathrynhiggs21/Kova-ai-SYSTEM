@@ -1,4 +1,6 @@
-name: V7.1 Card Production Pipeline
+# ARCHIVE ONLY — historical workflow preserved for provenance.
+# This file is intentionally outside .github/workflows and cannot be dispatched.
+name: V7.1 Card Production Pipeline (Archived)
 
 on:
   workflow_dispatch:
@@ -17,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    
+
     steps:
-      - name: Checkout kova-ai Code
+      - name: Checkout historical kova-ai code
         uses: actions/checkout@v4
 
       - name: Set up Python

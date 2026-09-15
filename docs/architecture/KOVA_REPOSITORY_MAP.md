@@ -58,7 +58,7 @@ A category name, future idea, temporary experiment or visual neatness is not eno
 
 ## Explicit exclusion
 
-The existing Zoo/card renderer and `scripts/batch_renderer.py` are not KOVA Core automation. Do not migrate them into Assistant, MCP, connectors, memory, automation, infrastructure or the canonical site.
+The existing Zoo/card renderer and `scripts/batch_renderer.py` are not KOVA Core automation. Its former GitHub Actions workflow is disabled under `archive/legacy-renderer/` and cannot be dispatched from this repository. Do not migrate renderer code into Assistant, MCP, connectors, memory, automation, infrastructure or the canonical site.
 
 ## Rules
 

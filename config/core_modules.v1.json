@@ -50,7 +50,7 @@
       ],
       "excluded_paths": [
         "scripts/batch_renderer.py",
-        ".github/workflows/v7_1_renderer.yml"
+        "archive/legacy-renderer/v7_1_renderer.yml"
       ],
       "responsibility": "implemented lifecycle jobs and steward policies; runtime scheduling and retries remain future work",
       "separate_repository": false
