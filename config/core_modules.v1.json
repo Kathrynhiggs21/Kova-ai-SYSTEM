@@ -94,6 +94,14 @@
   "split_policy": {
     "default": "keep_as_module",
     "requires_owner_approval": true,
+    "required_controls": [
+      "migration_plan",
+      "ci",
+      "deployment_ownership",
+      "versioned_interfaces",
+      "rollback",
+      "registry_update"
+    ],
     "qualifying_boundaries": [
       "independent_deployment",
       "distinct_security_or_secrets_boundary",
