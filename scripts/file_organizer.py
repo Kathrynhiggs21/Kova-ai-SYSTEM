@@ -398,9 +398,17 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     return rows
 
 
-def merge_history(current: list[dict[str, Any]], previous: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def merge_history(
+    current: list[dict[str, Any]],
+    previous: list[dict[str, Any]],
+    *,
+    full_snapshot: bool = False,
+) -> list[dict[str, Any]]:
     """Retain exact-version history and prior decisions across scanner runs."""
-    merged = {row["version_key"]: {**row, "observed_current": False} for row in previous}
+    if full_snapshot:
+        merged = {row["version_key"]: {**row, "observed_current": False} for row in previous}
+    else:
+        merged = {row["version_key"]: dict(row) for row in previous}
     for row in current:
         prior = merged.get(row["version_key"], {})
         combined = {**prior, **row}
@@ -493,7 +501,7 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
     if output.exists():
         payload = json.loads(output.read_text(encoding="utf-8"))
         previous = payload.get("items", []) if isinstance(payload, dict) else []
-    items = merge_history(rows, previous)
+    items = merge_history(rows, previous, full_snapshot=not rows)
     generated_at = datetime.now(timezone.utc).isoformat()
     exceptions = [
         row for row in items

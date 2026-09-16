@@ -233,6 +233,17 @@ class FileOrganizerTests(unittest.TestCase):
         self.assertEqual(merged["verification"]["evidence"], "Approved")
         self.assertEqual(merged["version_evidence"]["headRevisionId"], "rev-1")
 
+    def test_incremental_merge_keeps_previous_observed_current_state_for_unmentioned_items(self):
+        previous = [
+            {"version_key": "existing", "observed_current": True},
+        ]
+        current = [
+            {"version_key": "new", "observed_current": True},
+        ]
+        merged = {row["version_key"]: row for row in MODULE.merge_history(current, previous)}
+        self.assertTrue(merged["existing"]["observed_current"])
+        self.assertTrue(merged["new"]["observed_current"])
+
     def test_default_private_dir_uses_xdg_data_home(self):
         original_private = MODULE.os.environ.get("KOVA_PRIVATE_STATE_DIR")
         original_xdg = MODULE.os.environ.get("XDG_DATA_HOME")
