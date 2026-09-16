@@ -40,6 +40,10 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_separator_sensitive_and_uninspected_state(self):
         self.assertEqual(MODULE.sensitivity_for({"name": "private-config-url.txt"})[0], "SENSITIVE")
+        self.assertEqual(MODULE.sensitivity_for({"name": "credentials.json"})[0], "SENSITIVE")
+        self.assertEqual(MODULE.sensitivity_for({"name": "passwords.txt"})[0], "SENSITIVE")
+        self.assertEqual(MODULE.sensitivity_for({"name": "api-keys.txt"})[0], "SENSITIVE")
+        self.assertEqual(MODULE.sensitivity_for({"name": "secrets.txt"})[0], "SENSITIVE")
         self.assertEqual(MODULE.sensitivity_for({"name": "ordinary-notes.txt"})[0], "UNKNOWN")
         self.assertEqual(
             MODULE.sensitivity_for({"name": "ordinary-notes.txt", "content_inspected": True})[0],

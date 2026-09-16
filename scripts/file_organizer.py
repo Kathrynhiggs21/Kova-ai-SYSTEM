@@ -59,13 +59,17 @@ RECORD_ROLES = tuple(POLICY["record_roles"])
 
 SENSITIVE_MARKERS = (
     "credential",
+    "credentials",
     "password",
+    "passwords",
     "private key",
     "api key",
+    "api keys",
     "access token",
     "refresh token",
     "config url",
     "secret",
+    "secrets",
     "medical",
     "tax",
 )
