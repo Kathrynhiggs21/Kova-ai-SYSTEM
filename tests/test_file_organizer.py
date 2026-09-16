@@ -79,6 +79,16 @@ class FileOrganizerTests(unittest.TestCase):
         self.assertEqual(len(candidates), 1)
         self.assertEqual(candidates[0]["lifecycle"], "REVIEW")
 
+    def test_mixed_hash_likely_group_is_marked_for_review(self):
+        rows = MODULE.build_registry([
+            {"id": "hashless-newer", "name": "KOVA Plan.docx", "size": 9, "modified": "2026-02-01T00:00:00Z"},
+            {"id": "hashed-older", "name": "KOVA Plan.docx", "size": 9, "md5Checksum": "abc", "modified": "2026-01-01T00:00:00Z"},
+        ])
+        candidates = [row for row in rows if row["possible_duplicate_of"] is not None]
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["source_id"], "hashed-older")
+        self.assertEqual(candidates[0]["lifecycle"], "REVIEW")
+
     def test_version_identity_includes_source(self):
         a = MODULE.version_key({"id": "a", "md5Checksum": "same"})
         b = MODULE.version_key({"id": "b", "md5Checksum": "same"})

@@ -337,6 +337,11 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         for key, indexes in likely_groups.items()
         if len(indexes) > 1
     }
+    likely_groups_with_missing_hash = {
+        key
+        for key, indexes in likely_groups.items()
+        if len(indexes) > 1 and any(exact_duplicate_key(items[idx]) is None for idx in indexes)
+    }
     version_keys = [version_key(item) for item in items]
     rows: list[dict[str, Any]] = []
 
@@ -352,7 +357,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         likely = likely_duplicate_key(file_info, title)
         likely_canonical = likely_canonical_indexes.get(likely)
         possible_duplicate_of = None
-        if exact is None and likely_canonical is not None and likely_canonical != index:
+        if likely in likely_groups_with_missing_hash and likely_canonical is not None and likely_canonical != index:
             possible_duplicate_of = version_keys[likely_canonical]
             if lifecycle not in ("FINAL", "ARCHIVE"):
                 lifecycle, reason = "REVIEW", "Possible duplicate; content hash unavailable"
