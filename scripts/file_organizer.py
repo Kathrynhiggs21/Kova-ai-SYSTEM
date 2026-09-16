@@ -472,6 +472,47 @@ def merge_history(
     return sorted(merged.values(), key=lambda row: row["version_key"])
 
 
+def reclassify_exact_duplicates(
+    rows: list[dict[str, Any]], historical_current: set[str]
+) -> list[dict[str, Any]]:
+    """Reapply exact duplicate flags using current and previously-current hash evidence."""
+    candidate_indexes = [
+        index
+        for index, row in enumerate(rows)
+        if row.get("observed_current") or row.get("version_key") in historical_current
+    ]
+    exact_groups: dict[str, list[int]] = {}
+    for index in candidate_indexes:
+        version_evidence = rows[index].get("version_evidence", {})
+        content_hash = (
+            version_evidence.get("sha256")
+            or version_evidence.get("md5Checksum")
+            or version_evidence.get("content_hash")
+        )
+        if content_hash:
+            exact_groups.setdefault(f"hash:{content_hash}", []).append(index)
+    for indexes in exact_groups.values():
+        if len(indexes) < 2:
+            continue
+        canonical = max(
+            indexes,
+            key=lambda idx: (
+                rows[idx].get("verification", {}).get("verified") is True,
+                {"FINAL": 3, "ACTIVE": 2, "REVIEW": 1, "ARCHIVE": 0}.get(rows[idx].get("lifecycle"), 0),
+                str(rows[idx].get("version_evidence", {}).get("modified") or ""),
+                str(rows[idx].get("source_id") or ""),
+            ),
+        )
+        for index in indexes:
+            if index == canonical:
+                continue
+            if "DUPLICATE" not in rows[index]["flags"]:
+                rows[index]["flags"].append("DUPLICATE")
+                rows[index]["flag_colors"] = [FLAG_COLORS[flag] for flag in rows[index]["flags"]]
+            rows[index]["canonical_version_key"] = rows[canonical]["version_key"]
+    return rows
+
+
 def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
     """Atomically publish private JSON with user-only filesystem permissions."""
     parent = output.parent
@@ -509,7 +550,13 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
     if output.exists():
         payload = json.loads(output.read_text(encoding="utf-8"))
         previous = payload.get("items", []) if isinstance(payload, dict) else []
-    items = merge_history(rows, previous, full_snapshot=not rows)
+    historical_current = {
+        row["version_key"] for row in previous if row.get("observed_current") and row.get("version_key")
+    }
+    items = reclassify_exact_duplicates(
+        merge_history(rows, previous, full_snapshot=not rows),
+        historical_current,
+    )
     generated_at = datetime.now(timezone.utc).isoformat()
     exceptions = [
         row for row in items

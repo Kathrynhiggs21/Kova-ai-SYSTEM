@@ -180,6 +180,27 @@ class FileOrganizerTests(unittest.TestCase):
             self.assertEqual(payload["items"][0]["superseded_by"], "source:2")
             self.assertEqual(payload["items"][0]["lifecycle"], "ARCHIVE")
 
+    def test_incremental_write_reclassifies_duplicates_against_previous_current_hashes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "private" / "registry.json"
+            MODULE.write_registry(MODULE.build_registry([{
+                "id": "1",
+                "name": "KOVA Plan A.docx",
+                "md5Checksum": "same",
+                "modified": "2026-01-01T00:00:00Z",
+            }]), output)
+            MODULE.write_registry(MODULE.build_registry([{
+                "id": "2",
+                "name": "KOVA Plan B.docx",
+                "md5Checksum": "same",
+                "modified": "2026-02-01T00:00:00Z",
+            }]), output)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            rows_by_id = {row["source_id"]: row for row in payload["items"]}
+            self.assertIn("DUPLICATE", rows_by_id["1"]["flags"])
+            self.assertEqual(rows_by_id["1"]["canonical_version_key"], rows_by_id["2"]["version_key"])
+            self.assertNotIn("DUPLICATE", rows_by_id["2"]["flags"])
+
     def test_merge_history_preserves_prior_decisions_and_verification_evidence(self):
         previous = [{
             "version_key": "same",
