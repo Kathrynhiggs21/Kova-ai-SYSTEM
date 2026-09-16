@@ -1,36 +1,25 @@
-# ADR-002: Canonical KOVA Web Application
+# ADR-002: Command Center and Public Site Boundaries
 
 - Status: Accepted
-- Date: 2026-09-15
+- Date: 2026-09-16
 - Domain: `https://kovaos.com`
 
 ## Decision
 
-KOVA OS has two active platform repositories:
+KOVA OS currently operates with three active repositories and explicit frontend separation:
 
-1. `Kathrynhiggs21/Kova-ai-SYSTEM` owns architecture, the control plane, connector contracts, automation policy, shared schemas, deployment coordination, and audits.
-2. `Kathrynhiggs21/kovaos-site` owns the authenticated browser/PWA experience at `kovaos.com`.
+1. `Kathrynhiggs21/Kova-ai-SYSTEM` owns Core/backend orchestration, APIs, MCP, shared contracts, connector and automation interfaces, and policy.
+2. `Kathrynhiggs21/kova-ai-dash` owns the authenticated Command Center experience.
+3. `Kathrynhiggs21/kovaos-site` owns public, unauthenticated web responsibilities for `kovaos.com`.
 
-`kova-ai-dash` is a feature donor. Its unique dashboard, integration, command, and provenance features must move through reviewed pull requests into `kovaos-site`; it is disabled in the runtime registry and will be archived only after migration verification.
+`kova-ai-dash` is not treated as a donor during this remediation phase; it is the current authenticated authority. `kovaos-site` must not absorb authenticated Command Center scope until ownership is explicitly re-decided.
 
-The proposed names `kova-core-system`, `kovaos-pwa`, `kova-memory-mem0`, and `kova-legacy-archive` are logical target labels, not authorization to create duplicate repositories or combine Git histories destructively. Existing repositories keep their names until redirects, deployment links, package imports, and history preservation are verified.
+## Rationale
 
-Scribbles, Reagan learning, and TAC for Hope are independent product/World boundaries. They may integrate with KOVA through contracts, but they are not folders inside the KOVA Core repository.
-
-## Source evidence
-
-- [Approved KOVA final architecture](https://drive.google.com/file/d/19B30gtiOE9F9IzYaKixQNrz3wUu6IROq/view)
-- [KOVA target-state registry](https://drive.google.com/file/d/1vDdBFTgVxj1djLsSKI6Id5zGZpduq3mM/view)
-- [KOVA remediation roadmap](https://drive.google.com/file/d/17NmHIlWPDeHnFQDg-27GQA4eWmH2_W63/view)
-- [KOVA architecture package folder](https://drive.google.com/drive/folders/180rt6J7TuEtsErBvG_rt8ZPnEAICpako)
-- [Structured KOVA/AI Drive](https://drive.google.com/drive/folders/1ASnxBdkrBtEhw7s5OlM27JF6dTuQ5WWl)
-
-The general personal Drive folder is not a KOVA source of truth. The mixed KOVA working folder contains useful artifacts but also duplicates and converted copies; it is an intake/reference source, not executable truth.
+The immediate risk in this phase is ownership ambiguity, not missing UI code. Separating authenticated operations from public presentation prevents accidental privilege expansion, confusing automation behavior, and incorrect deployment assumptions while repository boundaries are being stabilized.
 
 ## Consequences
 
-- Runtime registry enables only Core and `kovaos-site`.
-- Feature donors, experiments, and archives cannot be deployed by registry automation.
-- GitHub owns executable truth; Drive owns user files and archival evidence.
-- New KOVA repositories require a distinct deployable boundary and an update to this ADR and the runtime registry.
-- Vercel cleanup retains clean project names only long enough to verify domains and environment variables; retaining a Vercel project does not promote its source repository to canonical status.
+- Runtime registry keeps all mutating cross-repository automation disabled.
+- Authenticated and public frontend responsibilities are reviewed independently.
+- Any future consolidation or migration requires an explicit ownership decision, versioned API boundaries, and tested rollout/rollback.

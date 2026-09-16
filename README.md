@@ -50,7 +50,8 @@ cross-repository synchronization.
 The currently enabled runtime repositories are:
 
 - **Kova-ai-SYSTEM** - Canonical orchestration hub and FastAPI backend (this repo)
-- **kovaos-site** - Canonical authenticated web application for `kovaos.com`
+- **kova-ai-dash** - Canonical authenticated Command Center application
+- **kovaos-site** - Canonical public web presence for `kovaos.com`
 
 Other KOVA-named repositories are catalogued with `enabled: false` until their
 code, ownership boundary, tests, secrets, and deployment path are audited. See
@@ -65,8 +66,9 @@ integration settings.
 
 - **Available now:** configured-repository listing, GitHub metadata retrieval,
   status inspection, and configuration validation.
-- **Disabled until implemented and secured:** automatic discovery, push/PR
-  synchronization, cross-repository notifications, and unified AI analysis.
+- **Disabled until ownership is stable and secured:** automatic discovery,
+  auto-sync/push/PR synchronization, webhook-driven mutation flows,
+  cross-repository PR automation, and unified changelog automation.
 - Dashboard integration badges are recorded state, not verified live health.
 
 ### Authenticated Local Checks

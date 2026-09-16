@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "architecture": "modular_two_repository_system",
+  "architecture": "modular_three_repository_system",
   "modules": [
     {
       "id": "orchestration",
@@ -92,10 +92,17 @@
       "separate_repository": false
     },
     {
-      "id": "web_application",
+      "id": "command_center_application",
+      "repository": "Kathrynhiggs21/kova-ai-dash",
+      "current_paths": ["src", "app", "public"],
+      "responsibility": "authenticated KOVA command center interface and operator workflows",
+      "separate_repository": true
+    },
+    {
+      "id": "public_site",
       "repository": "Kathrynhiggs21/kovaos-site",
-      "current_paths": ["client", "server", "shared", "drizzle"],
-      "responsibility": "authenticated KOVA interface and application delivery",
+      "current_paths": ["src", "public", "content"],
+      "responsibility": "public kovaos.com web presence and documentation",
       "separate_repository": true
     }
   ],
