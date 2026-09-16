@@ -30,6 +30,18 @@ class GoogleDriveImportTests(unittest.TestCase):
             self.assertEqual((output_dir / "duplicates_20260916_180000.json").stat().st_mode & 0o777, 0o600)
             self.assertEqual((output_dir / "summary_20260916_180000.txt").stat().st_mode & 0o777, 0o600)
 
+    def test_save_inventory_defaults_to_private_state_directory(self):
+        importer = MODULE.GoogleDriveImporter()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch.dict(MODULE.os.environ, {"KOVA_PRIVATE_STATE_DIR": temp_dir}, clear=False):
+                with mock.patch.object(MODULE, "datetime") as mocked_datetime:
+                    mocked_datetime.now.return_value = datetime(2026, 9, 16, 18, 0, 0)
+                    importer.save_inventory([{"category": "CORE"}], [])
+
+            output_dir = Path(temp_dir) / "inventory"
+            self.assertEqual(output_dir.stat().st_mode & 0o777, 0o700)
+            self.assertTrue((output_dir / "inventory_20260916_180000.json").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

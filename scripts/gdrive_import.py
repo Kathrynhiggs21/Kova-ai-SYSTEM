@@ -50,6 +50,16 @@ CATEGORIES = {
 }
 
 
+def default_private_dir() -> Path:
+    override = (os.environ.get("KOVA_PRIVATE_STATE_DIR") or "").strip()
+    if override:
+        return Path(override).expanduser()
+    xdg_data_home = (os.environ.get("XDG_DATA_HOME") or "").strip()
+    if xdg_data_home:
+        return Path(xdg_data_home).expanduser() / "kova" / "private"
+    return Path.home() / ".local" / "share" / "kova" / "private"
+
+
 class Colors:
     """ANSI color codes"""
     GREEN = '\033[92m'
@@ -380,7 +390,7 @@ class GoogleDriveImporter:
         output_dir: Optional[Path] = None,
     ):
         """Save inventory to JSON"""
-        output_dir = output_dir or (Path(__file__).parent.parent / 'kova_file_inventory')
+        output_dir = output_dir or (default_private_dir() / 'inventory')
         output_dir.mkdir(mode=0o700, exist_ok=True)
         os.chmod(output_dir, 0o700)
 

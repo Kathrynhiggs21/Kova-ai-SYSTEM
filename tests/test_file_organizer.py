@@ -253,6 +253,30 @@ class FileOrganizerTests(unittest.TestCase):
         self.assertEqual(merged["canonical_version_key"], "winner")
         self.assertEqual(merged["verification"]["evidence"], "Approved")
         self.assertEqual(merged["version_evidence"]["headRevisionId"], "rev-1")
+        self.assertEqual(merged["decision_reason"], "Owner approved")
+
+    def test_merge_history_keeps_prior_lifecycle_when_refresh_only_derives_recency(self):
+        previous = [{
+            "version_key": "same",
+            "lifecycle": "ARCHIVE",
+            "lifecycle_color": MODULE.LIFECYCLE_COLORS["ARCHIVE"],
+            "decision_reason": "Known replacement recorded",
+            "verification": {"verified": False, "source_status": None},
+            "flags": [],
+            "flag_colors": [],
+        }]
+        current = [{
+            "version_key": "same",
+            "lifecycle": "ACTIVE",
+            "lifecycle_color": MODULE.LIFECYCLE_COLORS["ACTIVE"],
+            "decision_reason": "Recent relevant work",
+            "verification": {"verified": False, "source_status": None},
+            "flags": [],
+            "flag_colors": [],
+        }]
+        merged = MODULE.merge_history(current, previous)[0]
+        self.assertEqual(merged["lifecycle"], "ARCHIVE")
+        self.assertEqual(merged["decision_reason"], "Known replacement recorded")
 
     def test_incremental_merge_keeps_previous_observed_current_state_for_unmentioned_items(self):
         previous = [
@@ -315,6 +339,63 @@ class FileOrganizerTests(unittest.TestCase):
             )
             self.assertEqual(original.read_text(encoding="utf-8"), "unchanged")
             self.assertTrue(registry.exists())
+
+    def test_dry_run_previews_merged_registry_payload(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            inventory = root / "inventory.json"
+            registry = root / "private" / "registry.json"
+            inventory.write_text("[]", encoding="utf-8")
+            MODULE.write_registry(
+                MODULE.build_registry([{
+                    "id": "1",
+                    "name": "KOVA Guide.docx",
+                    "modified": "2026-01-01T00:00:00Z",
+                    "lifecycle": "FINAL",
+                    "verified": True,
+                }]),
+                registry,
+            )
+            result = subprocess.run(
+                ["python3", str(SCRIPT), "--inventory", str(inventory), "--registry", str(registry), "--dry-run"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(result.stdout)
+            self.assertEqual(len(payload["items"]), 1)
+            self.assertFalse(payload["items"][0]["observed_current"])
+            self.assertEqual(payload["exceptions"]["exception_count"], 1)
+
+    def test_cli_rejects_registry_that_overwrites_inventory(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            inventory = Path(temp_dir) / "inventory.json"
+            inventory.write_text("[]", encoding="utf-8")
+            result = subprocess.run(
+                ["python3", str(SCRIPT), "--inventory", str(inventory), "--registry", str(inventory)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("--registry must not overwrite the input inventory", result.stderr)
+
+    def test_cli_rejects_repository_local_registry_output(self):
+        inventory = SCRIPT.parents[1] / "tests" / "tmp_inventory.json"
+        registry = SCRIPT.parents[1] / "tests" / "tmp_registry.json"
+        inventory.write_text("[]", encoding="utf-8")
+        try:
+            result = subprocess.run(
+                ["python3", str(SCRIPT), "--inventory", str(inventory), "--registry", str(registry)],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("--registry must point outside the repository checkout", result.stderr)
+        finally:
+            inventory.unlink(missing_ok=True)
+            registry.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

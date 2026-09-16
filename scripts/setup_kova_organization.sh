@@ -5,12 +5,16 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_dir="$(dirname "$script_dir")"
-inventory_dir="$project_dir/kova_file_inventory"
 inventory_path="${1:-}"
 private_state_dir="${KOVA_PRIVATE_STATE_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/kova/private}"
+inventory_dir="$private_state_dir/inventory"
+legacy_inventory_dir="$project_dir/kova_file_inventory"
 registry_path="${2:-$private_state_dir/status_registry.json}"
 
 if [[ -z "$inventory_path" ]]; then
+  if [[ ! -d "$inventory_dir" && -d "$legacy_inventory_dir" ]]; then
+    inventory_dir="$legacy_inventory_dir"
+  fi
   if [[ ! -d "$inventory_dir" ]]; then
     echo "No inventory found. Run the source scanner or provide an inventory JSON path." >&2
     exit 1

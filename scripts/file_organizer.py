@@ -461,9 +461,13 @@ def merge_history(
         if prior.get("possible_duplicate_of") and not row.get("possible_duplicate_of"):
             combined["possible_duplicate_of"] = prior["possible_duplicate_of"]
         if (
-            prior.get("lifecycle") in ("ACTIVE", "FINAL", "ARCHIVE")
-            and row.get("lifecycle") == "REVIEW"
-            and row.get("decision_reason") in {"Needs current verification", "Possible duplicate; content hash unavailable"}
+            prior.get("lifecycle")
+            and not current_verification.get("source_status")
+            and row.get("decision_reason") in {
+                "Needs current verification",
+                "Possible duplicate; content hash unavailable",
+                "Recent relevant work",
+            }
         ):
             combined["lifecycle"] = prior["lifecycle"]
             combined["lifecycle_color"] = LIFECYCLE_COLORS[prior["lifecycle"]]
@@ -513,6 +517,46 @@ def reclassify_exact_duplicates(
     return rows
 
 
+def build_registry_payload(
+    rows: list[dict[str, Any]],
+    previous: list[dict[str, Any]] | None = None,
+    *,
+    full_snapshot: bool = False,
+) -> dict[str, Any]:
+    previous_rows = previous or []
+    historical_current = {
+        row["version_key"]
+        for row in previous_rows
+        if row.get("observed_current") and row.get("version_key")
+    }
+    items = reclassify_exact_duplicates(
+        merge_history(rows, previous_rows, full_snapshot=full_snapshot),
+        historical_current,
+    )
+    generated_at = datetime.now(timezone.utc).isoformat()
+    exceptions = [
+        row for row in items
+        if row.get("lifecycle") == "REVIEW"
+        or row.get("sensitivity") in ("SENSITIVE", "UNKNOWN")
+        or row.get("flags")
+        or row.get("possible_duplicate_of")
+    ]
+    exception_payload = {
+        "schema_version": 1,
+        "generated_at": generated_at,
+        "exception_count": len(exceptions),
+        "items": exceptions,
+    }
+    return {
+        "schema_version": 2,
+        "generated_at": generated_at,
+        "organization_mode": "metadata-first",
+        "physical_changes": False,
+        "items": items,
+        "exceptions": exception_payload,
+    }
+
+
 def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
     """Atomically publish private JSON with user-only filesystem permissions."""
     parent = output.parent
@@ -550,39 +594,21 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
     if output.exists():
         payload = json.loads(output.read_text(encoding="utf-8"))
         previous = payload.get("items", []) if isinstance(payload, dict) else []
-    historical_current = {
-        row["version_key"] for row in previous if row.get("observed_current") and row.get("version_key")
-    }
-    items = reclassify_exact_duplicates(
-        merge_history(rows, previous, full_snapshot=not rows),
-        historical_current,
-    )
-    generated_at = datetime.now(timezone.utc).isoformat()
-    exceptions = [
-        row for row in items
-        if row.get("lifecycle") == "REVIEW"
-        or row.get("sensitivity") in ("SENSITIVE", "UNKNOWN")
-        or row.get("flags")
-        or row.get("possible_duplicate_of")
-    ]
-    exception_payload = {
-        "schema_version": 1,
-        "generated_at": generated_at,
-        "exception_count": len(exceptions),
-        "items": exceptions,
-    }
-    payload = {
-        "schema_version": 2,
-        "generated_at": generated_at,
-        "organization_mode": "metadata-first",
-        "physical_changes": False,
-        "items": items,
-        "exceptions": exception_payload,
-    }
+    payload = build_registry_payload(rows, previous, full_snapshot=not rows)
     atomic_write_private(output, payload)
     exception_output = output.with_name(f"{output.stem}.exceptions.json")
-    atomic_write_private(exception_output, exception_payload)
-    return len(exceptions)
+    atomic_write_private(exception_output, payload["exceptions"])
+    return payload["exceptions"]["exception_count"]
+
+
+def validate_registry_output_path(inventory: Path, registry: Path) -> Path:
+    resolved_inventory = inventory.expanduser().resolve()
+    resolved_registry = registry.expanduser().resolve()
+    if resolved_registry == resolved_inventory:
+        raise ValueError("--registry must not overwrite the input inventory")
+    if resolved_registry.is_relative_to(PROJECT_DIR):
+        raise ValueError("--registry must point outside the repository checkout")
+    return resolved_registry
 
 
 def main() -> int:
@@ -599,17 +625,27 @@ def main() -> int:
             print("Legacy move/folder arguments were ignored; governed files were not changed.")
             return 0
         parser.error("--inventory is required unless using legacy compatibility arguments")
+    if not args.inventory.is_file():
+        parser.error("--inventory must point to a JSON file")
+    try:
+        registry_path = validate_registry_output_path(args.inventory, args.registry)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
     if not isinstance(inventory, list):
         parser.error("inventory must be a JSON array")
     rows = build_registry(inventory)
     if args.dry_run:
-        print(json.dumps(rows, indent=2))
+        previous: list[dict[str, Any]] = []
+        if registry_path.exists():
+            payload = json.loads(registry_path.read_text(encoding="utf-8"))
+            previous = payload.get("items", []) if isinstance(payload, dict) else []
+        print(json.dumps(build_registry_payload(rows, previous, full_snapshot=not rows), indent=2))
     else:
-        exception_count = write_registry(rows, args.registry)
-        print(f"Wrote {len(rows)} current metadata records to {args.registry}")
-        print(f"Wrote {exception_count} review exceptions to {args.registry.with_name(args.registry.stem + '.exceptions.json')}")
+        exception_count = write_registry(rows, registry_path)
+        print(f"Wrote {len(rows)} current metadata records to {registry_path}")
+        print(f"Wrote {exception_count} review exceptions to {registry_path.with_name(registry_path.stem + '.exceptions.json')}")
     if args.base_path or args.execute:
         print("Legacy move/folder arguments were ignored; governed files were not changed.")
     return 0
