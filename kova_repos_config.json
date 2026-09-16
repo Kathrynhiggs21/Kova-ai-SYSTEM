@@ -18,39 +18,37 @@
     {
       "name": "kova-ai-dash",
       "full_name": "Kathrynhiggs21/kova-ai-dash",
-      "description": "Feature donor for migration into kovaos-site; archive after verified migration",
+      "description": "Canonical authenticated KOVA OS Command Center application",
       "type": "frontend",
-      "enabled": false,
-      "sync_priority": 2,
+      "enabled": true,
+      "sync_priority": 1,
       "features": [
+        "command-center",
         "dashboard",
         "integration-ui",
         "authentication",
-        "persistence",
-        "storage"
+        "routing",
+        "operator-workflows"
       ]
     },
     {
       "name": "kovaos-site",
       "full_name": "Kathrynhiggs21/kovaos-site",
-      "description": "Canonical authenticated KOVA OS web application for kovaos.com",
+      "description": "Canonical public KOVA OS site for kovaos.com",
       "type": "frontend",
       "enabled": true,
-      "sync_priority": 1,
+      "sync_priority": 2,
       "features": [
-        "website",
-        "pwa",
-        "dashboard",
-        "assistant",
-        "authentication",
-        "routing",
+        "public-site",
+        "marketing",
+        "documentation",
         "kovaos.com"
       ]
     },
     {
       "name": "kova-ai",
       "full_name": "Kathrynhiggs21/kova-ai",
-      "description": "Mixed assistant/application migration source; audit before enabling",
+      "description": "Mixed legacy repository under identity remediation; migrate Zoo/card code to Scribbles-Zoo-Project",
       "type": "experimental",
       "enabled": false,
       "sync_priority": 3,
@@ -175,7 +173,7 @@
     "cross_repo_prs": false,
     "unified_changelog": false
   },
-  "architecture_mode": "modular_two_repository_system",
+  "architecture_mode": "modular_three_repository_system",
   "repository_creation_policy": {
     "description": "See config/core_modules.v1.json for the canonical split policy",
     "split_policy_file": "config/core_modules.v1.json"
