@@ -102,7 +102,7 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_history_and_verified_decision_are_preserved(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "registry.json"
+            output = Path(temp_dir) / "private" / "registry.json"
             old = MODULE.build_registry([{
                 "id": "1", "name": "KOVA Guide.docx", "modified": "2026-01-01T00:00:00Z",
                 "lifecycle": "FINAL", "verified": True, "verification_evidence": "Owner approved"
@@ -116,6 +116,17 @@ class FileOrganizerTests(unittest.TestCase):
             self.assertEqual(output.stat().st_mode & 0o777, 0o600)
             self.assertEqual(output.parent.stat().st_mode & 0o777, 0o700)
             self.assertTrue(output.with_name("registry.exceptions.json").exists())
+
+    def test_existing_parent_permissions_are_preserved(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir) / "shared"
+            parent.mkdir(mode=0o755)
+            output = parent / "registry.json"
+
+            MODULE.write_registry(MODULE.build_registry([]), output)
+
+            self.assertEqual(parent.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(output.stat().st_mode & 0o777, 0o600)
 
     def test_history_preserves_superseded_relationship(self):
         with tempfile.TemporaryDirectory() as temp_dir:

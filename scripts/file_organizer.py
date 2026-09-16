@@ -385,15 +385,18 @@ def merge_history(current: list[dict[str, Any]], previous: list[dict[str, Any]])
 
 def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
     """Atomically publish private JSON with user-only filesystem permissions."""
-    output.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    os.chmod(output.parent, 0o700)
+    parent = output.parent
+    created_parent = not parent.exists()
+    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    if created_parent:
+        os.chmod(parent, 0o700)
     serialized = json.dumps(payload, indent=2) + "\n"
     temp_name: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
             "w",
             encoding="utf-8",
-            dir=output.parent,
+            dir=parent,
             prefix=f".{output.name}.",
             suffix=".tmp",
             delete=False,
