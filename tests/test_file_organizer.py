@@ -70,8 +70,8 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_same_title_without_hash_is_only_a_review_candidate(self):
         rows = MODULE.build_registry([
-            {"id": "1", "name": "KOVA Plan.docx", "size": 9, "modified": "2026-01-01T00:00:00Z"},
-            {"id": "2", "name": "KOVA Plan.docx", "size": 9, "modified": "2026-02-01T00:00:00Z"},
+            {"id": "1", "name": "KOVA Plan.docx", "size": 9, "version": "1", "modified": "2026-01-01T00:00:00Z"},
+            {"id": "2", "name": "KOVA Plan.docx", "size": 9, "version": "2", "modified": "2026-02-01T00:00:00Z"},
         ])
         self.assertNotIn("DUPLICATE", rows[0]["flags"])
         self.assertNotIn("DUPLICATE", rows[1]["flags"])
@@ -81,7 +81,7 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_mixed_hash_likely_group_is_marked_for_review(self):
         rows = MODULE.build_registry([
-            {"id": "hashless-newer", "name": "KOVA Plan.docx", "size": 9, "modified": "2026-02-01T00:00:00Z"},
+            {"id": "hashless-newer", "name": "KOVA Plan.docx", "size": 9, "version": "2", "modified": "2026-02-01T00:00:00Z"},
             {"id": "hashed-older", "name": "KOVA Plan.docx", "size": 9, "md5Checksum": "abc", "modified": "2026-01-01T00:00:00Z"},
         ])
         candidates = [row for row in rows if row["possible_duplicate_of"] is not None]
@@ -93,6 +93,10 @@ class FileOrganizerTests(unittest.TestCase):
         a = MODULE.version_key({"id": "a", "md5Checksum": "same"})
         b = MODULE.version_key({"id": "b", "md5Checksum": "same"})
         self.assertNotEqual(a, b)
+
+    def test_version_identity_rejects_modified_timestamp_only_evidence(self):
+        with self.assertRaises(ValueError):
+            MODULE.version_key({"id": "a", "modified": "2026-02-01T00:00:00Z"})
 
     def test_local_version_identity_uses_content(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -136,6 +140,7 @@ class FileOrganizerTests(unittest.TestCase):
             output = Path(temp_dir) / "private" / "registry.json"
             old = MODULE.build_registry([{
                 "id": "1", "name": "KOVA Guide.docx", "modified": "2026-01-01T00:00:00Z",
+                "version": "1",
                 "lifecycle": "FINAL", "verified": True, "verification_evidence": "Owner approved"
             }])
             MODULE.write_registry(old, output)
@@ -167,12 +172,14 @@ class FileOrganizerTests(unittest.TestCase):
                 "id": "1",
                 "name": "KOVA Old Guide.docx",
                 "superseded_by": "source:2",
+                "version": "1",
                 "modified": "2026-01-01T00:00:00Z",
             }])
             MODULE.write_registry(original, output)
             refresh = MODULE.build_registry([{
                 "id": "1",
                 "name": "KOVA Old Guide.docx",
+                "version": "1",
                 "modified": "2026-01-01T00:00:00Z",
             }])
             MODULE.write_registry(refresh, output)
@@ -350,6 +357,7 @@ class FileOrganizerTests(unittest.TestCase):
                 MODULE.build_registry([{
                     "id": "1",
                     "name": "KOVA Guide.docx",
+                    "version": "1",
                     "modified": "2026-01-01T00:00:00Z",
                     "lifecycle": "FINAL",
                     "verified": True,

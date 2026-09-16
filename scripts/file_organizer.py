@@ -240,7 +240,7 @@ def populate_version_metadata(file_info: dict[str, Any]) -> None:
     if not file_info.get("content_hash"):
         file_info["content_hash"] = file_info.get("sha256") or file_info.get("md5Checksum")
     if not file_info.get("revision_id"):
-        for key in ("headRevisionId", "blob_sha", "sha256", "md5Checksum", "content_hash", "version", "modified", "modifiedTime"):
+        for key in ("headRevisionId", "blob_sha", "sha256", "md5Checksum", "content_hash", "version"):
             if file_info.get(key):
                 file_info["revision_id"] = str(file_info[key])
                 break
