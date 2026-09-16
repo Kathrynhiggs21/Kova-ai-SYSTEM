@@ -157,13 +157,14 @@ async function loadDashboardData() {
   let data = fallbackDashboardData;
   
   try {
-    const res = await fetch("../config/dashboard.v1.json");
-    if (res.ok) {
-      const liveData = await res.json();
-      data = { ...fallbackDashboardData, ...liveData };
-      logToConsole("Loaded dashboard configuration from live config/dashboard.v1.json", "emerald");
-    } else {
-      logToConsole("Using local high-fidelity fallback dashboard data.", "slate");
+    for (const configPath of ["./config/dashboard.v1.json", "../config/dashboard.v1.json"]) {
+      const res = await fetch(configPath);
+      if (res.ok) {
+        const liveData = await res.json();
+        data = { ...fallbackDashboardData, ...liveData };
+        logToConsole(`Loaded dashboard configuration from ${configPath}`, "emerald");
+        break;
+      }
     }
   } catch (err) {
     logToConsole("Using localized fallback data (CORS or local mode).", "slate");

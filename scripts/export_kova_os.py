@@ -14,6 +14,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SITE_DIR = PROJECT_ROOT / "site"
 IMAGES_DIR = SITE_DIR / "images"
+CONFIG_FILE = PROJECT_ROOT / "config" / "dashboard.v1.json"
 
 def log(msg, success=True):
     prefix = "✅" if success else "⚠️"
@@ -58,6 +59,8 @@ def export_kova_os():
     site_zip = PROJECT_ROOT / "site_final.zip"
     log(f"Compiling entire site into {site_zip}...")
     if package_zip(SITE_DIR, site_zip):
+        with zipfile.ZipFile(site_zip, 'a', zipfile.ZIP_DEFLATED) as zipf:
+            zipf.write(CONFIG_FILE, Path("config") / CONFIG_FILE.name)
         log(f"Successfully packaged site_final.zip ({site_zip.stat().st_size / 1024:.1f} KB)")
     else:
         log("Failed to package site_final.zip", False)
