@@ -204,9 +204,9 @@ class FileOrganizerTests(unittest.TestCase):
         }]
         current = [{
             "version_key": "same",
-            "area": "Other",
-            "topic": "KOVA Reference",
-            "record_role": "Unknown",
+            "area": "Reagan",
+            "topic": "KOVA Workflows",
+            "record_role": "Source",
             "lifecycle": "REVIEW",
             "lifecycle_color": MODULE.LIFECYCLE_COLORS["REVIEW"],
             "decision_reason": "Needs current verification",

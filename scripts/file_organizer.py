@@ -414,6 +414,10 @@ def merge_history(
         combined = {**prior, **row}
         prior_verification = prior.get("verification", {})
         current_verification = row.get("verification", {})
+        preserve_prior_classification = prior_verification.get("verified") and not any(
+            current_verification.get(field) not in (None, "")
+            for field in ("evidence", "reference", "checked_at")
+        )
         if prior_verification.get("verified") and not current_verification.get("verified"):
             combined["verification"] = prior_verification
         else:
@@ -425,6 +429,10 @@ def merge_history(
                     if key == "verified" or value not in (None, "")
                 },
             }
+        if preserve_prior_classification:
+            for field in ("area", "topic", "subtopic", "file_type", "content_origin", "record_role"):
+                if field in prior:
+                    combined[field] = prior[field]
         combined["version_evidence"] = {
             **prior.get("version_evidence", {}),
             **{
