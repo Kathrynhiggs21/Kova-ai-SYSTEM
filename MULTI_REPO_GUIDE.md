@@ -3,7 +3,7 @@
 > **Historical reference — do not use these workflows for the current build.**
 > The runtime source of truth is `kova_repos_config.json`. It currently enables
 > only `Kathrynhiggs21/Kova-ai-SYSTEM` and
-> `Kathrynhiggs21/kova-ai-dash`; automatic discovery, Claude sync, webhooks,
+> `Kathrynhiggs21/kovaos-site`; automatic discovery, Claude sync, webhooks,
 > cross-repository PRs, and unified changelogs are disabled. The older repository
 > tables and `/discover`, `/add`, and automated-Claude examples below describe a
 > previous plan and must not be used to change the active KOVA OS registry.
