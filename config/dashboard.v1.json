@@ -31,19 +31,22 @@
       "id": "p1-site-truth",
       "title": "Align kovaos-site routes, authentication and status claims",
       "status": "in_progress",
-      "owner": "KOVA"
+      "owner": "KOVA",
+      "reason": "The static site must match the current canonical repositories, routes, and evidence-backed status claims."
     },
     {
       "id": "p2-api-contract",
       "title": "Implement the versioned Core-to-app API contract",
       "status": "next",
-      "owner": "KOVA"
+      "owner": "KOVA",
+      "reason": "The command center and canonical app still need one stable contract for shared runtime state."
     },
     {
       "id": "p3-runtime-proof",
       "title": "Verify one AI path and one connector path end to end",
       "status": "next",
-      "owner": "KOVA"
+      "owner": "KOVA",
+      "reason": "Production claims remain provisional until at least one authenticated AI and connector flow is verified."
     }
   ],
   "integrations": [

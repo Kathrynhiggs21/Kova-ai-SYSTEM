@@ -2,91 +2,97 @@
 
 // Fallback data in case config fetch is blocked by CORS (common in local file access)
 const fallbackDashboardData = {
-  "dashboard_date": "2026-07-23",
-  "system_status": "foundation_active_live_integrations_partial",
+  "dashboard_date": "2026-09-15",
+  "system_status": "canonical_pair_selected_build_in_progress",
   "source_of_truth": "Kathrynhiggs21/Kova-ai-SYSTEM",
+  "canonical_app": "Kathrynhiggs21/kovaos-site",
+  "active_repositories": [
+    "Kathrynhiggs21/Kova-ai-SYSTEM",
+    "Kathrynhiggs21/kovaos-site"
+  ],
+  "organization_model": {
+    "area": ["KOVA", "Personal", "Reagan", "Other"],
+    "lifecycle": ["ACTIVE", "FINAL", "REVIEW", "ARCHIVE"],
+    "optional_flags": ["SENSITIVE", "DUPLICATE"],
+    "rule": "File Type and Content Origin are fields; exact duplicate status requires content or revision evidence."
+  },
   "tagline": "You clearly need me.",
   "top_priorities": [
     {
-      "id": "p1-dashboard-shell",
-      "title": "Build Dashboard v1 shell from static JSON",
-      "status": "completed",
+      "id": "p1-site-truth",
+      "title": "Align kovaos-site routes, authentication and status claims",
+      "status": "in_progress",
       "owner": "KOVA",
-      "reason": "The dashboard spec supports static config first. This is now fully created and ready."
+      "reason": "The static site must match the current canonical repositories, routes, and evidence-backed status claims."
     },
     {
-      "id": "p2-calendar-digest",
-      "title": "Wire Google Calendar into Daily Digest v1",
-      "status": "ready",
-      "owner": "KOVA",
-      "reason": "Calendar access is readable and should be the first live digest source."
-    },
-    {
-      "id": "p3-integration-seeds",
-      "title": "Create integration seed files for Contacts, Dropbox, Notion, Manus, and OpenAI Platform",
+      "id": "p2-api-contract",
+      "title": "Implement the versioned Core-to-app API contract",
       "status": "next",
       "owner": "KOVA",
-      "reason": "Unavailable or empty connectors still need declared targets, scopes, owners, and expected outputs."
+      "reason": "The command center and canonical app still need one stable contract for shared runtime state."
+    },
+    {
+      "id": "p3-runtime-proof",
+      "title": "Verify one AI path and one connector path end to end",
+      "status": "next",
+      "owner": "KOVA",
+      "reason": "Production claims remain provisional until at least one authenticated AI and connector flow is verified."
     }
   ],
   "integrations": [
     {
       "name": "GitHub",
-      "status": "active",
-      "evidence": "Repo metadata readable and command-center files writable.",
-      "next_action": "Use Kova-ai-SYSTEM as canonical command center and add implementation backlog files."
+      "assistant_access": "verified",
+      "kova_runtime": "partial",
+      "status": "partial",
+      "evidence": "Assistant access: verified. KOVA runtime: partial.",
+      "next_action": "Require green checks on both active repositories."
     },
     {
-      "name": "Google Calendar",
-      "status": "active_read_ready",
-      "evidence": "Upcoming calendar events are readable through the connected calendar integration.",
-      "next_action": "Turn calendar reads into the Today Card and Daily Digest agenda section."
-    },
-    {
-      "name": "Google Contacts",
-      "status": "connected_but_unseeded",
-      "evidence": "Contacts search ran, but broad VIP query returned no matching contacts.",
-      "next_action": "Create a VIP/entity seed list: Katy, Reagan, Marcy, Blake, medical providers, school, vendors, collaborators."
-    },
-    {
-      "name": "Manus",
-      "status": "blocked_external",
-      "evidence": "No live Manus connector is available in this runtime.",
-      "next_action": "Export Manus project docs/assets into Drive or GitHub and track links in integrations/manus_sources.md."
-    },
-    {
-      "name": "Dropbox",
-      "status": "blocked_no_connector",
-      "evidence": "No Dropbox connector is available in this runtime.",
-      "next_action": "Pick a canonical Dropbox folder and define file-index rules before connecting OAuth/API."
+      "name": "Google Drive",
+      "assistant_access": "verified",
+      "kova_runtime": "unverified",
+      "status": "unverified",
+      "evidence": "Assistant access: verified. KOVA runtime: unverified.",
+      "next_action": "Run metadata inventory with readback and no source mutation."
     },
     {
       "name": "Notion",
-      "status": "blocked_no_connector",
-      "evidence": "No Notion connector is available in this runtime.",
-      "next_action": "Define the Notion database schema or choose GitHub docs as source of truth to avoid duplicate dashboards."
+      "assistant_access": "verified",
+      "kova_runtime": "unverified",
+      "status": "unverified",
+      "evidence": "Assistant access: verified. KOVA runtime: unverified.",
+      "next_action": "Use as a view, not a competing canonical store."
     },
     {
-      "name": "OpenAI Platform",
-      "status": "ready_for_secret_setup",
-      "evidence": "Config template exists, but real secrets must not be committed.",
-      "next_action": "Create an OpenAI project/API key and store it only in deployment/local secrets."
+      "name": "MCP",
+      "assistant_access": "n/a",
+      "kova_runtime": "implemented_not_production_verified",
+      "status": "implemented_not_production_verified",
+      "evidence": "Assistant access: n/a. KOVA runtime: implemented_not_production_verified.",
+      "next_action": "Merge hardening and verify authenticated production calls."
+    },
+    {
+      "name": "Zapier/Make/n8n",
+      "assistant_access": "optional",
+      "kova_runtime": "disabled_until_named_gap",
+      "status": "disabled_until_named_gap",
+      "evidence": "Assistant access: optional. KOVA runtime: disabled_until_named_gap.",
+      "next_action": "Use only when a direct connector or official API is insufficient."
     }
   ],
   "blockers": [
-    "No live Manus connector in runtime.",
-    "No Dropbox connector in runtime.",
-    "No Notion connector in runtime.",
-    "OpenAI Platform needs private API key/project setup outside the repo.",
-    "Google Contacts needs a seed/entity list because broad contact search returned no matches.",
-    "Dashboard deployment target still needs a final repo decision: kovaos-site vs kova-ai-site."
+    "kovaos-site contains stale or unverified product and integration claims.",
+    "The versioned Core-to-app API contract is not implemented.",
+    "Durable runs, queueing, retries and connector telemetry are not production-proven.",
+    "No authenticated end-to-end AI-provider and connector paths are verified."
   ],
   "next_actions": [
-    "Create a static dashboard shell that reads config/dashboard.v1.json.",
-    "Create reports/digests/2026-07-08.md as the first manual/live hybrid digest artifact.",
-    "Create integrations/contact_entity_seed.csv for VIP/contact routing.",
-    "Create integrations/external_source_targets.md for Manus, Dropbox, Notion, and OpenAI Platform setup instructions.",
-    "Choose the dashboard implementation repo and wire it to this command-center config."
+    "Complete and review the safe metadata registry PR.",
+    "Adopt the modular Core boundary policy without creating empty repositories.",
+    "Align kovaos-site with current routes, privacy boundaries and evidence states.",
+    "Keep inaccessible shared-chat links in REVIEW until content is verified."
   ]
 };
 
@@ -164,6 +170,57 @@ async function loadDashboardData() {
   }
   
   renderDashboard(data);
+}
+
+function describeIntegrationStatus(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "active") {
+    return {
+      label: "Active",
+      badgeClass: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+      dotClass: "bg-emerald-400"
+    };
+  }
+  if (normalized.includes("partial")) {
+    return {
+      label: "Partial",
+      badgeClass: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+      dotClass: "bg-amber-400"
+    };
+  }
+  if (normalized.includes("implemented")) {
+    return {
+      label: "Implemented",
+      badgeClass: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+      dotClass: "bg-sky-400"
+    };
+  }
+  if (normalized.includes("ready") || normalized.includes("connected")) {
+    return {
+      label: "Ready",
+      badgeClass: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+      dotClass: "bg-indigo-400 animate-pulse"
+    };
+  }
+  if (normalized.includes("unverified")) {
+    return {
+      label: "Unverified",
+      badgeClass: "bg-slate-500/10 text-slate-300 border border-slate-500/20",
+      dotClass: "bg-slate-300"
+    };
+  }
+  if (normalized.includes("disabled") || normalized.includes("optional")) {
+    return {
+      label: "Optional",
+      badgeClass: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+      dotClass: "bg-violet-400"
+    };
+  }
+  return {
+    label: "Blocked",
+    badgeClass: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+    dotClass: "bg-rose-400"
+  };
 }
 
 // Render dynamic elements to DOM
@@ -262,20 +319,10 @@ function renderDashboard(data) {
       dot.className = "w-1 h-1 rounded-full";
       
       const label = document.createElement("span");
-      
-      if (status === "active") {
-        badge.className += " bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-        dot.className += " bg-emerald-400";
-        label.textContent = "Active";
-      } else if (status.includes("ready") || status.includes("connected")) {
-        badge.className += " bg-indigo-500/10 text-indigo-400 border border-indigo-500/20";
-        dot.className += " bg-indigo-400 animate-pulse";
-        label.textContent = "Ready";
-      } else {
-        badge.className += " bg-rose-500/10 text-rose-400 border border-rose-500/20";
-        dot.className += " bg-rose-400";
-        label.textContent = "Blocked";
-      }
+      const statusView = describeIntegrationStatus(status);
+      badge.className += ` ${statusView.badgeClass}`;
+      dot.className += ` ${statusView.dotClass}`;
+      label.textContent = statusView.label;
       
       badge.appendChild(dot);
       badge.appendChild(label);

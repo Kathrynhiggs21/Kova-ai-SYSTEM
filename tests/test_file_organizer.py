@@ -62,8 +62,8 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_same_title_without_hash_is_only_a_review_candidate(self):
         rows = MODULE.build_registry([
-            {"id": "1", "name": "KOVA Plan.docx", "size": 9},
-            {"id": "2", "name": "KOVA Plan.docx", "size": 9},
+            {"id": "1", "name": "KOVA Plan.docx", "size": 9, "modified": "2026-01-01T00:00:00Z"},
+            {"id": "2", "name": "KOVA Plan.docx", "size": 9, "modified": "2026-02-01T00:00:00Z"},
         ])
         self.assertNotIn("DUPLICATE", rows[0]["flags"])
         self.assertNotIn("DUPLICATE", rows[1]["flags"])
@@ -96,6 +96,19 @@ class FileOrganizerTests(unittest.TestCase):
             row = MODULE.build_registry([{"source": "local", "path": str(item), "name": item.name}])[0]
             self.assertEqual(row["source_id"], str(item))
 
+    def test_registry_rows_include_version_evidence(self):
+        row = MODULE.build_registry([{
+            "id": "1",
+            "name": "KOVA Plan.docx",
+            "source": "google_drive",
+            "md5Checksum": "abc123",
+            "headRevisionId": "rev-1",
+            "version": "7",
+        }])[0]
+        self.assertEqual(row["version_evidence"]["source"], "google_drive")
+        self.assertEqual(row["version_evidence"]["headRevisionId"], "rev-1")
+        self.assertEqual(row["version_evidence"]["md5Checksum"], "abc123")
+
     def test_chat_record_role_does_not_infer_a_decision(self):
         self.assertEqual(MODULE.record_role_for({"name": "KOVA ideas chat"}), "Unknown")
         self.assertEqual(MODULE.record_role_for({"record_role": "decision"}), "Decision")
@@ -120,26 +133,114 @@ class FileOrganizerTests(unittest.TestCase):
             self.assertEqual(output.parent.stat().st_mode & 0o777, 0o700)
             self.assertTrue(output.with_name("registry.exceptions.json").exists())
 
-    def test_existing_parent_permissions_are_preserved(self):
+    def test_registry_rejects_non_private_output_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             parent = Path(temp_dir) / "shared"
             parent.mkdir(mode=0o755)
             output = parent / "registry.json"
 
-            MODULE.write_registry(MODULE.build_registry([]), output)
-
-            self.assertEqual(parent.stat().st_mode & 0o777, 0o755)
-            self.assertEqual(output.stat().st_mode & 0o777, 0o600)
+            with self.assertRaises(PermissionError):
+                MODULE.write_registry(MODULE.build_registry([]), output)
 
     def test_history_preserves_superseded_relationship(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            output = Path(temp_dir) / "registry.json"
-            original = MODULE.build_registry([{"id": "1", "name": "KOVA Old Guide.docx", "superseded_by": "source:2"}])
+            output = Path(temp_dir) / "private" / "registry.json"
+            original = MODULE.build_registry([{
+                "id": "1",
+                "name": "KOVA Old Guide.docx",
+                "superseded_by": "source:2",
+                "modified": "2026-01-01T00:00:00Z",
+            }])
             MODULE.write_registry(original, output)
-            refresh = MODULE.build_registry([{"id": "1", "name": "KOVA Old Guide.docx"}])
+            refresh = MODULE.build_registry([{
+                "id": "1",
+                "name": "KOVA Old Guide.docx",
+                "modified": "2026-01-01T00:00:00Z",
+            }])
             MODULE.write_registry(refresh, output)
             payload = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(payload["items"][0]["superseded_by"], "source:2")
+            self.assertEqual(payload["items"][0]["lifecycle"], "ARCHIVE")
+
+    def test_merge_history_preserves_prior_decisions_and_verification_evidence(self):
+        previous = [{
+            "version_key": "same",
+            "area": "KOVA",
+            "topic": "KOVA Connectors",
+            "record_role": "Decision",
+            "lifecycle": "FINAL",
+            "lifecycle_color": MODULE.LIFECYCLE_COLORS["FINAL"],
+            "decision_reason": "Owner approved",
+            "flags": ["DUPLICATE"],
+            "flag_colors": [MODULE.FLAG_COLORS["DUPLICATE"]],
+            "canonical_version_key": "winner",
+            "possible_duplicate_of": None,
+            "verification": {
+                "verified": True,
+                "evidence": "Approved",
+                "reference": "issue-1",
+                "checked_at": "2026-01-01T00:00:00Z",
+            },
+            "version_evidence": {"md5Checksum": "same", "headRevisionId": "rev-1"},
+            "observed_current": False,
+        }]
+        current = [{
+            "version_key": "same",
+            "area": "Other",
+            "topic": "KOVA Reference",
+            "record_role": "Unknown",
+            "lifecycle": "REVIEW",
+            "lifecycle_color": MODULE.LIFECYCLE_COLORS["REVIEW"],
+            "decision_reason": "Needs current verification",
+            "flags": [],
+            "flag_colors": [],
+            "canonical_version_key": None,
+            "possible_duplicate_of": None,
+            "verification": {
+                "verified": True,
+                "evidence": None,
+                "reference": None,
+                "checked_at": None,
+            },
+            "version_evidence": {"md5Checksum": "same"},
+            "observed_current": True,
+        }]
+        merged = MODULE.merge_history(current, previous)[0]
+        self.assertEqual(merged["area"], "KOVA")
+        self.assertEqual(merged["topic"], "KOVA Connectors")
+        self.assertEqual(merged["record_role"], "Decision")
+        self.assertEqual(merged["lifecycle"], "FINAL")
+        self.assertIn("DUPLICATE", merged["flags"])
+        self.assertEqual(merged["canonical_version_key"], "winner")
+        self.assertEqual(merged["verification"]["evidence"], "Approved")
+        self.assertEqual(merged["version_evidence"]["headRevisionId"], "rev-1")
+
+    def test_default_private_dir_uses_xdg_data_home(self):
+        original_private = MODULE.os.environ.get("KOVA_PRIVATE_STATE_DIR")
+        original_xdg = MODULE.os.environ.get("XDG_DATA_HOME")
+        try:
+            MODULE.os.environ.pop("KOVA_PRIVATE_STATE_DIR", None)
+            MODULE.os.environ["XDG_DATA_HOME"] = "/tmp/xdg-home"
+            self.assertEqual(MODULE.default_private_dir(), Path("/tmp/xdg-home/kova/private"))
+        finally:
+            if original_private is None:
+                MODULE.os.environ.pop("KOVA_PRIVATE_STATE_DIR", None)
+            else:
+                MODULE.os.environ["KOVA_PRIVATE_STATE_DIR"] = original_private
+            if original_xdg is None:
+                MODULE.os.environ.pop("XDG_DATA_HOME", None)
+            else:
+                MODULE.os.environ["XDG_DATA_HOME"] = original_xdg
+
+    def test_legacy_cli_without_inventory_is_a_noop(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = subprocess.run(
+                ["python3", str(SCRIPT), temp_dir, "--execute"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Legacy move/folder arguments were ignored", result.stdout)
 
     def test_missing_stable_source_identity_fails_closed(self):
         with self.assertRaises(ValueError):
@@ -152,7 +253,10 @@ class FileOrganizerTests(unittest.TestCase):
             original.write_text("unchanged", encoding="utf-8")
             inventory = root / "inventory.json"
             registry = root / "private" / "registry.json"
-            inventory.write_text(json.dumps([{"id": "1", "name": original.name}]), encoding="utf-8")
+            inventory.write_text(
+                json.dumps([{"source": "local", "path": str(original), "name": original.name}]),
+                encoding="utf-8",
+            )
             subprocess.run(
                 ["python3", str(SCRIPT), "--inventory", str(inventory), "--registry", str(registry)],
                 check=True,

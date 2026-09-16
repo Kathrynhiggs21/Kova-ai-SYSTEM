@@ -33,7 +33,7 @@ except ImportError:
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 KOVA_KEYWORDS = [
     'kova', 'kova-ai', 'kova ai', 'kovaai',
-    'k9va', 'kiva os', 'kiva-ai', 'purgatory', 'claude', 'multi-repo',
+    'k9va', 'kiva', 'kiva os', 'kiva-ai', 'purgatory', 'claude', 'multi-repo',
     'appsheet', 'webhook'
 ]
 
@@ -373,10 +373,16 @@ class GoogleDriveImporter:
             size /= 1024.0
         return f"{size:.1f} TB"
 
-    def save_inventory(self, analyzed_files: List[Dict[str, Any]], duplicates: List[Dict[str, Any]]):
+    def save_inventory(
+        self,
+        analyzed_files: List[Dict[str, Any]],
+        duplicates: List[Dict[str, Any]],
+        output_dir: Optional[Path] = None,
+    ):
         """Save inventory to JSON"""
-        output_dir = Path(__file__).parent.parent / 'kova_file_inventory'
-        output_dir.mkdir(exist_ok=True)
+        output_dir = output_dir or (Path(__file__).parent.parent / 'kova_file_inventory')
+        output_dir.mkdir(mode=0o700, exist_ok=True)
+        os.chmod(output_dir, 0o700)
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -384,11 +390,13 @@ class GoogleDriveImporter:
         inventory_file = output_dir / f'inventory_{timestamp}.json'
         with open(inventory_file, 'w') as f:
             json.dump(analyzed_files, f, indent=2)
+        os.chmod(inventory_file, 0o600)
 
         # Save duplicates
         duplicates_file = output_dir / f'duplicates_{timestamp}.json'
         with open(duplicates_file, 'w') as f:
             json.dump(duplicates, f, indent=2)
+        os.chmod(duplicates_file, 0o600)
 
         # Save summary
         summary_file = output_dir / f'summary_{timestamp}.txt'
@@ -404,6 +412,7 @@ class GoogleDriveImporter:
                 category_counts[cat] = category_counts.get(cat, 0) + 1
             for cat, count in sorted(category_counts.items()):
                 f.write(f"  {cat}: {count}\n")
+        os.chmod(summary_file, 0o600)
 
         self.log(f"\n💾 Inventory saved:", Colors.BOLD)
         self.log(f"  Files: {inventory_file}", Colors.GREEN)

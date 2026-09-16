@@ -185,3 +185,18 @@ test("export buttons describe retrieval rather than compilation", async () => {
     /compil/i
   );
 });
+
+test("maps new dashboard integration evidence states to non-blocked labels", () => {
+  const app = loadApp([]);
+
+  assert.equal(app.context.describeIntegrationStatus("partial").label, "Partial");
+  assert.equal(app.context.describeIntegrationStatus("unverified").label, "Unverified");
+  assert.equal(
+    app.context.describeIntegrationStatus("implemented_not_production_verified").label,
+    "Implemented"
+  );
+  assert.equal(
+    app.context.describeIntegrationStatus("disabled_until_named_gap").label,
+    "Optional"
+  );
+});

@@ -22,12 +22,19 @@ PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = Path(
     os.environ.get("KOVA_AUTOMATION_POLICY_PATH", PROJECT_DIR / "config" / "automation_policy.v1.json")
 )
-DEFAULT_PRIVATE_DIR = Path(
-    os.environ.get(
-        "KOVA_PRIVATE_STATE_DIR",
-        Path.home() / ".local" / "share" / "kova" / "private",
-    )
-)
+
+
+def default_private_dir() -> Path:
+    override = (os.environ.get("KOVA_PRIVATE_STATE_DIR") or "").strip()
+    if override:
+        return Path(override).expanduser()
+    xdg_data_home = (os.environ.get("XDG_DATA_HOME") or "").strip()
+    if xdg_data_home:
+        return Path(xdg_data_home).expanduser() / "kova" / "private"
+    return Path.home() / ".local" / "share" / "kova" / "private"
+
+
+DEFAULT_PRIVATE_DIR = default_private_dir()
 DEFAULT_REGISTRY_PATH = DEFAULT_PRIVATE_DIR / "status_registry.json"
 
 
@@ -244,7 +251,9 @@ def version_key(file_info: dict[str, Any]) -> str:
     if file_info.get("version_key"):
         return str(file_info["version_key"])
     populate_version_metadata(file_info)
-    revision = str(file_info.get("revision_id") or "unversioned")
+    revision = file_info.get("revision_id")
+    if not revision:
+        raise ValueError(f"inventory item needs version evidence for {source_identity(file_info)}")
     raw = f"{file_info.get('source', 'unknown')}|{source_identity(file_info)}|{revision}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
@@ -261,9 +270,7 @@ def likely_duplicate_key(file_info: dict[str, Any], title: str) -> str:
 
 def canonical_rank(file_info: dict[str, Any]) -> tuple[int, int, int, str, str]:
     """Deterministically prefer explicit/verified/current items, then a stable ID."""
-    lifecycle = str(file_info.get("lifecycle") or file_info.get("status") or "").upper()
-    if lifecycle == "UNREVIEWED":
-        lifecycle = "REVIEW"
+    lifecycle = lifecycle_for(file_info)[0]
     explicit_rank = {"FINAL": 3, "ACTIVE": 2, "REVIEW": 1, "ARCHIVE": 0}.get(lifecycle, 0)
     modified = str(file_info.get("modified") or file_info.get("modifiedTime") or "")
     return (
@@ -283,6 +290,20 @@ def verification_for(file_info: dict[str, Any]) -> dict[str, Any]:
         "reference": file_info.get("verification_reference") or file_info.get("decision_reference"),
         "checked_at": file_info.get("verified_at") or file_info.get("checked_at"),
     }
+
+
+def version_evidence_for(file_info: dict[str, Any]) -> dict[str, Any]:
+    evidence = {
+        "source": file_info.get("source"),
+        "revision_id": file_info.get("revision_id"),
+        "headRevisionId": file_info.get("headRevisionId"),
+        "md5Checksum": file_info.get("md5Checksum"),
+        "sha256": file_info.get("sha256"),
+        "content_hash": file_info.get("content_hash"),
+        "version": file_info.get("version"),
+        "modified": file_info.get("modified") or file_info.get("modifiedTime"),
+    }
+    return {key: value for key, value in evidence.items() if value not in (None, "")}
 
 
 def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -349,6 +370,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
                 "sensitivity_basis": sensitivity_basis,
                 "decision_reason": reason,
                 "verification": verification_for(file_info),
+                "version_evidence": version_evidence_for(file_info),
                 "source_id": source_identity(file_info),
                 "source_link": file_info.get("web_link") or file_info.get("url"),
                 "source_chat_id": file_info.get("chat_id") or file_info.get("agent_id"),
@@ -371,14 +393,54 @@ def merge_history(current: list[dict[str, Any]], previous: list[dict[str, Any]])
     for row in current:
         prior = merged.get(row["version_key"], {})
         combined = {**prior, **row}
+        prior_verification = prior.get("verification", {})
+        current_verification = row.get("verification", {})
+        if prior_verification.get("verified") and not current_verification.get("verified"):
+            combined["verification"] = prior_verification
+        else:
+            combined["verification"] = {
+                **prior_verification,
+                **{
+                    key: value
+                    for key, value in current_verification.items()
+                    if key == "verified" or value not in (None, "")
+                },
+            }
+        combined["version_evidence"] = {
+            **prior.get("version_evidence", {}),
+            **{
+                key: value
+                for key, value in row.get("version_evidence", {}).items()
+                if value not in (None, "")
+            },
+        }
         if row.get("superseded_by") is None and prior.get("superseded_by") is not None:
             combined["superseded_by"] = prior["superseded_by"]
-        if prior.get("verification", {}).get("verified") and not row.get("verification", {}).get("verified"):
-            combined["verification"] = prior["verification"]
-            if prior.get("lifecycle") in ("ACTIVE", "FINAL", "ARCHIVE"):
-                combined["lifecycle"] = prior["lifecycle"]
-                combined["lifecycle_color"] = LIFECYCLE_COLORS[prior["lifecycle"]]
-                combined["decision_reason"] = prior.get("decision_reason", combined["decision_reason"])
+        if prior.get("flags"):
+            combined["flags"] = list(dict.fromkeys([*prior.get("flags", []), *row.get("flags", [])]))
+            combined["flag_colors"] = [FLAG_COLORS[flag] for flag in combined["flags"]]
+        for field, fallback_values in (
+            ("area", {"Other"}),
+            ("topic", {"KOVA Reference"}),
+            ("subtopic", {None, ""}),
+            ("file_type", {"Other"}),
+            ("content_origin", {"Unknown"}),
+            ("record_role", {"Unknown"}),
+        ):
+            if field in prior and prior.get(field) not in fallback_values and combined.get(field) in fallback_values:
+                combined[field] = prior[field]
+        if prior.get("canonical_version_key") and not row.get("canonical_version_key"):
+            combined["canonical_version_key"] = prior["canonical_version_key"]
+        if prior.get("possible_duplicate_of") and not row.get("possible_duplicate_of"):
+            combined["possible_duplicate_of"] = prior["possible_duplicate_of"]
+        if (
+            prior.get("lifecycle") in ("ACTIVE", "FINAL", "ARCHIVE")
+            and row.get("lifecycle") == "REVIEW"
+            and row.get("decision_reason") in {"Needs current verification", "Possible duplicate; content hash unavailable"}
+        ):
+            combined["lifecycle"] = prior["lifecycle"]
+            combined["lifecycle_color"] = LIFECYCLE_COLORS[prior["lifecycle"]]
+            combined["decision_reason"] = prior.get("decision_reason", combined["decision_reason"])
         merged[row["version_key"]] = combined
     return sorted(merged.values(), key=lambda row: row["version_key"])
 
@@ -386,9 +448,11 @@ def merge_history(current: list[dict[str, Any]], previous: list[dict[str, Any]])
 def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
     """Atomically publish private JSON with user-only filesystem permissions."""
     parent = output.parent
-    created_parent = not parent.exists()
-    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    if created_parent:
+    if parent.exists():
+        if parent.stat().st_mode & 0o777 != 0o700:
+            raise PermissionError(f"refusing to write private data under non-private directory: {parent}")
+    else:
+        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(parent, 0o700)
     serialized = json.dumps(payload, indent=2) + "\n"
     temp_name: str | None = None
@@ -450,11 +514,17 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build KOVA's non-destructive file status registry")
     parser.add_argument("base_path", nargs="?", help="Deprecated legacy argument; files are never moved")
-    parser.add_argument("--inventory", required=True, type=Path, help="Inventory JSON produced by a source scanner")
+    parser.add_argument("--inventory", type=Path, help="Inventory JSON produced by a source scanner")
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY_PATH)
     parser.add_argument("--dry-run", action="store_true", help="Print the registry without writing it")
     parser.add_argument("--execute", action="store_true", help="Deprecated; output is always non-destructive")
     args = parser.parse_args()
+
+    if args.inventory is None:
+        if args.base_path or args.execute:
+            print("Legacy move/folder arguments were ignored; governed files were not changed.")
+            return 0
+        parser.error("--inventory is required unless using legacy compatibility arguments")
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
     if not isinstance(inventory, list):
