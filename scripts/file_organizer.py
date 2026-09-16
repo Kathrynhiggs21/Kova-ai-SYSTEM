@@ -419,14 +419,7 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
         payload = json.loads(output.read_text(encoding="utf-8"))
         previous = payload.get("items", []) if isinstance(payload, dict) else []
     items = merge_history(rows, previous)
-    payload = {
-        "schema_version": 2,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "organization_mode": "metadata-first",
-        "physical_changes": False,
-        "items": items,
-    }
-    atomic_write_private(output, payload)
+    generated_at = datetime.now(timezone.utc).isoformat()
     exceptions = [
         row for row in items
         if row.get("lifecycle") == "REVIEW"
@@ -434,16 +427,23 @@ def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
         or row.get("flags")
         or row.get("possible_duplicate_of")
     ]
+    exception_payload = {
+        "schema_version": 1,
+        "generated_at": generated_at,
+        "exception_count": len(exceptions),
+        "items": exceptions,
+    }
+    payload = {
+        "schema_version": 2,
+        "generated_at": generated_at,
+        "organization_mode": "metadata-first",
+        "physical_changes": False,
+        "items": items,
+        "exceptions": exception_payload,
+    }
+    atomic_write_private(output, payload)
     exception_output = output.with_name(f"{output.stem}.exceptions.json")
-    atomic_write_private(
-        exception_output,
-        {
-            "schema_version": 1,
-            "generated_at": payload["generated_at"],
-            "exception_count": len(exceptions),
-            "items": exceptions,
-        },
-    )
+    atomic_write_private(exception_output, exception_payload)
     return len(exceptions)
 
 
