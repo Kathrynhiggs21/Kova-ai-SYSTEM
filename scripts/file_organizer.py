@@ -259,7 +259,13 @@ def version_key(file_info: dict[str, Any]) -> str:
 
 
 def exact_duplicate_key(file_info: dict[str, Any]) -> str | None:
-    content_hash = file_info.get("sha256") or file_info.get("md5Checksum") or file_info.get("content_hash")
+    populate_version_metadata(file_info)
+    content_hash = (
+        file_info.get("sha256")
+        or file_info.get("md5Checksum")
+        or file_info.get("content_hash")
+        or file_info.get("blob_sha")
+    )
     return f"hash:{content_hash}" if content_hash else None
 
 

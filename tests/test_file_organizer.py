@@ -60,6 +60,14 @@ class FileOrganizerTests(unittest.TestCase):
         canonical_ids = [row["source_id"] for row in reversed_rows if "DUPLICATE" not in row["flags"]]
         self.assertEqual(canonical_ids, ["newer"])
 
+    def test_exact_duplicate_uses_blob_sha_evidence(self):
+        rows = MODULE.build_registry([
+            {"id": "older", "name": "KOVA Plan.docx", "blob_sha": "same", "modified": "2026-01-01T00:00:00Z"},
+            {"id": "newer", "name": "KOVA Plan.docx", "blob_sha": "same", "modified": "2026-02-01T00:00:00Z"},
+        ])
+        self.assertIn("DUPLICATE", rows[0]["flags"])
+        self.assertNotIn("DUPLICATE", rows[1]["flags"])
+
     def test_same_title_without_hash_is_only_a_review_candidate(self):
         rows = MODULE.build_registry([
             {"id": "1", "name": "KOVA Plan.docx", "size": 9, "modified": "2026-01-01T00:00:00Z"},
