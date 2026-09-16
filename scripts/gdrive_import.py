@@ -391,7 +391,7 @@ class GoogleDriveImporter:
     ):
         """Save inventory to JSON"""
         output_dir = output_dir or (default_private_dir() / 'inventory')
-        output_dir.mkdir(mode=0o700, exist_ok=True)
+        output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         os.chmod(output_dir, 0o700)
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
