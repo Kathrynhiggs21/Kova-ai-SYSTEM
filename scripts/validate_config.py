@@ -105,6 +105,7 @@ class ConfigValidator:
             "integration_settings": dict,
             "architecture_mode": str,
             "repository_creation_policy": dict,
+            "deployment_inventory": dict,
         }
 
         all_valid = True
@@ -666,6 +667,245 @@ class ConfigValidator:
             self.success(f"repository split policy valid: {policy_reference}")
         return all_valid
 
+    def validate_deployment_inventory(self) -> bool:
+        """Validate the Vercel deployment inventory pointer and schema."""
+        deployment_inventory = self.config.get("deployment_inventory")
+        if not isinstance(deployment_inventory, dict):
+            self.error("deployment_inventory must be an object")
+            return False
+
+        inventory_reference = deployment_inventory.get("vercel_project_inventory_file")
+        if not isinstance(inventory_reference, str) or not inventory_reference.strip():
+            self.error(
+                "deployment_inventory.vercel_project_inventory_file must be a "
+                "non-empty repository-root-relative path"
+            )
+            return False
+        if deployment_inventory.get("destructive_actions_require_owner_approval") is not True:
+            self.error(
+                "deployment_inventory.destructive_actions_require_owner_approval "
+                "must be true"
+            )
+            return False
+
+        relative_inventory_path = Path(inventory_reference)
+        repository_root = self.get_repository_root()
+        if relative_inventory_path.is_absolute():
+            self.error("vercel_project_inventory_file must be repository-root-relative")
+            return False
+
+        inventory_path = (repository_root / relative_inventory_path).resolve()
+        if not inventory_path.is_relative_to(repository_root):
+            self.error("vercel_project_inventory_file must stay within the repository root")
+            return False
+        if not inventory_path.is_file():
+            self.error(
+                "vercel_project_inventory_file not found: "
+                f"{inventory_reference}"
+            )
+            return False
+
+        try:
+            with open(inventory_path, "r", encoding="utf-8") as file_handle:
+                inventory = json.load(file_handle)
+        except json.JSONDecodeError as e:
+            self.error(f"vercel_project_inventory_file contains invalid JSON: {e}")
+            return False
+        except OSError as e:
+            self.error(f"Failed to read vercel_project_inventory_file: {e}")
+            return False
+
+        if not isinstance(inventory, dict):
+            self.error(
+                "vercel_project_inventory_file top-level JSON value must be an object"
+            )
+            return False
+
+        required_fields = {
+            "schema_version": int,
+            "canonical_backend_repository": str,
+            "canonical_frontend_repository": str,
+            "production_domains": list,
+            "projects": list,
+            "required_routes_after_cutover": list,
+            "owner_only_actions": list,
+            "notes": list,
+        }
+        all_valid = True
+        for field, expected_type in required_fields.items():
+            if field not in inventory:
+                self.error(f"vercel_project_inventory_file missing required field: {field}")
+                all_valid = False
+            elif type(inventory[field]) is not expected_type:
+                self.error(
+                    "vercel_project_inventory_file field "
+                    f"'{field}' should be {expected_type.__name__}"
+                )
+                all_valid = False
+
+        for field in (
+            "production_domains",
+            "required_routes_after_cutover",
+            "owner_only_actions",
+            "notes",
+        ):
+            values = inventory.get(field, [])
+            if isinstance(values, list) and not all(
+                isinstance(value, str) and value.strip() for value in values
+            ):
+                self.error(
+                    f"vercel_project_inventory_file {field} must contain "
+                    "non-empty strings"
+                )
+                all_valid = False
+
+        for field in ("canonical_backend_repository", "canonical_frontend_repository"):
+            repository_value = inventory.get(field)
+            if parse_github_repository(repository_value) is None:
+                self.error(
+                    f"vercel_project_inventory_file {field} must be a valid "
+                    "owner/repository coordinate"
+                )
+                all_valid = False
+
+        if inventory.get("canonical_backend_repository") != "Kathrynhiggs21/Kova-ai-SYSTEM":
+            self.error(
+                "vercel_project_inventory_file canonical_backend_repository must "
+                "reference Kathrynhiggs21/Kova-ai-SYSTEM"
+            )
+            all_valid = False
+        if inventory.get("canonical_frontend_repository") != "Kathrynhiggs21/kovaos-site":
+            self.error(
+                "vercel_project_inventory_file canonical_frontend_repository must "
+                "reference Kathrynhiggs21/kovaos-site"
+            )
+            all_valid = False
+
+        projects = inventory.get("projects", [])
+        seen_projects = set()
+        required_project_fields = {
+            "name": str,
+            "source_repository": str,
+            "classification": str,
+            "status": str,
+            "requires_owner_console_action": bool,
+        }
+        valid_classifications = {
+            "canonical",
+            "duplicate",
+            "legacy",
+            "experimental",
+            "missing",
+        }
+        valid_statuses = {
+            "keep",
+            "missing_create_or_connect",
+            "verify_then_unlink",
+            "verify_then_delete",
+        }
+
+        for index, project in enumerate(projects, start=1):
+            if not isinstance(project, dict):
+                self.error(f"vercel_project_inventory_file project #{index} must be an object")
+                all_valid = False
+                continue
+            for field, expected_type in required_project_fields.items():
+                if field not in project:
+                    self.error(
+                        "vercel_project_inventory_file project "
+                        f"#{index} missing required field: {field}"
+                    )
+                    all_valid = False
+                elif type(project[field]) is not expected_type:
+                    self.error(
+                        "vercel_project_inventory_file project "
+                        f"#{index} field '{field}' should be {expected_type.__name__}"
+                    )
+                    all_valid = False
+
+            name = project.get("name")
+            if isinstance(name, str):
+                key = name.casefold()
+                if key in seen_projects:
+                    self.error(f"vercel_project_inventory_file duplicate project name: {name}")
+                    all_valid = False
+                seen_projects.add(key)
+
+            source_repository = project.get("source_repository")
+            if parse_github_repository(source_repository) is None:
+                self.error(
+                    "vercel_project_inventory_file project "
+                    f"#{index} source_repository is invalid"
+                )
+                all_valid = False
+
+            classification = project.get("classification")
+            if isinstance(classification, str) and classification not in valid_classifications:
+                self.error(
+                    "vercel_project_inventory_file project "
+                    f"#{index} classification must be one of: "
+                    + ", ".join(sorted(valid_classifications))
+                )
+                all_valid = False
+
+            status = project.get("status")
+            if isinstance(status, str) and status not in valid_statuses:
+                self.error(
+                    "vercel_project_inventory_file project "
+                    f"#{index} status must be one of: "
+                    + ", ".join(sorted(valid_statuses))
+                )
+                all_valid = False
+
+        project_names = {
+            project.get("name")
+            for project in projects
+            if isinstance(project, dict) and isinstance(project.get("name"), str)
+        }
+        required_projects = {
+            "kova-ai-system",
+            "kova-ai-system-sl9b",
+            "kovaos-site",
+            "v0-kova-ai",
+            "kova-ai-z3fs",
+            "kova-os-docengine-kpsl",
+        }
+        missing_projects = sorted(required_projects.difference(project_names))
+        if missing_projects:
+            self.error(
+                "vercel_project_inventory_file is missing expected projects: "
+                + ", ".join(missing_projects)
+            )
+            all_valid = False
+
+        required_routes = {
+            "/",
+            "/dashboard",
+            "/ai",
+            "/files",
+            "/settings",
+            "/admin",
+        }
+        configured_routes = set(inventory.get("required_routes_after_cutover", []))
+        missing_routes = sorted(required_routes.difference(configured_routes))
+        if missing_routes:
+            self.error(
+                "vercel_project_inventory_file required_routes_after_cutover "
+                "is missing routes: " + ", ".join(missing_routes)
+            )
+            all_valid = False
+
+        if "kovaos.com" not in inventory.get("production_domains", []):
+            self.error(
+                "vercel_project_inventory_file production_domains must include "
+                "kovaos.com"
+            )
+            all_valid = False
+
+        if all_valid:
+            self.success(f"Vercel deployment inventory valid: {inventory_reference}")
+        return all_valid
+
     def check_duplicates(self) -> bool:
         """Check for duplicate repositories"""
         repos = []
@@ -745,6 +985,7 @@ class ConfigValidator:
                 ("Integration Settings", self.validate_integration_settings),
                 ("Repository Catalogs", self.validate_catalog_collections),
                 ("Repository Creation Policy", self.validate_repository_creation_policy),
+                ("Deployment Inventory", self.validate_deployment_inventory),
                 ("Duplicate Check", self.check_duplicates),
             ]
             for name, validator in validations:

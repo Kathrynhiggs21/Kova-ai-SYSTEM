@@ -49,6 +49,10 @@ def valid_config():
             "description": "Canonical split policy",
             "split_policy_file": "config/core_modules.v1.json",
         },
+        "deployment_inventory": {
+            "vercel_project_inventory_file": "config/vercel_projects.v1.json",
+            "destructive_actions_require_owner_approval": True,
+        },
     }
 
 
@@ -93,6 +97,71 @@ def valid_architecture_policy():
     }
 
 
+def valid_vercel_inventory():
+    return {
+        "schema_version": 1,
+        "canonical_backend_repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+        "canonical_frontend_repository": "Kathrynhiggs21/kovaos-site",
+        "production_domains": ["kovaos.com", "www.kovaos.com"],
+        "projects": [
+            {
+                "name": "kova-ai-system",
+                "source_repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+                "classification": "canonical",
+                "status": "keep",
+                "requires_owner_console_action": False,
+            },
+            {
+                "name": "kova-ai-system-sl9b",
+                "source_repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+                "classification": "duplicate",
+                "status": "verify_then_delete",
+                "requires_owner_console_action": True,
+            },
+            {
+                "name": "kovaos-site",
+                "source_repository": "Kathrynhiggs21/kovaos-site",
+                "classification": "canonical",
+                "status": "missing_create_or_connect",
+                "requires_owner_console_action": True,
+            },
+            {
+                "name": "v0-kova-ai",
+                "source_repository": "Kathrynhiggs21/kova-ai",
+                "classification": "duplicate",
+                "status": "verify_then_delete",
+                "requires_owner_console_action": True,
+            },
+            {
+                "name": "kova-ai-z3fs",
+                "source_repository": "Kathrynhiggs21/kova-ai",
+                "classification": "duplicate",
+                "status": "verify_then_delete",
+                "requires_owner_console_action": True,
+            },
+            {
+                "name": "kova-os-docengine-kpsl",
+                "source_repository": "Kathrynhiggs21/Kova-os-docengine",
+                "classification": "duplicate",
+                "status": "verify_then_delete",
+                "requires_owner_console_action": True,
+            },
+        ],
+        "required_routes_after_cutover": [
+            "/",
+            "/dashboard",
+            "/ai",
+            "/files",
+            "/settings",
+            "/admin",
+        ],
+        "owner_only_actions": [
+            "Create/connect the Vercel project for Kathrynhiggs21/kovaos-site."
+        ],
+        "notes": ["Vercel duplicate cleanup is owner-approved and staged."],
+    }
+
+
 class ConfigValidatorTests(unittest.TestCase):
     def validate(self, config, extra_files=None):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -117,6 +186,20 @@ class ConfigValidatorTests(unittest.TestCase):
                         local_path = Path(temp_dir) / current_path
                         local_path.parent.mkdir(parents=True, exist_ok=True)
                         local_path.touch()
+            inventory_pointer = (
+                config.get("deployment_inventory", {})
+                if isinstance(config, dict)
+                else {}
+            )
+            if (
+                inventory_pointer.get("vercel_project_inventory_file")
+                == "config/vercel_projects.v1.json"
+            ):
+                default_inventory_path = Path(temp_dir) / "config/vercel_projects.v1.json"
+                default_inventory_path.parent.mkdir(parents=True, exist_ok=True)
+                default_inventory_path.write_text(
+                    json.dumps(valid_vercel_inventory()), encoding="utf-8"
+                )
             for relative_path, content in (extra_files or {}).items():
                 file_path = Path(temp_dir) / relative_path
                 file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -404,6 +487,54 @@ class ConfigValidatorTests(unittest.TestCase):
         self.assertFalse(passed)
         self.assertTrue(
             any("must remain disabled in the Core registry" in e for e in results["errors"])
+        )
+
+    def test_missing_vercel_inventory_file_is_rejected(self):
+        config = valid_config()
+        config["deployment_inventory"]["vercel_project_inventory_file"] = (
+            "config/missing-vercel.json"
+        )
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "vercel_project_inventory_file not found: config/missing-vercel.json",
+            results["errors"],
+        )
+
+    def test_vercel_inventory_requires_owner_approval_guard(self):
+        config = valid_config()
+        config["deployment_inventory"]["destructive_actions_require_owner_approval"] = False
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "deployment_inventory.destructive_actions_require_owner_approval must be true",
+            results["errors"],
+        )
+
+    def test_vercel_inventory_requires_expected_duplicate_projects(self):
+        inventory = valid_vercel_inventory()
+        inventory["projects"] = [
+            project
+            for project in inventory["projects"]
+            if project["name"] != "kova-ai-z3fs"
+        ]
+
+        passed, results, _ = self.validate(
+            valid_config(),
+            extra_files={"config/vercel_projects.v1.json": json.dumps(inventory)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any(
+                "missing expected projects" in error
+                and "kova-ai-z3fs" in error
+                for error in results["errors"]
+            )
         )
 
 
