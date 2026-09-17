@@ -4,16 +4,11 @@ Artifacts API Endpoints
 Manages Claude-generated artifacts (code, documents, diagrams, configs)
 """
 
-import sys
-from pathlib import Path
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
 
-sys.path.append(str(Path(__file__).parent.parent))
-
-from fastapi import APIRouter, HTTPException  # noqa: E402
-from pydantic import BaseModel  # noqa: E402
-from typing import Optional, Dict, Any  # noqa: E402
-
-from services.claude_connector import ClaudeConnector, ArtifactType  # noqa: E402
+from app.services.claude_connector import ClaudeConnector, ArtifactType
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 

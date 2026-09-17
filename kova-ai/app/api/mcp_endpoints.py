@@ -8,7 +8,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.security.api_key import require_owner_api_key
-from services.multi_repo_sync_service import MultiRepoSyncService
+from app.services.multi_repo_sync_service import MultiRepoSyncService
 
 
 router = APIRouter(

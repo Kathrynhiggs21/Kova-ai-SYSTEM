@@ -3,9 +3,9 @@ Export & Packaging API Endpoints for KOVA OS
 Provides routes to download final site ZIPs, image archives, or trigger Google Drive uploads.
 """
 
-import sys
 import os
 import re
+import sys
 import subprocess
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,9 +14,6 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.security.api_key import require_owner_api_key
-
-# Ensure parent directory is in python path
-sys.path.append(str(Path(__file__).parent.parent))
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
