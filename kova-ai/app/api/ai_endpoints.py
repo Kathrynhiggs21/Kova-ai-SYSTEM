@@ -48,12 +48,12 @@ async def ai_command(command: ClaudeCommand):
 
 async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
     """Sync repository data with Claude"""
+    repository = await require_allowed_repository(command.repository)
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
 
     if not anthropic_key:
         raise HTTPException(status_code=400, detail="Anthropic API key not configured")
 
-    repository = await require_allowed_repository(command.repository)
     github_token = require_github_token()
 
     # Fetch repository data

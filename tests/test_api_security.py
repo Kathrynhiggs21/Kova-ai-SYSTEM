@@ -293,7 +293,7 @@ class GitHubCredentialTests(unittest.IsolatedAsyncioTestCase):
     async def test_sync_denies_disallowed_repository_before_missing_token(self):
         with patch.dict(
             os.environ,
-            {"ANTHROPIC_API_KEY": "test-anthropic-key", "GITHUB_TOKEN": ""},
+            {"ANTHROPIC_API_KEY": "", "GITHUB_TOKEN": ""},
             clear=False,
         ):
             with patch(
@@ -314,6 +314,10 @@ class GitHubCredentialTests(unittest.IsolatedAsyncioTestCase):
                     )
 
         self.assertEqual(raised.exception.status_code, 403)
+        self.assertEqual(
+            raised.exception.detail,
+            "Repository is not enabled in KOVA configuration",
+        )
 
     async def test_analyze_validates_path_before_missing_token(self):
         with patch.dict(os.environ, {"GITHUB_TOKEN": ""}, clear=False):
