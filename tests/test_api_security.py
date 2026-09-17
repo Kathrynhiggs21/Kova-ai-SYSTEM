@@ -1,6 +1,7 @@
 """Security regression tests for KOVA's owner-only API boundary."""
 
 import asyncio
+import importlib
 import os
 import sys
 import tempfile
@@ -160,6 +161,35 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
             )
         finally:
             asyncio.run(created_engine.dispose())
+
+    def test_module_level_database_url_ignores_placeholder_samples(self):
+        original_engine = database_session.engine
+        asyncio.run(original_engine.dispose())
+
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "pw",
+                "POSTGRES_HOST": "postgres.internal",
+                "POSTGRES_PORT": "6543",
+                "POSTGRES_DB": "kova_core",
+            },
+            clear=False,
+        ):
+            reloaded_session = importlib.reload(database_session)
+            expected_url = reloaded_session.build_default_database_url()
+
+            try:
+                self.assertEqual(reloaded_session.DATABASE_URL, expected_url)
+                self.assertEqual(
+                    reloaded_session.engine.url.render_as_string(hide_password=False),
+                    expected_url,
+                )
+            finally:
+                asyncio.run(reloaded_session.engine.dispose())
+                importlib.reload(database_session)
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
