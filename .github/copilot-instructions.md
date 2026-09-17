@@ -4,6 +4,8 @@
 
 The Kova AI System is a comprehensive AI-powered development automation platform built with FastAPI, PostgreSQL, Docker, and monitoring tools. It provides automatic error detection, AI integrations, and real-time monitoring capabilities.
 
+Treat this as current KOVA Core. Prioritize backend, orchestration, CI, security, connectors, jobs, and architecture consistency.
+
 ## Working Effectively
 
 ### System Requirements
@@ -143,8 +145,8 @@ After making any changes to the codebase:
 2. Restart services: `docker compose restart`
 3. Verify configuration changes take effect
 
-### No Automated Testing Infrastructure
-**IMPORTANT**: This repository does not have pytest, flake8, or black configured. Manual testing is required.
+### Automated Testing Infrastructure (Current Status)
+**IMPORTANT**: This repository does include automated checks in CI, including Python unit tests (`python3 -m unittest`) and browser export tests (`node --test tests/test_site_exports.js`). Continue running the repository verification commands after changes.
 
 ## Common Development Tasks
 
