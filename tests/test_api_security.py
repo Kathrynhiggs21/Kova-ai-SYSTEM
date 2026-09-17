@@ -1,5 +1,7 @@
 """Security regression tests for KOVA's owner-only API boundary."""
 
+import asyncio
+import importlib
 import os
 import sys
 import tempfile
@@ -12,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kova-ai"))
 import httpx
 from fastapi import HTTPException
 
+from app.database import session as database_session
 from app.api import export_endpoints
 from app.api.ai_endpoints import validate_repository_path
 from app.main import app, parse_allowed_origins
@@ -20,20 +23,173 @@ from app.main import app, parse_allowed_origins
 OWNER_KEY = "test-owner-api-key"
 ENV_EXAMPLE = Path(__file__).resolve().parents[1] / "kova-ai" / ".env.example"
 SETUP_GUIDE = Path(__file__).resolve().parents[1] / "SETUP_GUIDE.md"
+README = Path(__file__).resolve().parents[1] / "README.md"
+NEXT_STEPS = Path(__file__).resolve().parents[1] / "NEXT_STEPS.md"
+MULTI_REPO_GUIDE = Path(__file__).resolve().parents[1] / "MULTI_REPO_GUIDE.md"
+IMPLEMENTATION_SUMMARY = Path(__file__).resolve().parents[1] / "IMPLEMENTATION_SUMMARY.md"
+DEPLOYMENT_ENV_TEMPLATE = (
+    Path(__file__).resolve().parents[1]
+    / "deployment_templates"
+    / "common"
+    / "env.template"
+)
+
+
+def parse_assignments(path: Path) -> dict[str, str]:
+    return {
+        line.partition("=")[0]: line.partition("=")[2]
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if "=" in line and not line.lstrip().startswith("#")
+    }
 
 
 class SecureConfigurationDefaultsTests(unittest.TestCase):
     def test_owner_api_key_samples_are_empty(self):
         for sample_path in (ENV_EXAMPLE, SETUP_GUIDE):
             with self.subTest(sample_path=sample_path.name):
-                assignments = {
-                    line.partition("=")[0]: line.partition("=")[2]
-                    for line in sample_path.read_text(encoding="utf-8").splitlines()
-                    if "=" in line and not line.lstrip().startswith("#")
-                }
+                assignments = parse_assignments(sample_path)
 
                 self.assertIn("KOVA_OWNER_API_KEY", assignments)
                 self.assertEqual(assignments["KOVA_OWNER_API_KEY"], "")
+
+    def test_templates_use_generic_placeholder_values(self):
+        for sample_path, expected in (
+            (
+                ENV_EXAMPLE,
+                {
+                    "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                    "GITHUB_TOKEN": "replace-with-your-github-token",
+                    "ANTHROPIC_API_KEY": "replace-with-your-anthropic-api-key",
+                },
+            ),
+            (
+                DEPLOYMENT_ENV_TEMPLATE,
+                {
+                    "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                    "OPENAI_API_KEY": "replace-with-your-openai-api-key",
+                    "GITHUB_TOKEN": "replace-with-your-github-token",
+                    "ANTHROPIC_API_KEY": "replace-with-your-anthropic-api-key",
+                },
+            ),
+        ):
+            assignments = parse_assignments(sample_path)
+            for key, value in expected.items():
+                with self.subTest(sample_path=sample_path.name, key=key):
+                    self.assertIn(key, assignments)
+                    self.assertEqual(assignments[key], value)
+                    self.assertNotIn("ghp_", assignments[key])
+                    self.assertNotIn("sk-ant-", assignments[key])
+
+    def test_updated_docs_do_not_reintroduce_token_shaped_samples(self):
+        for sample_path in (
+            README,
+            NEXT_STEPS,
+            MULTI_REPO_GUIDE,
+            IMPLEMENTATION_SUMMARY,
+        ):
+            with self.subTest(sample_path=sample_path.name):
+                text = sample_path.read_text(encoding="utf-8")
+                self.assertNotIn("ghp_", text)
+                self.assertNotIn("sk-ant-", text)
+
+    def test_database_url_default_uses_component_environment_variables(self):
+        with patch.dict(
+            os.environ,
+            {
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "pw",
+                "POSTGRES_HOST": "postgres.internal",
+                "POSTGRES_PORT": "6543",
+                "POSTGRES_DB": "kova_core",
+            },
+            clear=False,
+        ):
+            database_url = database_session.build_default_database_url()
+
+        self.assertTrue(database_url.startswith("postgresql+asyncpg://"))
+        self.assertIn("owner:pw", database_url)
+        self.assertIn("@postgres.internal:6543/kova_core", database_url)
+        self.assertNotIn("*", database_url)
+
+    def test_missing_database_url_falls_back_to_component_settings(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "",
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "pw",
+                "POSTGRES_HOST": "postgres.internal",
+                "POSTGRES_PORT": "6543",
+                "POSTGRES_DB": "kova_core",
+            },
+            clear=False,
+        ):
+            self.assertEqual(
+                database_session.resolve_database_url(),
+                database_session.build_default_database_url(),
+            )
+
+    def test_sqlalchemy_echo_is_disabled_by_default(self):
+        with patch.dict(os.environ, {"SQLALCHEMY_ECHO": ""}, clear=False):
+            self.assertFalse(database_session.is_sqlalchemy_echo_enabled())
+
+    def test_sqlalchemy_echo_accepts_truthy_opt_in_values(self):
+        with patch.dict(os.environ, {"SQLALCHEMY_ECHO": "true"}, clear=False):
+            self.assertTrue(database_session.is_sqlalchemy_echo_enabled())
+
+    def test_database_url_placeholder_falls_back_to_component_settings(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "pw",
+                "POSTGRES_HOST": "postgres.internal",
+                "POSTGRES_PORT": "6543",
+                "POSTGRES_DB": "kova_core",
+            },
+            clear=False,
+        ):
+            created_engine = database_session.create_database_engine()
+            expected_url = database_session.build_default_database_url()
+
+        created_url = created_engine.url.render_as_string(hide_password=False)
+        try:
+            self.assertEqual(
+                created_url,
+                expected_url,
+            )
+        finally:
+            asyncio.run(created_engine.dispose())
+
+    def test_module_level_database_url_ignores_placeholder_samples(self):
+        original_engine = database_session.engine
+        asyncio.run(original_engine.dispose())
+
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "pw",
+                "POSTGRES_HOST": "postgres.internal",
+                "POSTGRES_PORT": "6543",
+                "POSTGRES_DB": "kova_core",
+            },
+            clear=False,
+        ):
+            reloaded_session = importlib.reload(database_session)
+            expected_url = reloaded_session.build_default_database_url()
+
+            try:
+                self.assertEqual(reloaded_session.DATABASE_URL, expected_url)
+                self.assertEqual(
+                    reloaded_session.engine.url.render_as_string(hide_password=False),
+                    expected_url,
+                )
+            finally:
+                asyncio.run(reloaded_session.engine.dispose())
+                importlib.reload(database_session)
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
