@@ -1,5 +1,6 @@
 """Security regression tests for KOVA's owner-only API boundary."""
 
+import asyncio
 import os
 import sys
 import tempfile
@@ -109,10 +110,13 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
             expected_url = database_session.build_default_database_url()
 
         created_url = created_engine.url.render_as_string(hide_password=False)
-        self.assertEqual(
-            created_url,
-            expected_url,
-        )
+        try:
+            self.assertEqual(
+                created_url,
+                expected_url,
+            )
+        finally:
+            asyncio.run(created_engine.dispose())
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
