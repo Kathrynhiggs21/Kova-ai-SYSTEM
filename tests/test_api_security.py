@@ -22,6 +22,10 @@ from app.main import app, parse_allowed_origins
 OWNER_KEY = "test-owner-api-key"
 ENV_EXAMPLE = Path(__file__).resolve().parents[1] / "kova-ai" / ".env.example"
 SETUP_GUIDE = Path(__file__).resolve().parents[1] / "SETUP_GUIDE.md"
+README = Path(__file__).resolve().parents[1] / "README.md"
+NEXT_STEPS = Path(__file__).resolve().parents[1] / "NEXT_STEPS.md"
+MULTI_REPO_GUIDE = Path(__file__).resolve().parents[1] / "MULTI_REPO_GUIDE.md"
+IMPLEMENTATION_SUMMARY = Path(__file__).resolve().parents[1] / "IMPLEMENTATION_SUMMARY.md"
 DEPLOYMENT_ENV_TEMPLATE = (
     Path(__file__).resolve().parents[1]
     / "deployment_templates"
@@ -74,6 +78,18 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
                     self.assertEqual(assignments[key], value)
                     self.assertNotIn("ghp_", assignments[key])
                     self.assertNotIn("sk-ant-", assignments[key])
+
+    def test_updated_docs_do_not_reintroduce_token_shaped_samples(self):
+        for sample_path in (
+            README,
+            NEXT_STEPS,
+            MULTI_REPO_GUIDE,
+            IMPLEMENTATION_SUMMARY,
+        ):
+            with self.subTest(sample_path=sample_path.name):
+                text = sample_path.read_text(encoding="utf-8")
+                self.assertNotIn("ghp_", text)
+                self.assertNotIn("sk-ant-", text)
 
     def test_database_url_default_uses_component_environment_variables(self):
         with patch.dict(
