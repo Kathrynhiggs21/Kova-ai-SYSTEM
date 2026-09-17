@@ -18,6 +18,7 @@ from app.core.repository_registry import CANONICAL_REPOSITORIES, parse_github_re
 from services.multi_repo_sync_service import MultiRepoSyncService  # noqa: E402
 
 router = APIRouter(prefix="/multi-repo", tags=["multi-repo"])
+CANONICAL_REPOSITORY_KEYS = {repo.casefold() for repo in CANONICAL_REPOSITORIES}
 
 
 class RepoAddRequest(BaseModel):
@@ -106,13 +107,15 @@ async def add_repository(request: RepoAddRequest):
     """Add a new repository to the Kova AI system"""
     try:
         coordinate = parse_github_repository(request.repo_full_name)
+        canonical_full_name = (
+            f"{coordinate[0]}/{coordinate[1]}" if coordinate is not None else None
+        )
         if (
-            coordinate is None
-            or request.repo_full_name.casefold()
-            not in {repo.casefold() for repo in CANONICAL_REPOSITORIES}
+            canonical_full_name is None
+            or canonical_full_name.casefold() not in CANONICAL_REPOSITORY_KEYS
         ):
             raise HTTPException(
-                status_code=403,
+                status_code=422,
                 detail=(
                     f"Repository {request.repo_full_name} is not in the canonical "
                     "runtime registry"
@@ -121,7 +124,7 @@ async def add_repository(request: RepoAddRequest):
 
         service = MultiRepoSyncService()
         success = await service.add_repo_to_config(
-            request.repo_full_name, request.repo_type
+            canonical_full_name, request.repo_type
         )
 
         if success:
@@ -129,7 +132,7 @@ async def add_repository(request: RepoAddRequest):
                 status="success",
                 data={
                     "message": f"Repository {request.repo_full_name} added successfully",
-                    "repo": request.repo_full_name,
+                    "repo": canonical_full_name,
                 },
             )
         else:

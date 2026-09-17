@@ -16,6 +16,7 @@ from app.security.api_key import require_owner_api_key
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
+CANONICAL_REPOSITORY_KEYS = {repository.casefold() for repository in CANONICAL_REPOSITORIES}
 
 
 def get_github_webhook_secret() -> str:
@@ -84,7 +85,7 @@ async def process_webhook_background(event_type: str, payload: dict, delivery_id
 
 def is_canonical_webhook_repository(repo_name: Optional[str]) -> bool:
     """Return whether the webhook payload references a canonical KOVA repository."""
-    return bool(repo_name) and repo_name in CANONICAL_REPOSITORIES
+    return bool(repo_name) and repo_name.casefold() in CANONICAL_REPOSITORY_KEYS
 
 
 async def handle_push_event(payload: dict):

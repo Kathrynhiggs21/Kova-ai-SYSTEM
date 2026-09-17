@@ -11,6 +11,7 @@ from fastapi import BackgroundTasks, HTTPException
 
 from app.api.webhooks import (
     github_webhook,
+    handle_pull_request_event,
     handle_push_event,
     handle_workflow_run_event,
     verify_github_signature,
@@ -139,9 +140,30 @@ class GitHubWebhookRepositoryScopeTests(unittest.IsolatedAsyncioTestCase):
 
         forward_to_claude.assert_not_called()
 
+    async def test_non_canonical_pull_request_event_is_ignored(self):
+        payload = {
+            "action": "opened",
+            "repository": {"full_name": "Kathrynhiggs21/kova-ai-site"},
+            "pull_request": {"number": 5, "title": "legacy repo change"},
+        }
+        with patch("app.api.webhooks.forward_to_claude") as forward_to_claude:
+            await handle_pull_request_event(payload)
+
+        forward_to_claude.assert_not_called()
+
     async def test_canonical_workflow_event_is_forwarded(self):
         payload = {
             "repository": {"full_name": "Kathrynhiggs21/Kova-ai-SYSTEM"},
+            "workflow_run": {"name": "CI", "status": "completed", "conclusion": "success"},
+        }
+        with patch("app.api.webhooks.forward_to_claude") as forward_to_claude:
+            await handle_workflow_run_event(payload)
+
+        forward_to_claude.assert_called_once()
+
+    async def test_case_variant_canonical_workflow_event_is_forwarded(self):
+        payload = {
+            "repository": {"full_name": "kathrynhiggs21/kova-ai-system"},
             "workflow_run": {"name": "CI", "status": "completed", "conclusion": "success"},
         }
         with patch("app.api.webhooks.forward_to_claude") as forward_to_claude:

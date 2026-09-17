@@ -232,7 +232,7 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException) as raised:
             await add_repository(request)
 
-        self.assertEqual(raised.exception.status_code, 403)
+        self.assertEqual(raised.exception.status_code, 422)
 
     async def test_add_endpoint_accepts_canonical_repository(self):
         request = RepoAddRequest(
