@@ -3,7 +3,7 @@
 > **Historical reference:** This guide contains legacy multi-repository and
 > automation examples that are not active in the current KOVA OS build. The
 > runtime source of truth is `kova_repos_config.json`, which currently enables
-> only `Kova-ai-SYSTEM` and `kova-ai-dash` and keeps discovery, Claude sync,
+> only `Kova-ai-SYSTEM` and `kovaos-site` and keeps discovery, Claude sync,
 > webhooks, and cross-repository automation disabled. Do not use the legacy
 > `/discover` or `/add` examples to expand the registry. Follow `README.md` and
 > the checked-in configuration until this guide is fully replaced.
