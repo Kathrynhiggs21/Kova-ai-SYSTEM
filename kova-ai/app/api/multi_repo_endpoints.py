@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 from typing import Optional, Dict, Any, List  # noqa: E402
 
+from app.core.repository_registry import CANONICAL_REPOSITORIES, parse_github_repository
 from services.multi_repo_sync_service import MultiRepoSyncService  # noqa: E402
 
 router = APIRouter(prefix="/multi-repo", tags=["multi-repo"])
@@ -104,6 +105,20 @@ async def discover_new_repos():
 async def add_repository(request: RepoAddRequest):
     """Add a new repository to the Kova AI system"""
     try:
+        coordinate = parse_github_repository(request.repo_full_name)
+        if (
+            coordinate is None
+            or request.repo_full_name.casefold()
+            not in {repo.casefold() for repo in CANONICAL_REPOSITORIES}
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    f"Repository {request.repo_full_name} is not in the canonical "
+                    "runtime registry"
+                ),
+            )
+
         service = MultiRepoSyncService()
         success = await service.add_repo_to_config(
             request.repo_full_name, request.repo_type
@@ -120,6 +135,8 @@ async def add_repository(request: RepoAddRequest):
         else:
             raise HTTPException(status_code=500, detail="Failed to add repository")
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

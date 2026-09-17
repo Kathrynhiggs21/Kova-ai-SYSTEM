@@ -11,6 +11,7 @@ import json
 import os
 import logging
 
+from app.core.repository_registry import CANONICAL_REPOSITORIES
 from app.security.api_key import require_owner_api_key
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks"])
@@ -81,9 +82,21 @@ async def process_webhook_background(event_type: str, payload: dict, delivery_id
         logger.error(f"Error processing webhook: {e}")
 
 
+def is_canonical_webhook_repository(repo_name: Optional[str]) -> bool:
+    """Return whether the webhook payload references a canonical KOVA repository."""
+    return bool(repo_name) and repo_name in CANONICAL_REPOSITORIES
+
+
 async def handle_push_event(payload: dict):
     """Handle push events"""
     repo_name = payload.get("repository", {}).get("full_name")
+    if not is_canonical_webhook_repository(repo_name):
+        logger.info(
+            "Ignoring push webhook for non-canonical repository: %s",
+            repo_name,
+        )
+        return
+
     ref = payload.get("ref")
     commits = payload.get("commits", [])
 
@@ -106,6 +119,12 @@ async def handle_pull_request_event(payload: dict):
     action = payload.get("action")
     pr = payload.get("pull_request", {})
     repo_name = payload.get("repository", {}).get("full_name")
+    if not is_canonical_webhook_repository(repo_name):
+        logger.info(
+            "Ignoring pull_request webhook for non-canonical repository: %s",
+            repo_name,
+        )
+        return
 
     logger.info(f"PR {action} in {repo_name}: #{pr.get('number')} - {pr.get('title')}")
 
@@ -128,6 +147,12 @@ async def handle_issues_event(payload: dict):
     action = payload.get("action")
     issue = payload.get("issue", {})
     repo_name = payload.get("repository", {}).get("full_name")
+    if not is_canonical_webhook_repository(repo_name):
+        logger.info(
+            "Ignoring issues webhook for non-canonical repository: %s",
+            repo_name,
+        )
+        return
 
     logger.info(
         f"Issue {action} in {repo_name}: #{issue.get('number')} - {issue.get('title')}"
@@ -152,6 +177,12 @@ async def handle_issue_comment_event(payload: dict):
     comment = payload.get("comment", {})
     issue = payload.get("issue", {})
     repo_name = payload.get("repository", {}).get("full_name")
+    if not is_canonical_webhook_repository(repo_name):
+        logger.info(
+            "Ignoring issue_comment webhook for non-canonical repository: %s",
+            repo_name,
+        )
+        return
 
     logger.info(f"Comment {action} in {repo_name} on issue #{issue.get('number')}")
 
@@ -170,6 +201,13 @@ async def handle_workflow_run_event(payload: dict):
     """Handle workflow run events"""
     workflow_run = payload.get("workflow_run", {})
     repo_name = payload.get("repository", {}).get("full_name")
+    if not is_canonical_webhook_repository(repo_name):
+        logger.info(
+            "Ignoring workflow_run webhook for non-canonical repository: %s",
+            repo_name,
+        )
+        return
+
     status = workflow_run.get("status")
     conclusion = workflow_run.get("conclusion")
 

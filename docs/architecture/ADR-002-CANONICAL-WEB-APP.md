@@ -34,3 +34,14 @@ The general personal Drive folder is not a KOVA source of truth. The mixed KOVA 
 - GitHub owns executable truth; Drive owns user files and archival evidence.
 - New KOVA repositories require a distinct deployable boundary and an update to this ADR and the runtime registry.
 - Vercel cleanup retains clean project names only long enough to verify domains and environment variables; retaining a Vercel project does not promote its source repository to canonical status.
+
+## Vercel duplicate cleanup boundary
+
+The duplicate projects `kova-ai-system-sl9b`, `v0-kova-ai`, `kova-ai-z3fs`, and
+`kova-os-docengine-kpsl` are cleanup candidates only. Before any owner-only
+unlink/delete action, compare each duplicate for unique environment variables,
+domains, aliases, auth settings, and active production traffic.
+
+This repository can enforce canonical runtime behavior through registry-aware CI
+and API/webhook checks, but irreversible Vercel console operations remain a final
+owner review step.

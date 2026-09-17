@@ -9,7 +9,12 @@ from unittest.mock import patch
 import httpx
 from fastapi import BackgroundTasks, HTTPException
 
-from app.api.webhooks import github_webhook, verify_github_signature
+from app.api.webhooks import (
+    github_webhook,
+    handle_push_event,
+    handle_workflow_run_event,
+    verify_github_signature,
+)
 from app.main import app
 
 
@@ -120,6 +125,29 @@ class GitHubWebhookEndpointTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertNotIn("sensitive", raised.exception.detail)
         log_exception.assert_called_once_with("Unexpected GitHub webhook error")
+
+
+class GitHubWebhookRepositoryScopeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_non_canonical_push_event_is_ignored(self):
+        payload = {
+            "repository": {"full_name": "Kathrynhiggs21/kova-ai"},
+            "ref": "refs/heads/main",
+            "commits": [{"message": "test"}],
+        }
+        with patch("app.api.webhooks.forward_to_claude") as forward_to_claude:
+            await handle_push_event(payload)
+
+        forward_to_claude.assert_not_called()
+
+    async def test_canonical_workflow_event_is_forwarded(self):
+        payload = {
+            "repository": {"full_name": "Kathrynhiggs21/Kova-ai-SYSTEM"},
+            "workflow_run": {"name": "CI", "status": "completed", "conclusion": "success"},
+        }
+        with patch("app.api.webhooks.forward_to_claude") as forward_to_claude:
+            await handle_workflow_run_event(payload)
+
+        forward_to_claude.assert_called_once()
 
 
 if __name__ == "__main__":

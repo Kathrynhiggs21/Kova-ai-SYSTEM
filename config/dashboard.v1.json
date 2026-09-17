@@ -57,10 +57,15 @@
     "No verified production Core-to-site API contract.",
     "No proof-backed end-to-end connector path.",
     "Durable run history, queueing, retries, and connector telemetry remain incomplete.",
-    "The duplicate legacy Core Vercel project still creates configuration-drift risk."
+    "Duplicate/legacy Vercel projects must be owner-reviewed for unique env/domain settings before owner-only unlink/delete console actions."
   ],
   "next_actions": [
     "Merge architecture changes only after exact-head CI and review pass.",
+    "Create or verify the canonical Vercel project linked to Kathrynhiggs21/kovaos-site.",
+    "Confirm kova-ai-system remains the canonical backend deployment.",
+    "Compare env vars/domains/aliases for kova-ai-system-sl9b, v0-kova-ai, kova-ai-z3fs, and kova-os-docengine-kpsl before duplicate cleanup.",
+    "After owner verification, remove Git integration or delete duplicate projects from the Vercel console only.",
+    "Verify /, /dashboard, /ai, /files, /settings, and owner/admin routes after frontend cutover.",
     "Implement and test the versioned Core-to-site API.",
     "Verify one authenticated connector path with audit evidence.",
     "Migrate unique donor features before archiving any repository."
