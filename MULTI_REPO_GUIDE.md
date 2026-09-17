@@ -447,8 +447,8 @@ If a repo shows `exists: false`:
 
 Ensure your `.env` has:
 ```bash
-GITHUB_TOKEN=ghp_your_token_here
-ANTHROPIC_API_KEY=sk-ant-your_key_here
+GITHUB_TOKEN=REPLACE_WITH_YOUR_GITHUB_TOKEN
+ANTHROPIC_API_KEY=REPLACE_WITH_YOUR_ANTHROPIC_API_KEY
 ```
 
 ### Config Not Loading

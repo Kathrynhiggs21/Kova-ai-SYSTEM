@@ -14,26 +14,83 @@ from fastapi import HTTPException
 
 from app.api import export_endpoints
 from app.api.ai_endpoints import validate_repository_path
+from app.database.session import build_default_database_url
 from app.main import app, parse_allowed_origins
 
 
 OWNER_KEY = "test-owner-api-key"
 ENV_EXAMPLE = Path(__file__).resolve().parents[1] / "kova-ai" / ".env.example"
 SETUP_GUIDE = Path(__file__).resolve().parents[1] / "SETUP_GUIDE.md"
+DEPLOYMENT_ENV_TEMPLATE = (
+    Path(__file__).resolve().parents[1]
+    / "deployment_templates"
+    / "common"
+    / "env.template"
+)
+
+
+def parse_assignments(path: Path) -> dict[str, str]:
+    return {
+        line.partition("=")[0]: line.partition("=")[2]
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if "=" in line and not line.lstrip().startswith("#")
+    }
 
 
 class SecureConfigurationDefaultsTests(unittest.TestCase):
     def test_owner_api_key_samples_are_empty(self):
         for sample_path in (ENV_EXAMPLE, SETUP_GUIDE):
             with self.subTest(sample_path=sample_path.name):
-                assignments = {
-                    line.partition("=")[0]: line.partition("=")[2]
-                    for line in sample_path.read_text(encoding="utf-8").splitlines()
-                    if "=" in line and not line.lstrip().startswith("#")
-                }
+                assignments = parse_assignments(sample_path)
 
                 self.assertIn("KOVA_OWNER_API_KEY", assignments)
                 self.assertEqual(assignments["KOVA_OWNER_API_KEY"], "")
+
+    def test_templates_use_generic_placeholder_values(self):
+        for sample_path, expected in (
+            (
+                ENV_EXAMPLE,
+                {
+                    "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                    "GITHUB_TOKEN": "replace-with-your-github-token",
+                    "ANTHROPIC_API_KEY": "replace-with-your-anthropic-api-key",
+                },
+            ),
+            (
+                DEPLOYMENT_ENV_TEMPLATE,
+                {
+                    "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                    "OPENAI_API_KEY": "replace-with-your-openai-api-key",
+                    "GITHUB_TOKEN": "replace-with-your-github-token",
+                    "ANTHROPIC_API_KEY": "replace-with-your-anthropic-api-key",
+                },
+            ),
+        ):
+            assignments = parse_assignments(sample_path)
+            for key, value in expected.items():
+                with self.subTest(sample_path=sample_path.name, key=key):
+                    self.assertEqual(assignments[key], value)
+                    self.assertNotIn("ghp_", assignments[key])
+                    self.assertNotIn("sk-ant-", assignments[key])
+
+    def test_database_url_default_uses_component_environment_variables(self):
+        with patch.dict(
+            os.environ,
+            {
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "pw",
+                "POSTGRES_HOST": "postgres.internal",
+                "POSTGRES_PORT": "6543",
+                "POSTGRES_DB": "kova_core",
+            },
+            clear=False,
+        ):
+            database_url = build_default_database_url()
+
+        self.assertTrue(database_url.startswith("postgresql+asyncpg://"))
+        self.assertIn("owner:pw", database_url)
+        self.assertIn("@postgres.internal:6543/kova_core", database_url)
+        self.assertNotIn("*", database_url)
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):

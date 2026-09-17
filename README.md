@@ -355,10 +355,10 @@ nano .env  # or your preferred editor
 #### `kova-ai/.env` (fill in your actual values)
 ```bash
 # MUST FILL THESE:
-OPENAI_API_KEY=sk-your-actual-key-here
-ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
-GITHUB_TOKEN=ghp_your-actual-token-here
-PINECONE_API_KEY=your-actual-key-here
+OPENAI_API_KEY=replace-with-your-openai-api-key
+ANTHROPIC_API_KEY=replace-with-your-anthropic-api-key
+GITHUB_TOKEN=replace-with-your-github-token
+PINECONE_API_KEY=replace-with-your-pinecone-api-key
 ```
 
 ### Step 3: Run Installation
@@ -397,9 +397,9 @@ Edit `.env` file with your actual values:
 
 ```bash
 # Essential (MUST configure)
-OPENAI_API_KEY=sk-...          # Your OpenAI key
-ANTHROPIC_API_KEY=sk-ant-...   # Your Anthropic key
-GITHUB_TOKEN=ghp_...            # Your GitHub token
+OPENAI_API_KEY=...              # Your OpenAI key
+ANTHROPIC_API_KEY=...           # Your Anthropic key
+GITHUB_TOKEN=...                # Your GitHub token
 PINECONE_API_KEY=...            # Your Pinecone key
 
 # Optional (can use defaults)
