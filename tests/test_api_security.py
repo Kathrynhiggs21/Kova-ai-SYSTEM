@@ -70,6 +70,7 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
             assignments = parse_assignments(sample_path)
             for key, value in expected.items():
                 with self.subTest(sample_path=sample_path.name, key=key):
+                    self.assertIn(key, assignments)
                     self.assertEqual(assignments[key], value)
                     self.assertNotIn("ghp_", assignments[key])
                     self.assertNotIn("sk-ant-", assignments[key])
