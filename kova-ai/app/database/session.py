@@ -27,10 +27,13 @@ def resolve_database_url() -> str:
     return database_url
 
 
-DEFAULT_DATABASE_URL = build_default_database_url()
-DATABASE_URL = resolve_database_url()
+def create_database_engine():
+    return create_async_engine(resolve_database_url(), echo=True)
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+
+DEFAULT_DATABASE_URL = build_default_database_url()
+engine = create_database_engine()
+DATABASE_URL = engine.url.render_as_string(hide_password=False)
 SessionLocal = sessionmaker(
     engine,
     class_=AsyncSession,

@@ -105,10 +105,14 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
             },
             clear=False,
         ):
-            self.assertEqual(
-                database_session.resolve_database_url(),
-                database_session.build_default_database_url(),
-            )
+            created_engine = database_session.create_database_engine()
+            expected_url = database_session.build_default_database_url()
+
+        created_url = created_engine.url.render_as_string(hide_password=False)
+        self.assertEqual(
+            created_url,
+            expected_url,
+        )
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
