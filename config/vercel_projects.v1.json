@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "canonical_backend_repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+  "canonical_frontend_repository": "Kathrynhiggs21/kovaos-site",
+  "production_domains": [
+    "kovaos.com",
+    "www.kovaos.com"
+  ],
+  "projects": [
+    {
+      "name": "kova-ai-system",
+      "source_repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "classification": "canonical",
+      "status": "keep",
+      "requires_owner_console_action": false
+    },
+    {
+      "name": "kova-ai-system-sl9b",
+      "source_repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "classification": "duplicate",
+      "status": "verify_then_delete",
+      "requires_owner_console_action": true
+    },
+    {
+      "name": "kovaos-site",
+      "source_repository": "Kathrynhiggs21/kovaos-site",
+      "classification": "canonical",
+      "status": "missing_create_or_connect",
+      "requires_owner_console_action": true
+    },
+    {
+      "name": "kova-ai",
+      "source_repository": "Kathrynhiggs21/kova-ai",
+      "classification": "legacy",
+      "status": "verify_then_unlink",
+      "requires_owner_console_action": true
+    },
+    {
+      "name": "v0-kova-ai",
+      "source_repository": "Kathrynhiggs21/kova-ai",
+      "classification": "duplicate",
+      "status": "verify_then_delete",
+      "requires_owner_console_action": true
+    },
+    {
+      "name": "kova-ai-z3fs",
+      "source_repository": "Kathrynhiggs21/kova-ai",
+      "classification": "duplicate",
+      "status": "verify_then_delete",
+      "requires_owner_console_action": true
+    },
+    {
+      "name": "kova-os-docengine",
+      "source_repository": "Kathrynhiggs21/Kova-os-docengine",
+      "classification": "experimental",
+      "status": "verify_then_unlink",
+      "requires_owner_console_action": true
+    },
+    {
+      "name": "kova-os-docengine-kpsl",
+      "source_repository": "Kathrynhiggs21/Kova-os-docengine",
+      "classification": "duplicate",
+      "status": "verify_then_delete",
+      "requires_owner_console_action": true
+    }
+  ],
+  "required_routes_after_cutover": [
+    "/",
+    "/dashboard",
+    "/ai",
+    "/files",
+    "/settings",
+    "/admin"
+  ],
+  "owner_only_actions": [
+    "Create/connect the Vercel project for Kathrynhiggs21/kovaos-site.",
+    "Point kovaos.com aliases to the canonical frontend project after env/build/auth verification.",
+    "Unlink Git integration from redundant duplicate projects.",
+    "Delete duplicate projects only after confirming no unique environment variables, aliases, or production traffic remain."
+  ],
+  "notes": [
+    "Duplicate project NEXT_NO_VERSION failures are configuration noise when a non-Next repository is linked as Next.js.",
+    "Project retention for temporary env/domain verification does not promote legacy repositories to canonical runtime."
+  ]
+}

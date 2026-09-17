@@ -179,5 +179,9 @@
   "repository_creation_policy": {
     "description": "See config/core_modules.v1.json for the canonical split policy",
     "split_policy_file": "config/core_modules.v1.json"
+  },
+  "deployment_inventory": {
+    "vercel_project_inventory_file": "config/vercel_projects.v1.json",
+    "destructive_actions_require_owner_approval": true
   }
 }

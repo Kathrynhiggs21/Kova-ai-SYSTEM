@@ -35,6 +35,11 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
                 self.assertIn("KOVA_OWNER_API_KEY", assignments)
                 self.assertEqual(assignments["KOVA_OWNER_API_KEY"], "")
 
+    def test_sample_tokens_do_not_use_real_prefixes(self):
+        content = ENV_EXAMPLE.read_text(encoding="utf-8")
+        self.assertNotIn("ghp_", content)
+        self.assertNotIn("sk-ant-", content)
+
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
     async def request(self, method: str, path: str, owner_key=None, **kwargs):
