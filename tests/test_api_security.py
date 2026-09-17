@@ -128,6 +128,14 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
                 database_session.build_default_database_url(),
             )
 
+    def test_sqlalchemy_echo_is_disabled_by_default(self):
+        with patch.dict(os.environ, {"SQLALCHEMY_ECHO": ""}, clear=False):
+            self.assertFalse(database_session.is_sqlalchemy_echo_enabled())
+
+    def test_sqlalchemy_echo_accepts_truthy_opt_in_values(self):
+        with patch.dict(os.environ, {"SQLALCHEMY_ECHO": "true"}, clear=False):
+            self.assertTrue(database_session.is_sqlalchemy_echo_enabled())
+
     def test_database_url_placeholder_falls_back_to_component_settings(self):
         with patch.dict(
             os.environ,
