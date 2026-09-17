@@ -20,8 +20,15 @@ def build_default_database_url() -> str:
     )
 
 
+def resolve_database_url() -> str:
+    database_url = os.getenv("DATABASE_URL", "").strip()
+    if not database_url or "<" in database_url or ">" in database_url:
+        return build_default_database_url()
+    return database_url
+
+
 DEFAULT_DATABASE_URL = build_default_database_url()
-DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+DATABASE_URL = resolve_database_url()
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(

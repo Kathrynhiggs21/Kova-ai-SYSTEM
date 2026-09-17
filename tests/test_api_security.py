@@ -12,9 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kova-ai"))
 import httpx
 from fastapi import HTTPException
 
+from app.database import session as database_session
 from app.api import export_endpoints
 from app.api.ai_endpoints import validate_repository_path
-from app.database.session import build_default_database_url
 from app.main import app, parse_allowed_origins
 
 
@@ -85,12 +85,30 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
             },
             clear=False,
         ):
-            database_url = build_default_database_url()
+            database_url = database_session.build_default_database_url()
 
         self.assertTrue(database_url.startswith("postgresql+asyncpg://"))
         self.assertIn("owner:pw", database_url)
         self.assertIn("@postgres.internal:6543/kova_core", database_url)
         self.assertNotIn("*", database_url)
+
+    def test_database_url_placeholder_falls_back_to_component_settings(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "postgresql+asyncpg://<db-user>:<db-password>@localhost:5432/<db-name>",
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "pw",
+                "POSTGRES_HOST": "postgres.internal",
+                "POSTGRES_PORT": "6543",
+                "POSTGRES_DB": "kova_core",
+            },
+            clear=False,
+        ):
+            self.assertEqual(
+                database_session.resolve_database_url(),
+                database_session.build_default_database_url(),
+            )
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
