@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -21,13 +21,15 @@ def build_default_database_url() -> str:
 
 
 def resolve_database_url() -> str:
+    """Resolve a real DSN, ignoring copied template placeholders."""
     database_url = os.getenv("DATABASE_URL", "").strip()
     if not database_url or "<" in database_url or ">" in database_url:
         return build_default_database_url()
     return database_url
 
 
-def create_database_engine():
+def create_database_engine() -> AsyncEngine:
+    """Create the async SQLAlchemy engine from the current environment."""
     return create_async_engine(resolve_database_url(), echo=True)
 
 
