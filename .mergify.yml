@@ -1,0 +1,22 @@
+# KOVA canonical Mergify configuration
+# Keep GitHub branch/ruleset protections authoritative. Mergify injects those
+# requirements into the queue instead of duplicating check names here.
+
+merge_queue:
+  mode: serial
+  max_parallel_checks: 1
+  status_comments: outcomes
+  queued_label: queued
+  dequeued_label: dequeued
+
+queue_rules:
+  - name: default
+    merge_method: squash
+    batch_size: 1
+    branch_protection_injection_mode: queue
+    queue_conditions:
+      - base = main
+      - -draft
+    merge_conditions:
+      - base = main
+      - -draft
