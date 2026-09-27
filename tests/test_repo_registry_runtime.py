@@ -19,6 +19,7 @@ from app.services.multi_repo_sync_service import MultiRepoSyncService
 
 CANONICAL_REPOSITORIES = [
     "Kathrynhiggs21/Kova-ai-SYSTEM",
+    "Kathrynhiggs21/kova-ai-dash",
     "Kathrynhiggs21/kovaos-site",
 ]
 
@@ -39,13 +40,22 @@ def write_config(path: Path, *, claude_enabled: bool = False) -> None:
                         "features": ["orchestration"],
                     },
                     {
-                        "name": "kovaos-site",
+                        "name": "kova-ai-dash",
                         "full_name": CANONICAL_REPOSITORIES[1],
-                        "description": "Canonical KOVA OS web app",
+                        "description": "Canonical authenticated KOVA OS command center",
                         "type": "frontend",
                         "enabled": True,
                         "sync_priority": 1,
-                        "features": ["dashboard"],
+                        "features": ["command-center"],
+                    },
+                    {
+                        "name": "kovaos-site",
+                        "full_name": CANONICAL_REPOSITORIES[2],
+                        "description": "Canonical public KOVA OS site",
+                        "type": "frontend",
+                        "enabled": True,
+                        "sync_priority": 2,
+                        "features": ["public-site"],
                     },
                     {
                         "name": "disabled",
@@ -152,7 +162,7 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
             with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
                 service = MultiRepoSyncService()
 
-        self.assertEqual(len(service.config["repositories"]), 2)
+        self.assertEqual(len(service.config["repositories"]), 3)
         self.assertEqual(service.get_enabled_repos(), CANONICAL_REPOSITORIES)
 
     async def test_invalid_nested_setting_falls_back_to_canonical_registry(self):

@@ -1,119 +1,45 @@
 # KOVA OS Remediation Roadmap
 
-Status: Historical implementation roadmap. Repository and frontend ownership are superseded by `KOVA_REPOSITORY_MAP.md`, `ADR-002-CANONICAL-WEB-APP.md`, and `kova_repos_config.json`.
+Status: Active remediation roadmap for issue #92.
 
 ## Goal
-Create a safe, understandable, operational KOVA OS from the existing repositories without deleting working code or enabling unsafe automation prematurely.
+Make the current multi-repository KOVA OS understandable, safe to automate, and operational without destructive rewrites.
 
-## Phase 0 — Freeze ambiguity
-- Keep `Kova-ai-SYSTEM` as current Core authority.
-- Keep `kovaos-site` as the current authenticated application authority; use `kova-ai-dash` only as a disabled feature donor.
-- Keep cross-repo auto-sync, auto-discovery, webhook mutations and cross-repo PR automation disabled.
-- Treat `kova-ai` as a mixed legacy repository until content is inventoried; legacy renderer code is explicitly outside KOVA OS.
-- Treat starter/template repos as non-production unless explicitly promoted.
+No destructive repo moves or automation enablement should happen until the Phase 0 ownership map is merged.
 
-Exit criteria: repository map accepted and runtime registry matches active production roles.
+## Phase 0 (P0) — Canonical ownership freeze
 
-## Phase 1 — Repository identity repair
-- Update READMEs/descriptions to state exact role, lifecycle and replacement/migration target.
-- Standardize default branch naming where practical.
-- Add `ARCHITECTURE.md`, `SECURITY.md`, `CONTRIBUTING.md` and ownership notes to production repos.
-- Add lifecycle markers: ACTIVE, TRANSITION, WORLD, EXPERIMENT, ARCHIVED.
-- Inventory `kova-ai` for genuinely generic KOVA code while excluding renderer scripts/workflows from the KOVA architecture.
+- Adopt `docs/architecture/KOVA_REPOSITORY_MAP.md` as the human source of truth.
+- Keep `Kova-ai-SYSTEM` as current Core/backend authority.
+- Keep `kova-ai-dash` as current authenticated Command Center authority.
+- Keep `kovaos-site` as the public-site authority and separate from authenticated Command Center responsibilities.
+- Keep auto-sync, auto-discovery, webhook mutations, cross-repo PR automation, and unified changelog disabled until ownership is stable.
+- Resolve `kova-ai` identity conflict and migrate Zoo/card code to `Scribbles-Zoo-Project`.
 
-Exit criteria: a developer or agent can identify the correct repo for any KOVA change without guessing.
+Exit criteria: repository map merged; runtime registry and fallback defaults match ownership and keep mutating automation disabled.
 
-## Phase 2 — World boundaries
-- Define Scribbles by Marcy and Zoo/Educational Cards as KOVA Worlds with independent domain data and product logic.
-- Do not migrate the legacy renderer into either KOVA Core or the canonical Zoo/Educational Card World.
-- Keep KOVA Core limited to generic research, AI, storage, memory, connector, notification and automation capabilities.
-- Select any future presentation/export implementation independently.
+## Phase 1 (P1) — Contract and boundary definition
 
-Exit criteria: no renderer-specific workflow is required anywhere in KOVA OS.
+- Define provider-independent memory contract.
+- Define connector contract and verified health semantics.
+- Define AI gateway interface.
+- Define durable automation/job contract.
+- Define Android client boundary.
+- Standardize CI/security gates across production repositories.
 
-## Phase 3 — Frontend separation
-- Treat `kovaos-site` as the authenticated KOVA application and canonical home of the Command Center.
-- Migrate only verified, unique features from disabled donor `kova-ai-dash` through reviewed pull requests.
-- Define the versioned API boundary from `kovaos-site` to KOVA Core.
+Exit criteria: each contract has clear API/interface shape, ownership, validation semantics, and CI coverage expectations.
 
-Exit criteria: `kovaos-site` owns one authenticated application surface and uses a versioned, tested boundary to KOVA Core.
+## Operational definition
 
-## Phase 4 — Platform services
-Establish clear service boundaries for:
-- Memory
-- Connectors
-- Automation
-- AI gateway
-- Android/mobile
-- Infrastructure/observability
-- Shared SDK/contracts
+KOVA OS is operational when all of the following are true:
 
-These can begin inside `Kova-ai-SYSTEM` as packages while interfaces stabilize. Split into standalone repos only when deployment, security or ownership needs justify it.
-
-Exit criteria: each service has a documented interface, tests, health status and data classification.
-
-## Phase 5 — Security and CI hardening
-Required checks for production repos:
-1. secret scanning
-2. dependency/security scanning
-3. lint
-4. type checking
-5. unit tests
-6. integration tests
-7. build
-8. preview/staging deploy where applicable
-9. smoke tests
-10. protected production promotion
-
-Never embed owner/API keys in browser code. Prefer OAuth and managed secrets. Redact logs.
-
-Exit criteria: main branches cannot accept broken or secret-bearing changes through the normal workflow.
-
-## Phase 6 — Connector operationalization
-Every connector must declare:
-- provider
-- capabilities
-- auth/scopes
-- read/write level
-- data classification
-- sync strategy
-- rate limits
-- webhook support
-- health check
-- last successful sync
-- revocation procedure
-
-Exit criteria: Command Center health badges reflect verified state rather than configured state.
-
-## Phase 7 — Controlled automation
-Only after prior phases:
-- enable signed GitHub webhooks
-- enable repository discovery for approved naming/owners
-- enable unified changelog
-- enable cross-repo notifications
-- enable narrowly scoped cross-repo PR automation
-
-Mutating automation must use least privilege and produce an audit trail.
-
-## Phase 8 — KOVA Worlds
-Formalize domain worlds that consume KOVA services without contaminating Core:
-- Scribbles by Marcy
-- Zoo / Educational Cards
-- Personal / Family
-- Education
-- Creative
-- Travel
-
-Each World owns its data model and business logic.
-
-## Definition of operational
-KOVA OS is operational when:
-- Core has a reproducible deployment and health check.
-- Command Center can authenticate and read verified Core/integration health.
-- At least one AI provider works through a controlled gateway.
-- Memory and connector layers have explicit privacy/provenance behavior.
-- A scheduled automation can run, log, retry and report failure safely.
-- Android/web clients can use documented APIs.
-- Secrets are externalized.
-- CI protects production branches.
-- Backup/restore and rollback are documented and tested.
+- Core deployment and health checks are reproducible.
+- Authenticated Command Center reads verified Core/integration health through stable interfaces.
+- Public site and authenticated Command Center responsibilities remain separated.
+- At least one AI provider operates through the defined gateway interface.
+- Memory and connector layers expose explicit privacy/provenance behavior.
+- Automation jobs run with durability semantics (schedule, retry, audit, failure reporting).
+- Android/web clients use documented boundaries.
+- Secrets remain externalized.
+- CI/security gates protect production branches.
+- Backup/restore and rollback are documented and testable.
