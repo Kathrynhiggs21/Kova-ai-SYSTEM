@@ -13,7 +13,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kova-ai"))
 from fastapi import HTTPException
 
 from app.api.ai_endpoints import load_kova_repos_from_config
-from app.api.multi_repo_endpoints import RepoSyncRequest, sync_repositories
+from app.api.multi_repo_endpoints import (
+    RepoAddRequest,
+    RepoSyncRequest,
+    add_repository,
+    sync_repositories,
+)
 from app.services.multi_repo_sync_service import MultiRepoSyncService
 
 
@@ -217,6 +222,35 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
                         await sync_repositories(RepoSyncRequest(include_claude=True))
 
         self.assertEqual(raised.exception.status_code, 409)
+
+    async def test_add_endpoint_rejects_non_canonical_repository(self):
+        request = RepoAddRequest(
+            repo_full_name="Kathrynhiggs21/kova-ai",
+            repo_type="experimental",
+        )
+
+        with self.assertRaises(HTTPException) as raised:
+            await add_repository(request)
+
+        self.assertEqual(raised.exception.status_code, 422)
+
+    async def test_add_endpoint_accepts_canonical_repository(self):
+        request = RepoAddRequest(
+            repo_full_name="Kathrynhiggs21/kovaos-site",
+            repo_type="frontend",
+        )
+
+        with patch(
+            "app.api.multi_repo_endpoints.MultiRepoSyncService.add_repo_to_config",
+            new=AsyncMock(return_value=True),
+        ) as add_repo_to_config:
+            response = await add_repository(request)
+
+        self.assertEqual(response.status, "success")
+        add_repo_to_config.assert_awaited_once_with(
+            "Kathrynhiggs21/kovaos-site",
+            "frontend",
+        )
 
 
 if __name__ == "__main__":
