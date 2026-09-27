@@ -118,8 +118,8 @@ KOVA_OWNER_API_KEY=
 KOVA_ALLOWED_ORIGINS=http://localhost:5173
 
 # Multi-Repository Management (REQUIRED)
-GITHUB_TOKEN=ghp_YOUR_ACTUAL_GITHUB_TOKEN_HERE
-ANTHROPIC_API_KEY=sk-ant-YOUR_ACTUAL_ANTHROPIC_KEY_HERE
+GITHUB_TOKEN=REPLACE_WITH_YOUR_GITHUB_TOKEN
+ANTHROPIC_API_KEY=REPLACE_WITH_YOUR_ANTHROPIC_API_KEY
 
 # Required when the GitHub webhook endpoint is enabled. Generate a unique value.
 GITHUB_WEBHOOK_SECRET=
@@ -553,7 +553,7 @@ python3 scripts/validate_config.py
 
 1. Verify API key in `.env`:
    ```bash
-   ANTHROPIC_API_KEY=sk-ant-your-key-here
+   ANTHROPIC_API_KEY=REPLACE_WITH_YOUR_ANTHROPIC_API_KEY
    ```
 
 2. Check the Claude API endpoint is correct (should be `/v1/messages`)

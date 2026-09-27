@@ -72,8 +72,8 @@ python3 scripts/validate_config.py
 cd kova-ai
 cp .env.example .env
 # Edit .env and add your actual API keys:
-#   GITHUB_TOKEN=ghp_your_token_here
-#   ANTHROPIC_API_KEY=sk-ant-your_key_here
+#   GITHUB_TOKEN=REPLACE_WITH_YOUR_GITHUB_TOKEN
+#   ANTHROPIC_API_KEY=REPLACE_WITH_YOUR_ANTHROPIC_API_KEY
 
 # Step 3: Start the services
 docker-compose up -d

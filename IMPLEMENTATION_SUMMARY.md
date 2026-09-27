@@ -174,7 +174,7 @@ This document summarizes the comprehensive enhancements made to the Kova AI Syst
 **New Required Variables:**
 ```bash
 # Claude AI
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+ANTHROPIC_API_KEY=REPLACE_WITH_YOUR_ANTHROPIC_API_KEY
 CLAUDE_MODEL=claude-3-sonnet-20240229
 
 # Multi-Repo
