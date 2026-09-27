@@ -354,11 +354,19 @@ nano .env  # or your preferred editor
 
 #### `kova-ai/.env` (fill in your actual values)
 ```bash
-# MUST FILL THESE:
-OPENAI_API_KEY=sk-your-actual-key-here
-ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
-GITHUB_TOKEN=ghp_your-actual-token-here
-PINECONE_API_KEY=your-actual-key-here
+# REQUIRED FOR OWNER-AUTHENTICATED CONTROL ROUTES
+KOVA_OWNER_API_KEY=your-long-random-owner-key
+KOVA_ALLOWED_ORIGINS=http://localhost:5173
+
+# REQUIRED FOR REPOSITORY/AI INTEGRATIONS
+GITHUB_TOKEN=your_github_token_here
+ANTHROPIC_API_KEY=your_anthropic_key_here
+
+# REQUIRED FOR SIGNED GITHUB WEBHOOK PROCESSING
+GITHUB_WEBHOOK_SECRET=your_webhook_secret_here
+
+# DATABASE (defaults shown)
+DATABASE_URL=postgresql+asyncpg://kova:kova_pass@db:5432/kova
 ```
 
 ### Step 3: Run Installation
@@ -397,15 +405,15 @@ Edit `.env` file with your actual values:
 
 ```bash
 # Essential (MUST configure)
-OPENAI_API_KEY=sk-...          # Your OpenAI key
-ANTHROPIC_API_KEY=sk-ant-...   # Your Anthropic key
-GITHUB_TOKEN=ghp_...            # Your GitHub token
-PINECONE_API_KEY=...            # Your Pinecone key
+KOVA_OWNER_API_KEY=...         # Owner API key for protected routes
+KOVA_ALLOWED_ORIGINS=...       # Allowed browser origins (comma-separated)
+ANTHROPIC_API_KEY=...          # Claude integration
+GITHUB_TOKEN=...               # GitHub API access for repo sync/status
+GITHUB_WEBHOOK_SECRET=...      # Webhook signature verification secret
 
 # Optional (can use defaults)
-POSTGRES_PASSWORD=...           # Database password
-SECRET_KEY=...                  # JWT secret key
-ADMIN_EMAIL=...                 # Admin email
+DATABASE_URL=...               # Database connection string
+POSTGRES_PASSWORD=...          # PostgreSQL password (if using compose defaults)
 ```
 
 ### GitHub Webhook Setup
@@ -433,15 +441,13 @@ curl -X POST http://localhost:8000/ai/command \
 
 ### Test Error Scanning
 ```bash
-curl -X POST http://localhost:8000/api/scan \
-  -H "Content-Type: application/json" \
-  -d '{"name": "test-repo"}'
+curl -X GET http://localhost:8000/multi-repo/list \
+  -H "X-Kova-API-Key: $KOVA_OWNER_API_KEY"
 ```
 
 ### Access Dashboards
 - **API Documentation**: http://localhost:8000/docs
-- **Grafana Monitoring**: http://localhost:3000 (admin/admin)
-- **Prometheus Metrics**: http://localhost:9090
+- **Prometheus Metrics**: http://localhost:8000/metrics
 
 ## 📱 AppSheet Setup
 
@@ -576,7 +582,7 @@ Once running, access interactive API docs at:
 ### Key Endpoints
 
 - `POST /ai/command` - Execute AI command
-- `POST /api/scan` - Scan repository
+- `GET /multi-repo/list` - List enabled repositories (owner key required)
 - `POST /webhooks/github` - GitHub webhook
 - `GET /health` - Health check
 - `GET /metrics` - Prometheus metrics
