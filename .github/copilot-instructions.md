@@ -28,6 +28,9 @@ Goal: one coherent operating layer with explicit boundaries, not parallel protot
 - Never claim a feature/integration is live unless runtime verification exists.
 - Never expose or commit credentials/secrets.
 - Never migrate the legacy Zoo/card renderer into KOVA OS unless explicitly instructed.
+- Keep normal KOVA operation no-code for the owner; maintenance should not require the owner to write or debug code for routine tasks.
+- Follow one-home-per-artifact: each canonical artifact has one authoritative storage location; do not introduce mirrored duplicate storage.
+- Keep user-facing behavior dyslexia-first and accessibility-first, including plain-language status/errors and readable structure.
 
 ## 3. Repository Classification First
 
@@ -182,6 +185,7 @@ For GitHub automation/webhooks/API access:
 - Production routing should align with `https://kovaos.com` through environment-based configuration.
 - Keep localhost/staging/preview values environment-specific; do not hard-code production where config should vary.
 - Do not treat duplicate hosting projects as canonical without architecture approval.
+- Do not change production domains, DNS, authentication ownership, or other destructive production-critical configuration without explicit owner approval.
 
 ## 16. Authentication and Security
 
@@ -281,6 +285,12 @@ When docs conflict, prioritize:
 4. historical plans/backlogs
 
 Update docs only where behavior/ownership/commands changed. Avoid creating duplicate planning docs when canonical docs exist.
+
+## 24.1 Accessibility and Operator Usability
+
+- Keep operator workflows understandable to a non-developer and executable without code changes in normal operation.
+- Default to plain language in user-facing copy, statuses, and error messages.
+- Preserve dyslexia-first readability: avoid dense walls of text, use clear labels, and keep navigation/content structure predictable.
 
 ## 25. Standard Work Sequence for Each Task
 
