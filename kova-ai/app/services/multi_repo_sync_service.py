@@ -234,10 +234,14 @@ class MultiRepoSyncService:
 
     def get_enabled_repos(self) -> List[str]:
         """Get list of enabled repositories"""
+        return self.get_configured_repos(include_disabled=False)
+
+    def get_configured_repos(self, include_disabled: bool = True) -> List[str]:
+        """Get configured repositories, optionally including disabled entries."""
         return [
             repo["full_name"]
             for repo in self.config.get("repositories", [])
-            if repo.get("enabled", True)
+            if include_disabled or repo.get("enabled", True)
         ]
 
     def is_integration_enabled(self, setting: str) -> bool:
@@ -351,9 +355,18 @@ class MultiRepoSyncService:
                 if pattern.lower() in repo["name"].lower()
             ]
 
-            # Find new repos not in config
-            known_repos = set(self.get_enabled_repos())
-            new_repos = [repo for repo in kova_repos if repo not in known_repos]
+            # Find new repos that are not already catalogued in the registry.
+            # Disabled entries are intentionally treated as known to avoid duplicate
+            # rediscovery of intentionally non-runtime repositories.
+            known_repositories = {
+                repository_key(repo)
+                for repo in self.get_configured_repos(include_disabled=True)
+            }
+            new_repos = [
+                repo
+                for repo in kova_repos
+                if repository_key(repo) not in known_repositories
+            ]
 
             if new_repos:
                 logger.info(f"Discovered {len(new_repos)} new repos: {new_repos}")

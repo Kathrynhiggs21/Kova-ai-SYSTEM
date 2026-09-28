@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "kova-ai"))
 
@@ -217,6 +217,43 @@ class RepositoryRegistryRuntimeTests(unittest.IsolatedAsyncioTestCase):
                         await sync_repositories(RepoSyncRequest(include_claude=True))
 
         self.assertEqual(raised.exception.status_code, 409)
+
+    async def test_discovery_excludes_disabled_catalogued_repositories(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "kova_repos_config.json"
+            write_config(config_path)
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            config["repositories"][2]["name"] = "kova-ai-legacy"
+            config["repositories"][2]["full_name"] = "Kathrynhiggs21/kova-ai-legacy"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
+                service = MultiRepoSyncService()
+                mocked_response = Mock()
+                mocked_response.status_code = 200
+                mocked_response.json.return_value = [
+                    {
+                        "name": "kova-ai-legacy",
+                        "full_name": "Kathrynhiggs21/kova-ai-legacy",
+                    },
+                    {
+                        "name": "kova-ai-new",
+                        "full_name": "Kathrynhiggs21/kova-ai-new",
+                    },
+                ]
+
+                mocked_client = AsyncMock()
+                mocked_client.get.return_value = mocked_response
+                mocked_httpx_client = AsyncMock()
+                mocked_httpx_client.__aenter__.return_value = mocked_client
+                mocked_httpx_client.__aexit__.return_value = None
+
+                with patch(
+                    "app.services.multi_repo_sync_service.httpx.AsyncClient",
+                    return_value=mocked_httpx_client,
+                ):
+                    discovered = await service.discover_new_repos()
+
+        self.assertEqual(discovered, ["Kathrynhiggs21/kova-ai-new"])
 
 
 if __name__ == "__main__":
