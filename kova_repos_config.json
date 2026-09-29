@@ -179,5 +179,9 @@
   "repository_creation_policy": {
     "description": "See config/core_modules.v1.json for the canonical split policy",
     "split_policy_file": "config/core_modules.v1.json"
+  },
+  "vault_live_enablement_policy": {
+    "description": "Fail-closed gates and evidence required before any Vault live-data cutover",
+    "policy_file": "config/vault_live_enablement.v1.json"
   }
 }
