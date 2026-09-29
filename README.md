@@ -10,6 +10,7 @@ This repository coordinates one KOVA system. It is not a second document library
 2. Use [`docs/architecture/KOVA_REPOSITORY_MAP.md`](docs/architecture/KOVA_REPOSITORY_MAP.md) for canonical repository roles.
 3. Use [`kova_repos_config.json`](kova_repos_config.json) for machine-readable repository status and boundaries.
 4. Use [`docs/command-center/KOVA_OS_FINAL_GUIDE.md`](docs/command-center/KOVA_OS_FINAL_GUIDE.md) for the product vision and phased roadmap.
+5. Use [`reports/kova_github_snapshot.md`](reports/kova_github_snapshot.md) for the latest captured GitHub state (open PRs, issues, branches) across every KOVA repository.
 
 Historical guides and generated exports may still exist in the repository. Verify current code, configuration, and runtime evidence before treating an older document as authoritative.
 
