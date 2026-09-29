@@ -69,8 +69,12 @@ The redacted prototype in `kovaos-site` must remain in sample mode until all of 
 
 Canonical machine-readable enforcement lives at `config/vault_live_enablement.v1.json`,
 referenced by `kova_repos_config.json` under `vault_live_enablement_policy`. The
-validator (`python3 scripts/validate_config.py`) must fail closed when live cutover
-is marked enabled without runtime-verified required gates and explicit evidence.
+validator (`python3 scripts/validate_config.py`) rejects any live cutover enabled
+in this Git-tracked policy. Its status and evidence fields are planning records,
+not authorization or runtime proof. Live family data remains off until a separate
+server-side mechanism verifies the authenticated owner's specific approval,
+per-person access, deployment configuration, and independently observed runtime
+gates. A self-declared file edit cannot turn those checks on.
 
 ## Connected-source rule
 
