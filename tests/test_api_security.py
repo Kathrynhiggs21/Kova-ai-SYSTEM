@@ -20,6 +20,12 @@ from app.main import app, parse_allowed_origins
 OWNER_KEY = "test-owner-api-key"
 ENV_EXAMPLE = Path(__file__).resolve().parents[1] / "kova-ai" / ".env.example"
 SETUP_GUIDE = Path(__file__).resolve().parents[1] / "SETUP_GUIDE.md"
+DEPLOYMENT_ENV_TEMPLATE = (
+    Path(__file__).resolve().parents[1]
+    / "deployment_templates"
+    / "common"
+    / "env.template"
+)
 
 
 class SecureConfigurationDefaultsTests(unittest.TestCase):
@@ -34,6 +40,26 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
 
                 self.assertIn("KOVA_OWNER_API_KEY", assignments)
                 self.assertEqual(assignments["KOVA_OWNER_API_KEY"], "")
+
+    def test_templates_do_not_use_token_shaped_placeholders(self):
+        token_like_prefixes = ("ghp_", "sk-ant-")
+        for sample_path in (ENV_EXAMPLE, DEPLOYMENT_ENV_TEMPLATE):
+            with self.subTest(sample_path=sample_path.name):
+                contents = sample_path.read_text(encoding="utf-8")
+                for token_prefix in token_like_prefixes:
+                    self.assertNotIn(token_prefix, contents)
+
+    def test_deployment_template_uses_safe_disabled_automation_defaults(self):
+        assignments = {
+            line.partition("=")[0]: line.partition("=")[2]
+            for line in DEPLOYMENT_ENV_TEMPLATE.read_text(encoding="utf-8").splitlines()
+            if "=" in line and not line.lstrip().startswith("#")
+        }
+
+        self.assertEqual(assignments.get("AUTO_DISCOVER_REPOS"), "false")
+        self.assertEqual(assignments.get("ENABLE_AUTO_FIX"), "false")
+        self.assertEqual(assignments.get("ENABLE_CLAUDE_SYNC"), "false")
+        self.assertEqual(assignments.get("ENABLE_WEBHOOKS"), "false")
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):

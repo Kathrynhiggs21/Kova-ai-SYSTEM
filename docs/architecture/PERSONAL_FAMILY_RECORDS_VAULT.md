@@ -67,6 +67,11 @@ The redacted prototype in `kovaos-site` must remain in sample mode until all of 
 - upload staging uses Intake & Review and requires confirmation before move/rename;
 - security tests verify anonymous access and cross-person access are denied.
 
+Canonical machine-readable enforcement lives at `config/vault_live_enablement.v1.json`,
+referenced by `kova_repos_config.json` under `vault_live_enablement_policy`. The
+validator (`python3 scripts/validate_config.py`) must fail closed when live cutover
+is marked enabled without runtime-verified required gates and explicit evidence.
+
 ## Connected-source rule
 
 Only a source with a verified connected adapter may be queried. Unavailable sources are reported as unavailable and handled through an explicit user export/import workflow. No connector status is inferred from old documentation alone.

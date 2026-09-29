@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "vault_world": "personal_family_records_vault",
+  "live_data_cutover": {
+    "enabled": false,
+    "requires_owner_approval": true,
+    "requires_all_required_gates_runtime_verified": true,
+    "notes": "Fail closed by default. Keep sample mode until all required gates have runtime evidence."
+  },
+  "required_gates": [
+    {
+      "id": "drive_adapter_private_packet",
+      "title": "Server-side Drive adapter uses canonical private Personal Records Packet",
+      "priority": "P0",
+      "required": true,
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "server_only_secret_ids",
+      "title": "Vault folder and index IDs are server-only deployment secrets",
+      "priority": "P0",
+      "required": true,
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "no_public_links",
+      "title": "Vault cannot create public or anyone-with-link URLs",
+      "priority": "P0",
+      "required": true,
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "per_person_authorization",
+      "title": "Per-person grants enforced and cross-person access denied",
+      "priority": "P0",
+      "required": true,
+      "status": "pending",
+      "evidence": []
+    },
+    {
+      "id": "audit_events_no_sensitive_values",
+      "title": "Audit persistence proves actions are logged without sensitive answer values",
+      "priority": "P0",
+      "required": true,
+      "status": "pending",
+      "evidence": []
+    }
+  ]
+}
