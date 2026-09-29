@@ -60,6 +60,16 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
         self.assertEqual(assignments.get("ENABLE_AUTO_FIX"), "false")
         self.assertEqual(assignments.get("ENABLE_CLAUDE_SYNC"), "false")
         self.assertEqual(assignments.get("ENABLE_WEBHOOKS"), "false")
+        self.assertEqual(assignments.get("ENABLE_MULTI_REPO"), "false")
+        self.assertEqual(assignments.get("DEBUG"), "false")
+        for secret in (
+            "POSTGRES_PASSWORD", "REDIS_PASSWORD", "SECRET_KEY",
+            "JWT_SECRET_KEY", "GITHUB_WEBHOOK_SECRET", "GRAFANA_ADMIN_PASSWORD",
+            "DATABASE_URL",
+        ):
+            with self.subTest(secret=secret):
+                self.assertEqual(assignments.get(secret), "")
+
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):

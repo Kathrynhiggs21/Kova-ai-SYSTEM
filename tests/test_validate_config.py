@@ -480,6 +480,28 @@ class ConfigValidatorTests(unittest.TestCase):
             )
         )
 
+    def test_self_declared_evidence_cannot_authorize_live_cutover(self):
+        policy = valid_vault_live_enablement_policy()
+        policy["live_data_cutover"]["enabled"] = True
+        policy["required_gates"][0]["status"] = "runtime_verified"
+        policy["required_gates"][0]["evidence"] = [{
+            "type": "runtime_probe",
+            "reference": "self-declared",
+            "verified_at": "2026-09-29T00:00:00Z",
+            "verifier": "self",
+        }]
+
+        passed, results, _ = self.validate(
+            valid_config(),
+            extra_files={"config/vault_live_enablement.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(any(
+            "cannot be enabled by a static policy file" in error
+            for error in results["errors"]
+        ))
+
     def test_runtime_verified_gate_requires_evidence(self):
         config = valid_config()
         policy = valid_vault_live_enablement_policy()

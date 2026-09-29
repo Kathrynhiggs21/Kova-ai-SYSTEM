@@ -931,6 +931,17 @@ class ConfigValidator:
                 )
                 all_valid = False
 
+        # This is a repository-file validator, not an authorization authority.
+        # Git-tracked claims of approval or runtime evidence can be edited by the
+        # same actor enabling the flag. A future server-side cutover mechanism must
+        # verify the owner identity, grant, runtime checks, and deployment state
+        # independently before this policy may enable access to live family data.
+        if live_data_cutover.get("enabled") is True:
+            self.error(
+                "vault live cutover cannot be enabled by a static policy file; "
+                "independent runtime authorization and verification are required"
+            )
+            all_valid = False
         if live_data_cutover.get("enabled") is True:
             if not required_gate_statuses:
                 self.error(
