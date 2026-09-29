@@ -36,14 +36,14 @@ One artifact gets one canonical home. Indexes and dashboards should point to tha
 
 Use these labels consistently:
 
-| Label              | Meaning                                                  |
-| ------------------ | -------------------------------------------------------- |
-| `Configured`       | A setting or adapter exists; runtime has not been proven |
-| `Connected`        | Authentication and a current harmless read succeeded     |
-| `Runtime verified` | The intended production path passed a current check      |
-| `Needs connection` | Required authorization or configuration is missing       |
-| `Broken`           | A current check failed with recorded evidence            |
-| `Unknown`          | No current evidence exists                               |
+| Label              | Meaning                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `Configured`       | A setting or adapter exists; runtime has not been proven                           |
+| `Connected`        | Authentication and a current end-to-end read through the intended source succeeded |
+| `Runtime verified` | The intended production path passed a current check                                |
+| `Needs connection` | Required authorization or configuration is missing                                 |
+| `Broken`           | A current check failed with recorded evidence                                      |
+| `Unknown`          | No current evidence exists                                                         |
 
 Never infer a live connection from a document, environment-variable name, mock response, or provider logo.
 
@@ -102,8 +102,7 @@ This is a dated baseline, not a permanent health guarantee. Re-run checks before
 - [`docs/architecture/KOVA_REPOSITORY_MAP.md`](docs/architecture/KOVA_REPOSITORY_MAP.md) — repository ownership and runtime boundary
 - [`docs/architecture/PERSONAL_FAMILY_RECORDS_VAULT.md`](docs/architecture/PERSONAL_FAMILY_RECORDS_VAULT.md) — Vault security and cutover boundary
 - [`CONNECTOR_TRAY.md`](CONNECTOR_TRAY.md) — connector design and status model
-- [`SECURITY.md`](SECURITY.md) — security policy
-- [`SETUP_GUIDE.md`](SETUP_GUIDE.md) — detailed environment setup; verify older sections against current configuration
+- [`SETUP_GUIDE.md`](SETUP_GUIDE.md) — historical setup reference only; use the validation section above for current checks
 - [`archive/`](archive/) — historical material, not current operating instructions
 
 When documents disagree, current code plus the repository map, machine-readable registry, tests, and runtime evidence take precedence.
