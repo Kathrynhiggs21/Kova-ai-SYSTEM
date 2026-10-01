@@ -16,6 +16,45 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_local_identity_requires_absolute_paths_and_prefers_canonical_path(self):
+        with self.assertRaisesRegex(ValueError, "absolute"):
+            MODULE.version_key({"source": "local", "id": "unstable-id", "path": "notes.txt", "version": "1"})
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "notes.txt"
+            source.write_text("notes")
+            item = {"source": "local", "id": "unstable-id", "path": str(source.parent / ".." / source.parent.name / source.name)}
+            self.assertEqual(MODULE.source_identity(item), str(source))
+
+    def test_github_identity_uses_repository_and_file_path_instead_of_shared_id(self):
+        first = {"source": "github", "id": "shared", "repository": "owner/repo", "path": "one.md", "blob_sha": "same"}
+        second = {**first, "path": "two.md"}
+        third = {**first, "repository": "owner/other"}
+        self.assertEqual(len({MODULE.version_key(item) for item in (first, second, third)}), 3)
+        self.assertEqual(MODULE.source_identity(first), "owner/repo:one.md")
+
+    def test_probable_duplicate_pointer_clears_when_current_metadata_resolves_it(self):
+        previous = MODULE.build_registry([{"source": "test", "id": "a", "name": "KOVA guide", "size": 12, "version": "1"}])
+        previous[0]["possible_duplicate_of"] = "stale-target"
+        refreshed = MODULE.build_registry([{"source": "test", "id": "a", "name": "Unrelated item", "size": 13, "version": "1"}])
+        merged = MODULE.build_registry_payload(refreshed, previous)["items"]
+        self.assertIsNone(merged[0]["possible_duplicate_of"])
+
+    def test_explicit_non_drive_setup_inventory_defaults_to_incremental(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inventory = root / "inventory.json"
+            inventory.write_text(json.dumps([{"source": "github", "id": "a", "name": "Guide", "blob_sha": "v1"}]))
+            output = root / "private" / "registry.json"
+            result = subprocess.run(["bash", str(SCRIPT.parent / "setup_kova_organization.sh"), str(inventory), str(output)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(output.read_text())["items"][0]["version_evidence"]["source"], "github")
+
+    def test_fresh_observation_replaces_history_even_without_modified_timestamps(self):
+        previous = MODULE.build_registry([{"source": "test", "id": "a", "name": "Guide", "version": "old"}])
+        current = MODULE.build_registry([{"source": "test", "id": "a", "name": "Guide", "version": "new"}])
+        merged = MODULE.merge_history(current, previous)
+        self.assertEqual([row["version_key"] for row in merged if row["observed_current"]], [current[0]["version_key"]])
+
     def test_incremental_hashless_title_matches_enter_review(self):
         first = MODULE.build_registry([{"source": "test", "id": "a", "name": "KOVA Guide", "size": 12, "version": "1", "status": "ACTIVE"}])
         second = MODULE.build_registry([{"source": "test", "id": "b", "name": "KOVA Guide copy", "size": 12, "version": "1", "status": "ACTIVE"}])

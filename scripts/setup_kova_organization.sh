@@ -8,7 +8,11 @@ project_dir="$(dirname "$script_dir")"
 inventory_path="${1:-}"
 private_state_dir="${KOVA_PRIVATE_STATE_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/kova/private}"
 registry_path="${2:-$private_state_dir/status_registry.json}"
-snapshot_mode="${3:-drive-snapshot}"
+default_snapshot_mode="incremental"
+if [[ -z "$inventory_path" ]]; then
+  default_snapshot_mode="drive-snapshot"
+fi
+snapshot_mode="${3:-$default_snapshot_mode}"
 snapshot_args=()
 case "$snapshot_mode" in
   drive-snapshot) snapshot_args+=(--full-snapshot --snapshot-source google_drive) ;;

@@ -47,7 +47,7 @@ class GoogleDriveImportTests(unittest.TestCase):
             with mock.patch.object(MODULE, 'GDRIVE_AVAILABLE', True), \
                     mock.patch.object(MODULE, 'Credentials', create=True) as credentials:
                 self.assertFalse(importer.authenticate())
-                credentials.from_authorized_user_file.assert_not_called()
+                credentials.from_authorized_user_info.assert_not_called()
             self.assertEqual(list(target.iterdir()), [])
 
     def test_hardlinked_token_is_rejected_without_chmod_or_read(self):
@@ -63,7 +63,7 @@ class GoogleDriveImportTests(unittest.TestCase):
             with mock.patch.object(MODULE, 'GDRIVE_AVAILABLE', True), \
                     mock.patch.object(MODULE, 'Credentials', create=True) as credentials:
                 self.assertFalse(importer.authenticate())
-                credentials.from_authorized_user_file.assert_not_called()
+                credentials.from_authorized_user_info.assert_not_called()
             self.assertEqual(target.stat().st_mode & 0o777, 0o644)
             self.assertEqual(target.read_text(), '{}')
 
@@ -85,7 +85,7 @@ class GoogleDriveImportTests(unittest.TestCase):
                     mock.patch.object(MODULE, 'InstalledAppFlow', create=True) as flows, \
                     mock.patch.object(MODULE, 'build', create=True) as build, \
                     chdir(temp_dir):
-                flows.from_client_secrets_file.return_value = flow
+                flows.from_client_config.return_value = flow
                 self.assertTrue(importer.authenticate())
                 build.assert_called_once_with('drive', 'v3', credentials=creds)
             token = state / 'google-drive' / 'token.json'
@@ -104,10 +104,10 @@ class GoogleDriveImportTests(unittest.TestCase):
             with mock.patch.object(MODULE, 'GDRIVE_AVAILABLE', True), \
                     mock.patch.object(MODULE, 'Credentials', create=True) as credentials, \
                     mock.patch.object(MODULE, 'InstalledAppFlow', create=True) as flows:
-                credentials.from_authorized_user_file.side_effect = ValueError('invalid')
+                credentials.from_authorized_user_info.side_effect = ValueError('invalid')
                 self.assertFalse(importer.authenticate())
-                credentials.from_authorized_user_file.assert_called_once_with(str(token), MODULE.SCOPES)
-                flows.from_client_secrets_file.assert_not_called()
+                credentials.from_authorized_user_info.assert_not_called()
+                flows.from_client_config.assert_not_called()
             self.assertEqual(token.read_text(), 'invalid')
 
     def test_linked_token_is_rejected_without_loading_credentials(self):
@@ -121,7 +121,7 @@ class GoogleDriveImportTests(unittest.TestCase):
             with mock.patch.object(MODULE, 'GDRIVE_AVAILABLE', True), \
                     mock.patch.object(MODULE, 'Credentials', create=True) as credentials:
                 self.assertFalse(importer.authenticate())
-                credentials.from_authorized_user_file.assert_not_called()
+                credentials.from_authorized_user_info.assert_not_called()
             self.assertEqual(target.read_text(), '{}')
 
     def test_only_contextual_kiva_aliases_are_searchable(self):

@@ -15,13 +15,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import re
-import tempfile
 from uuid import uuid4
 
 try:
-    from scripts.private_state import validate_unlinked_path
+    from scripts.private_state import private_directory, read_private_text, validate_unlinked_path, write_private_text, write_text_at
 except ModuleNotFoundError:
-    from private_state import validate_unlinked_path
+    from private_state import private_directory, read_private_text, validate_unlinked_path, write_private_text, write_text_at
 
 try:
     from google.oauth2.credentials import Credentials
@@ -115,13 +114,18 @@ class GoogleDriveImporter:
         if self.auth_dir.exists() and self.auth_dir.stat().st_mode & 0o777 != 0o700:
             self.log("❌ Google Drive credentials need a dedicated private directory", Colors.RED)
             return False
-        self.auth_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        try:
+            with private_directory(self.auth_dir, create=True):
+                pass
+        except (OSError, PermissionError):
+            self.log("❌ Google Drive credentials need a dedicated unlinked private directory", Colors.RED)
+            return False
 
         # Load existing credentials
         if token_path.exists():
             try:
-                os.chmod(token_path, 0o600)
-                creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+                token_data = json.loads(read_private_text(token_path, restrict_permissions=True))
+                creds = Credentials.from_authorized_user_info(token_data, SCOPES)
             except (OSError, ValueError):
                 self.log("❌ Stored Google Drive token is unreadable or invalid; reconnect explicitly", Colors.RED)
                 return False
@@ -136,22 +140,18 @@ class GoogleDriveImporter:
                     self.log("   Get credentials from: https://console.cloud.google.com/", Colors.YELLOW)
                     return False
 
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    str(self.credentials_path), SCOPES)
+                try:
+                    client_data = json.loads(read_private_text(self.credentials_path))
+                except (OSError, ValueError):
+                    self.log("❌ Client credentials need a private, valid JSON file", Colors.RED)
+                    return False
+                flow = InstalledAppFlow.from_client_config(client_data, SCOPES)
                 creds = flow.run_local_server(port=0)
 
             # Save credentials
             # Create privately from the first write and replace atomically.
             # Never deserialize a legacy token.pickle from the working tree.
-            temporary_path = None
-            try:
-                with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=self.auth_dir, delete=False) as token:
-                    temporary_path = Path(token.name)
-                    token.write(creds.to_json())
-                os.replace(temporary_path, token_path)
-            finally:
-                if temporary_path is not None:
-                    temporary_path.unlink(missing_ok=True)
+            write_private_text(token_path, creds.to_json())
 
         self.service = build('drive', 'v3', credentials=creds)
         self.log("✅ Authenticated with Google Drive", Colors.GREEN)
@@ -429,51 +429,25 @@ class GoogleDriveImporter:
         validate_unlinked_path(output_dir)
         if output_dir.is_symlink() or (output_dir.exists() and output_dir.stat().st_mode & 0o777 != 0o700):
             raise PermissionError("inventory output requires a dedicated private directory")
-        missing = []
-        cursor = output_dir
-        while not cursor.exists():
-            missing.append(cursor)
-            cursor = cursor.parent
-        for directory in reversed(missing):
-            directory.mkdir(mode=0o700)
-        for directory in [output_dir, *output_dir.parents]:
-            if directory.stat().st_mode & 0o777 != 0o700:
-                raise PermissionError("inventory output requires private parent directories")
-            if directory not in missing:
-                break
-
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex
 
         # Save analyzed files
         inventory_file = output_dir / f'inventory_{timestamp}.json'
-        validate_unlinked_path(inventory_file)
-        with open(inventory_file, 'w') as f:
-            json.dump(analyzed_files, f, indent=2)
-        os.chmod(inventory_file, 0o600)
-
         # Save duplicates
         duplicates_file = output_dir / f'duplicates_{timestamp}.json'
-        validate_unlinked_path(duplicates_file)
-        with open(duplicates_file, 'w') as f:
-            json.dump(duplicates, f, indent=2)
-        os.chmod(duplicates_file, 0o600)
-
         # Save summary
         summary_file = output_dir / f'summary_{timestamp}.txt'
-        validate_unlinked_path(summary_file)
-        with open(summary_file, 'w') as f:
-            f.write(f"Kova File Analysis Summary\n")
-            f.write(f"Generated: {datetime.now().isoformat()}\n")
-            f.write(f"\nTotal Files: {len(analyzed_files)}\n")
-            f.write(f"Total Duplicates: {len(duplicates)}\n")
-            f.write(f"\nFiles by Category:\n")
-            category_counts = {}
-            for file in analyzed_files:
-                cat = file['category']
-                category_counts[cat] = category_counts.get(cat, 0) + 1
-            for cat, count in sorted(category_counts.items()):
-                f.write(f"  {cat}: {count}\n")
-        os.chmod(summary_file, 0o600)
+        category_counts = {}
+        for file in analyzed_files:
+            cat = file['category']
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+        summary = (f"Kova File Analysis Summary\nGenerated: {datetime.now().isoformat()}\n"
+                   f"\nTotal Files: {len(analyzed_files)}\nTotal Duplicates: {len(duplicates)}\n\nFiles by Category:\n")
+        summary += ''.join(f"  {cat}: {count}\n" for cat, count in sorted(category_counts.items()))
+        with private_directory(output_dir, create=True) as directory:
+            write_text_at(directory, inventory_file.name, json.dumps(analyzed_files, indent=2))
+            write_text_at(directory, duplicates_file.name, json.dumps(duplicates, indent=2))
+            write_text_at(directory, summary_file.name, summary)
 
         self.log(f"\n💾 Inventory saved:", Colors.BOLD)
         self.log(f"  Files: {inventory_file}", Colors.GREEN)

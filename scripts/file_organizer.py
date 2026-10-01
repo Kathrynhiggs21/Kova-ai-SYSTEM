@@ -14,15 +14,14 @@ import json
 import os
 import re
 import stat
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
 try:
-    from scripts.private_state import validate_unlinked_path
+    from scripts.private_state import private_directory, read_private_text, read_text_at, validate_unlinked_path, write_private_text, write_text_at
 except ModuleNotFoundError:
-    from private_state import validate_unlinked_path
+    from private_state import private_directory, read_private_text, read_text_at, validate_unlinked_path, write_private_text, write_text_at
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
@@ -227,6 +226,21 @@ def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
 
 
 def source_identity(file_info: dict[str, Any]) -> str:
+    source = str(file_info.get("source") or "").casefold()
+    path = file_info.get("path")
+    if source == "local" and path:
+        candidate = Path(str(path)).expanduser()
+        if not candidate.is_absolute():
+            raise ValueError("local inventories require absolute source paths")
+        return str(candidate.resolve())
+    if source == "github" and path:
+        repository = file_info.get("repository_full_name") or file_info.get("repository") or file_info.get("repo")
+        if not isinstance(repository, str) or not re.fullmatch(r"[^/\s]+/[^/\s]+", repository):
+            raise ValueError("GitHub file paths require a repository owner/name")
+        parts = str(path).replace("\\", "/").split("/")
+        if ".." in parts:
+            raise ValueError("GitHub source paths must be canonical repository paths")
+        return repository.casefold() + ":" + "/".join(part for part in parts if part and part != ".")
     identity = (
         file_info.get("source_identity")
         or file_info.get("id")
@@ -258,7 +272,7 @@ def supported_revision(file_info: dict[str, Any]) -> str | None:
 def populate_version_metadata(file_info: dict[str, Any]) -> None:
     """Populate revision/content metadata before deriving canonical identity."""
     local_path = file_info.get("path")
-    if local_path:
+    if local_path and str(file_info.get("source") or "").casefold() == "local":
         candidate = Path(str(local_path))
         if candidate.is_file():
             cache = file_info.local_hashes if isinstance(file_info, InventorySnapshot) else {}
@@ -562,7 +576,7 @@ def merge_history(
                 combined[field] = prior[field]
         if prior.get("canonical_version_key") and not row.get("canonical_version_key"):
             combined["canonical_version_key"] = prior["canonical_version_key"]
-        if prior.get("possible_duplicate_of") and not row.get("possible_duplicate_of"):
+        if prior.get("possible_duplicate_of") and "possible_duplicate_of" not in row:
             combined["possible_duplicate_of"] = prior["possible_duplicate_of"]
         if (
             prior.get("lifecycle")
@@ -589,9 +603,15 @@ def merge_history(
         identity = (row.get("version_evidence", {}).get("source"), row.get("source_id"))
         if all(identity) and row.get("observed_current"):
             by_identity.setdefault(identity, []).append(row)
-    for versions in by_identity.values():
+    incoming = {}
+    for row in current:
+        identity = (row.get("version_evidence", {}).get("source"), row.get("source_id"))
+        if row.get("observed_current"):
+            incoming.setdefault(identity, set()).add(row["version_key"])
+    for identity, versions in by_identity.items():
         if len(versions) > 1:
-            winner = max(versions, key=lambda row: (modified_instant(row.get("version_evidence", {}).get("modified")), str(row.get("version_evidence", {}).get("revision_id") or ""), row["version_key"]))
+            observed = [row for row in versions if row["version_key"] in incoming.get(identity, set())]
+            winner = max(observed or versions, key=lambda row: (modified_instant(row.get("version_evidence", {}).get("modified")), str(row.get("version_evidence", {}).get("revision_id") or ""), row["version_key"]))
             for row in versions:
                 row["observed_current"] = row is winner
     return sorted(merged.values(), key=lambda row: row["version_key"])
@@ -646,6 +666,7 @@ def reclassify_likely_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, A
     groups: dict[str, list[int]] = {}
     for index, row in enumerate(rows):
         if row.get("observed_current"):
+            row["possible_duplicate_of"] = None
             key = likely_duplicate_key({"size": row.get("source_size", "")}, row.get("display_title", ""))
             groups.setdefault(key, []).append(index)
     for indexes in groups.values():
@@ -706,70 +727,33 @@ def build_registry_payload(
 
 def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
     """Atomically publish private JSON with user-only filesystem permissions."""
-    output = validate_unlinked_path(output)
-    parent = output.parent
-    ensure_private_parent(parent)
-    serialized = json.dumps(payload, indent=2) + "\n"
-    temp_name: str | None = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            "w",
-            encoding="utf-8",
-            dir=parent,
-            prefix=f".{output.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as temp_file:
-            temp_name = temp_file.name
-            os.chmod(temp_name, 0o600)
-            temp_file.write(serialized)
-            temp_file.flush()
-            os.fsync(temp_file.fileno())
-        os.replace(temp_name, output)
-        os.chmod(output, 0o600)
-    finally:
-        if temp_name and os.path.exists(temp_name):
-            os.unlink(temp_name)
-
-
-def ensure_private_parent(parent: Path) -> None:
-    missing = []
-    cursor = parent
-    while not cursor.exists():
-        missing.append(cursor)
-        cursor = cursor.parent
-    for directory in reversed(missing):
-        directory.mkdir(mode=0o700)
-    for directory in [parent, *parent.parents]:
-        if directory.stat().st_mode & 0o777 != 0o700:
-            raise PermissionError("private state requires user-only parent directories")
-        if directory not in missing:
-            break
+    write_private_text(output, json.dumps(payload, indent=2) + "\n")
 
 
 def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: bool = False, snapshot_sources: set[str] | None = None) -> int:
     output = validate_unlinked_path(output)
     exception_output = output.with_name(f"{output.stem}.exceptions.json")
     validate_unlinked_path(exception_output)
-    parent = output.parent
-    if parent.exists() and parent.stat().st_mode & 0o777 != 0o700:
-        raise PermissionError("registry updates require a dedicated private directory")
-    ensure_private_parent(parent)
     lock_path = validate_unlinked_path(output.with_name(f".{output.name}.lock"))
-    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(descriptor, "a") as lock:
-        metadata = os.fstat(lock.fileno())
-        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_mode & 0o777 != 0o600:
-            raise PermissionError("registry lock must be an unlinked private file")
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
-        previous: list[dict[str, Any]] = []
-        if output.exists():
-            payload = json.loads(output.read_text(encoding="utf-8"))
-            previous = payload.get("items", []) if isinstance(payload, dict) else []
-        payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources)
-        atomic_write_private(output, payload)
-        atomic_write_private(exception_output, payload["exceptions"])
-        return payload["exceptions"]["exception_count"]
+    with private_directory(output.parent, create=True) as directory:
+        descriptor = os.open(lock_path.name, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600, dir_fd=directory)
+        with os.fdopen(descriptor, "a") as lock:
+            metadata = os.fstat(lock.fileno())
+            if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_mode & 0o777 != 0o600:
+                raise PermissionError("registry lock must be an unlinked private file")
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+            previous: list[dict[str, Any]] = []
+            try:
+                existing = read_text_at(directory, output.name)
+            except FileNotFoundError:
+                pass
+            else:
+                previous_payload = json.loads(existing)
+                previous = previous_payload.get("items", []) if isinstance(previous_payload, dict) else []
+            payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources)
+            write_text_at(directory, output.name, json.dumps(payload, indent=2) + "\n")
+            write_text_at(directory, exception_output.name, json.dumps(payload["exceptions"], indent=2) + "\n")
+            return payload["exceptions"]["exception_count"]
 
 
 def validate_registry_output_path(inventory: Path, registry: Path) -> Path:
@@ -818,7 +802,7 @@ def main() -> int:
     if args.dry_run:
         previous: list[dict[str, Any]] = []
         if registry_path.exists():
-            payload = json.loads(registry_path.read_text(encoding="utf-8"))
+            payload = json.loads(read_private_text(registry_path))
             previous = payload.get("items", []) if isinstance(payload, dict) else []
         preview = build_registry_payload(rows, previous, full_snapshot=args.full_snapshot, snapshot_sources=snapshot_sources)
         print(json.dumps({
