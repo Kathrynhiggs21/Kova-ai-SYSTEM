@@ -32,7 +32,24 @@ class FileOrganizerTests(unittest.TestCase):
             {"source": "test", "id": "c", "name": "Shared.pdf", "version": "1", "size": 10, "md5Checksum": "c" * 32},
         ]
         result = MODULE.build_registry_payload(MODULE.build_registry(items))["items"]
-        self.assertTrue(all(row["possible_duplicate_of"] is None for row in result))
+        self.assertTrue(all(row["possible_duplicate_of"] is None for row in result if row["source_id"] in {"a", "b"}))
+        self.assertIsNotNone(next(row for row in result if row["source_id"] == "c")["possible_duplicate_of"])
+
+    def test_legacy_title_and_verified_review_recover_on_incremental_scan(self):
+        old = MODULE.build_registry_payload(MODULE.build_registry([
+            {"source": "test", "id": "a", "name": "KOVA Guide copy.pdf", "version": "1", "size": 10, "verified": True, "lifecycle": "ACTIVE"},
+            {"source": "test", "id": "b", "name": "KOVA Guide.pdf", "version": "1", "size": 10},
+        ]))["items"]
+        for row in old:
+            row.pop("duplicate_title", None)
+        refreshed = MODULE.build_registry_payload(MODULE.build_registry([]), old)["items"]
+        self.assertEqual(sum(bool(row["possible_duplicate_of"]) for row in refreshed), 1)
+        separated = MODULE.build_registry_payload(MODULE.build_registry([
+            {"source": "test", "id": "b", "name": "Different.pdf", "version": "1", "size": 10},
+        ]), refreshed)["items"]
+        verified = next(row for row in separated if row["source_id"] == "a")
+        self.assertEqual(verified["lifecycle"], "ACTIVE")
+        self.assertIsNone(verified["possible_duplicate_of"])
 
     def test_probable_review_clears_when_group_dissolves(self):
         items = [

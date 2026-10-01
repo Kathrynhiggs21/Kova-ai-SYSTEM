@@ -340,6 +340,8 @@ def likely_duplicate_key(file_info: dict[str, Any], title: str) -> str:
 def comparable_digest_conflict(left: dict[str, Any], right: dict[str, Any]) -> bool:
     """A shared digest algorithm with different values proves two files differ."""
     for field in ("sha256", "md5Checksum", "blob_sha", "content_hash"):
+        if field == "content_hash" and (any(left.get(k) for k in ("sha256", "md5Checksum", "blob_sha")) or any(right.get(k) for k in ("sha256", "md5Checksum", "blob_sha"))):
+            continue
         if left.get(field) and right.get(field):
             lhs, rhs = str(left[field]), str(right[field])
             if (lhs != rhs) if field == "content_hash" else (lhs.casefold() != rhs.casefold()):
@@ -687,24 +689,25 @@ def reclassify_likely_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, A
     for index, row in enumerate(rows):
         if row.get("observed_current"):
             row["possible_duplicate_of"] = None
-            if row.get("decision_reason") in {"Possible duplicate; content hash unavailable", "Possible duplicate; comparable content hash unavailable"} and not row.get("verification", {}).get("verified"):
+            if row.get("decision_reason") in {"Possible duplicate; content hash unavailable", "Possible duplicate; comparable content hash unavailable"}:
                 row["lifecycle"] = row.get("source_lifecycle") or "REVIEW"
                 row["lifecycle_color"] = LIFECYCLE_COLORS[row["lifecycle"]]
                 row["decision_reason"] = row.get("source_decision_reason") or "Needs current verification"
-            key = likely_duplicate_key({"size": row.get("source_size", "")}, row.get("duplicate_title") or row.get("source_name") or row.get("display_title", ""))
+            full_title = row.get("duplicate_title") or short_title({"name": row.get("source_name") or row.get("display_title", "")}, limit=10_000)
+            key = likely_duplicate_key({"size": row.get("source_size", "")}, full_title)
             groups.setdefault(key, []).append(index)
     for indexes in groups.values():
         if len(indexes) < 2 or not needs_hash_review(rows[i].get("version_evidence", {}) for i in indexes):
             continue
-        if any(comparable_digest_conflict(rows[a].get("version_evidence", {}), rows[b].get("version_evidence", {})) for offset, a in enumerate(indexes) for b in indexes[offset + 1:]):
-            # Do not imply equivalence through a third file with an incomparable digest.
-            continue
+        conflicting = {i for offset, a in enumerate(indexes) for b in indexes[offset + 1:] if comparable_digest_conflict(rows[a].get("version_evidence", {}), rows[b].get("version_evidence", {})) for i in (a, b)}
         for index in indexes:
             row = rows[index]
+            if index in conflicting:
+                continue
             candidates = [i for i in indexes if i != index and not comparable_digest_conflict(row.get("version_evidence", {}), rows[i].get("version_evidence", {}))]
             if not candidates:
                 continue
-            canonical = max([index, *candidates], key=lambda i: selection_rank(
+            canonical = max(candidates if conflicting else [index, *candidates], key=lambda i: selection_rank(
                 rows[i].get("canonical"), rows[i].get("verification", {}).get("verified"),
                 rows[i].get("lifecycle"), rows[i].get("version_evidence", {}).get("modified"), rows[i]["version_key"],
             ))
