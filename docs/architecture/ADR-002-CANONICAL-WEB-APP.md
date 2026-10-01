@@ -11,7 +11,7 @@ KOVA OS has two active platform repositories:
 1. `Kathrynhiggs21/Kova-ai-SYSTEM` owns architecture, the control plane, connector contracts, automation policy, shared schemas, deployment coordination, and audits.
 2. `Kathrynhiggs21/kovaos-site` owns the authenticated browser/PWA experience at `kovaos.com`.
 
-`kova-ai-dash` is a feature donor. Its unique dashboard, integration, command, and provenance features must move through reviewed pull requests into `kovaos-site`; it is disabled in the runtime registry and will be archived only after migration verification.
+Donor builds (including `kova-ai-dash` and the Lovable KOVA OS prototype) are feature donors only. Their unique dashboard, integration, command, and provenance features must move through reviewed pull requests into `kovaos-site`; donors remain non-canonical and cannot become runtime authorities by implementation convenience.
 
 The proposed names `kova-core-system`, `kovaos-pwa`, `kova-memory-mem0`, and `kova-legacy-archive` are logical target labels, not authorization to create duplicate repositories or combine Git histories destructively. Existing repositories keep their names until redirects, deployment links, package imports, and history preservation are verified.
 
@@ -31,6 +31,7 @@ The general personal Drive folder is not a KOVA source of truth. The mixed KOVA 
 
 - Runtime registry enables only Core and `kovaos-site`.
 - Feature donors, experiments, and archives cannot be deployed by registry automation.
+- Lovable donor migration decisions are tracked in `docs/architecture/KOVA_LOVABLE_DONOR_MIGRATION_MATRIX.md`; only `donor better` and `net-new` items are eligible for migration.
 - GitHub owns executable truth; Drive owns user files and archival evidence.
 - New KOVA repositories require a distinct deployable boundary and an update to this ADR and the runtime registry.
 - Vercel cleanup retains clean project names only long enough to verify domains and environment variables; retaining a Vercel project does not promote its source repository to canonical status.

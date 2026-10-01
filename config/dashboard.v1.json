@@ -21,10 +21,10 @@
     },
     {
       "id": "p3-donor-migration",
-      "title": "Audit dashboard donor features",
+      "title": "Compare Lovable donor and migrate net-new features",
       "status": "review",
       "owner": "KOVA",
-      "reason": "Move only unique, verified features from kova-ai-dash into kovaos-site before archiving the donor."
+      "reason": "Use docs/architecture/KOVA_LOVABLE_DONOR_MIGRATION_MATRIX.md to move only donor-better and net-new Lovable features into kovaos-site."
     }
   ],
   "integrations": [
@@ -63,6 +63,6 @@
     "Merge architecture changes only after exact-head CI and review pass.",
     "Implement and test the versioned Core-to-site API.",
     "Verify one authenticated connector path with audit evidence.",
-    "Migrate unique donor features before archiving any repository."
+    "Migrate only donor-better and net-new Lovable features into kovaos-site through reviewed, preview-validated slices."
   ]
 }
