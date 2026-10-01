@@ -3,130 +3,134 @@
 // Fallback data in case config fetch is blocked by CORS (common in local file access)
 const fallbackDashboardData = {
   "dashboard_date": "2026-09-15",
-  "system_status": "canonical_pair_selected_build_in_progress",
+  "system_status": "architecture_aligned_runtime_integrations_unverified",
   "source_of_truth": "Kathrynhiggs21/Kova-ai-SYSTEM",
-  "canonical_app": "Kathrynhiggs21/kovaos-site",
-  "active_repositories": [
-    "Kathrynhiggs21/Kova-ai-SYSTEM",
-    "Kathrynhiggs21/kovaos-site"
-  ],
-  "organization_model": {
-    "area": ["KOVA", "Personal", "Reagan", "Other"],
-    "lifecycle": ["ACTIVE", "FINAL", "REVIEW", "ARCHIVE"],
-    "optional_flags": ["SENSITIVE", "DUPLICATE"],
-    "rule": "File Type and Content Origin are fields; exact duplicate status requires content or revision evidence."
-  },
+  "canonical_application": "Kathrynhiggs21/kovaos-site",
   "tagline": "You clearly need me.",
   "top_priorities": [
     {
-      "id": "p1-site-truth",
-      "title": "Align kovaos-site routes, authentication and status claims",
-      "status": "in_progress",
-      "owner": "KOVA",
-      "reason": "The static site must match the current canonical repositories, routes, and evidence-backed status claims."
-    },
-    {
-      "id": "p2-api-contract",
-      "title": "Implement the versioned Core-to-app API contract",
+      "id": "p1-api-contract",
+      "title": "Define the versioned Core-to-site API",
       "status": "next",
       "owner": "KOVA",
-      "reason": "The command center and canonical app still need one stable contract for shared runtime state."
+      "reason": "The canonical repositories are settled; their authenticated runtime contract still needs implementation and proof."
     },
     {
-      "id": "p3-runtime-proof",
-      "title": "Verify one AI path and one connector path end to end",
-      "status": "next",
+      "id": "p2-connector-proof",
+      "title": "Verify one connector end to end",
+      "status": "blocked",
       "owner": "KOVA",
-      "reason": "Production claims remain provisional until at least one authenticated AI and connector flow is verified."
+      "reason": "Configured or documented integrations must not appear live until authentication, health, and last-success evidence exist."
+    },
+    {
+      "id": "p3-donor-migration",
+      "title": "Audit dashboard donor features",
+      "status": "review",
+      "owner": "KOVA",
+      "reason": "Move only unique, verified features from kova-ai-dash into kovaos-site before archiving the donor."
     }
   ],
   "integrations": [
     {
       "name": "GitHub",
-      "assistant_access": "verified",
-      "kova_runtime": "partial",
-      "status": "partial",
-      "evidence": "Assistant access: verified. KOVA runtime: partial.",
-      "next_action": "Require green checks on both active repositories."
+      "status": "active",
+      "evidence": "Canonical repositories and reviewed change workflow are available.",
+      "next_action": "Keep Core and site changes behind exact-head CI and review gates."
     },
     {
-      "name": "Google Drive",
-      "assistant_access": "verified",
-      "kova_runtime": "unverified",
-      "status": "unverified",
-      "evidence": "Assistant access: verified. KOVA runtime: unverified.",
-      "next_action": "Run metadata inventory with readback and no source mutation."
+      "name": "KOVA Core API",
+      "status": "implemented_unverified_in_production",
+      "evidence": "FastAPI, health, MCP, repository status, and export routes exist in Core.",
+      "next_action": "Verify the protected production health and authenticated API boundary."
     },
     {
-      "name": "Notion",
-      "assistant_access": "verified",
-      "kova_runtime": "unverified",
-      "status": "unverified",
-      "evidence": "Assistant access: verified. KOVA runtime: unverified.",
-      "next_action": "Use as a view, not a competing canonical store."
+      "name": "KOVA Web Application",
+      "status": "canonical",
+      "evidence": "kovaos-site is the sole canonical authenticated application repository.",
+      "next_action": "Connect it to a versioned Core API and verify private deployment behavior."
     },
     {
-      "name": "MCP",
-      "assistant_access": "n/a",
-      "kova_runtime": "implemented_not_production_verified",
-      "status": "implemented_not_production_verified",
-      "evidence": "Assistant access: n/a. KOVA runtime: implemented_not_production_verified.",
-      "next_action": "Merge hardening and verify authenticated production calls."
-    },
-    {
-      "name": "Zapier/Make/n8n",
-      "assistant_access": "optional",
-      "kova_runtime": "disabled_until_named_gap",
-      "status": "disabled_until_named_gap",
-      "evidence": "Assistant access: optional. KOVA runtime: disabled_until_named_gap.",
-      "next_action": "Use only when a direct connector or official API is insufficient."
+      "name": "External Connectors",
+      "status": "disabled_or_unverified",
+      "evidence": "No repository evidence currently proves production health for optional providers.",
+      "next_action": "Enable one least-privilege connector only after authentication, health, audit, and revocation tests pass."
     }
   ],
   "blockers": [
-    "kovaos-site contains stale or unverified product and integration claims.",
-    "The versioned Core-to-app API contract is not implemented.",
-    "Durable runs, queueing, retries and connector telemetry are not production-proven.",
-    "No authenticated end-to-end AI-provider and connector paths are verified."
+    "No verified production Core-to-site API contract.",
+    "No proof-backed end-to-end connector path.",
+    "Durable run history, queueing, retries, and connector telemetry remain incomplete.",
+    "The duplicate legacy Core Vercel project still creates configuration-drift risk."
   ],
   "next_actions": [
-    "Complete and review the safe metadata registry PR.",
-    "Adopt the modular Core boundary policy without creating empty repositories.",
-    "Align kovaos-site with current routes, privacy boundaries and evidence states.",
-    "Keep inaccessible shared-chat links in REVIEW until content is verified."
-  ]
+    "Merge architecture changes only after exact-head CI and review pass.",
+    "Implement and test the versioned Core-to-site API.",
+    "Verify one authenticated connector path with audit evidence.",
+    "Migrate unique donor features before archiving any repository."
+  ],
+  "organization_model": {
+    "area": [
+      "KOVA",
+      "Personal",
+      "Reagan",
+      "Other"
+    ],
+    "lifecycle": [
+      "ACTIVE",
+      "FINAL",
+      "REVIEW",
+      "ARCHIVE"
+    ],
+    "optional_flags": [
+      "SENSITIVE",
+      "DUPLICATE"
+    ],
+    "rule": "File type and content origin are metadata fields. Exact duplicates require content or revision evidence; source files are never moved or copied."
+  }
 };
 
-// Fallback Digest text
-const fallbackDigestText = `<h3>KOVA Daily Digest — 2026-07-23</h3>
-<p><strong>Status:</strong> KOVA OS command-center foundation is active. GitHub is readable/writable. Google Calendar is readable. Google Contacts is connected but needs a clean seed/entity list. Manus, Dropbox, and Notion are not directly connected in this runtime yet.</p>
+// The reference dashboard holds configuration, not verified live provider data.
+let currentDashboardData = fallbackDashboardData;
+const fallbackCalendarEvents = [];
 
-<h4 class="font-bold text-indigo-400 mt-3">Calendar Lookahead</h4>
-<ul class="list-disc list-inside space-y-1 text-slate-300">
-  <li><strong>2026-07-24 12:00 PM</strong> — 45-minute Session with Nathan Fite / Appointment with Nathan Fite</li>
-  <li><strong>2026-07-25 01:15 PM</strong> — CEI Perez</li>
-  <li><strong>2026-07-28 10:00 AM</strong> — Dream to Me Premiere</li>
-</ul>
-<p class="text-xs text-slate-400 mt-2"><em>Note: Nathan Fite appears twice at the same time, likely one recurring/manual calendar item and one Gmail-created event. This should be deduplicated in the digest engine so KOVA does not nag twice like a caffeinated parrot.</em></p>
+function describeSystemStatus(status) {
+  const value = String(status || "unknown");
+  return {
+    label: value === "blocked" ? "Blocked" : "Needs verification",
+    detail: `Configuration status: ${value.replaceAll("_", " ")}. Production routes and provider connections still need verification.`
+  };
+}
 
-<h4 class="font-bold text-indigo-400 mt-3">Project Pulse</h4>
-<div class="space-y-1.5 text-slate-300">
-  <p><strong>KOVA OS:</strong> Command-center docs, integration matrix, dashboard v1 spec, daily digest spec, and static JSON dashboard config are now complete. Live exports are successfully packaged!</p>
-  <p><strong>Dashboard v1:</strong> This premium static HTML dashboard has been successfully implemented and is ready for production hosting at <code>kovoas.com</code>.</p>
-</div>`;
+function renderSystemStatus(data) {
+  const status = describeSystemStatus(data.system_status);
+  document.getElementById("badge-status").textContent = status.label;
+  document.getElementById("system-status-detail").textContent = status.detail;
+}
 
-// Calendar Agenda Fallback
-const fallbackCalendarEvents = [
-  { time: "12:00 PM", title: "Session with Nathan Fite", date: "Tomorrow" },
-  { time: "01:15 PM", title: "CEI Perez", date: "Friday" },
-  { time: "All Day", title: "Dream to Me Premiere", date: "Monday" }
-];
+function renderDigest(data) {
+  const target = document.getElementById("digest-content");
+  target.innerHTML = "";
+  const heading = document.createElement("h3");
+  heading.textContent = `KOVA configuration snapshot — ${data.dashboard_date || "date unknown"}`;
+  const detail = document.createElement("p");
+  detail.textContent = "A live digest and current calendar reads have not been verified. Check the canonical web application for authenticated work.";
+  target.appendChild(heading);
+  target.appendChild(detail);
+  const blockers = document.createElement("ul");
+  (data.blockers || []).forEach(blocker => {
+    const row = document.createElement("li");
+    row.textContent = blocker;
+    blockers.appendChild(row);
+  });
+  target.appendChild(blockers);
+}
 
 // Memory list
 const fallbackMemory = [
   { key: "Preferred Timezone", val: "America/New_York (Eastern Time)" },
   { key: "Primary Owner", val: "Katy (Kathrynhiggs21)" },
   { key: "Orchestrator Path", val: "Kova-ai-SYSTEM" },
-  { key: "Deployment Goal", val: "kovoas.com (static and API routes)" },
+  { key: "Deployment Goal", val: "kovaos.com via the canonical kovaos-site application" },
   { key: "Tone and Voice", val: "Slightly playful, helpful, says 'You clearly need me.'" }
 ];
 
@@ -226,6 +230,8 @@ function describeIntegrationStatus(status) {
 
 // Render dynamic elements to DOM
 function renderDashboard(data) {
+  currentDashboardData = data;
+  renderSystemStatus(data);
   // Update header tagline
   if (data.tagline) {
     document.getElementById("tagline").textContent = data.tagline;
@@ -234,6 +240,9 @@ function renderDashboard(data) {
   // Render Calendar Agenda (Today card)
   const agendaList = document.getElementById("calendar-agenda-list");
   agendaList.innerHTML = "";
+  if (fallbackCalendarEvents.length === 0) {
+    agendaList.textContent = "No verified calendar feed is connected to this reference dashboard.";
+  }
   fallbackCalendarEvents.forEach(evt => {
     const item = document.createElement("div");
     item.className = "flex justify-between items-center bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-xs";
@@ -275,8 +284,7 @@ function renderDashboard(data) {
   });
   
   // Render Daily Digest Content
-  const digestEl = document.getElementById("digest-content");
-  digestEl.innerHTML = fallbackDigestText;
+  renderDigest(data);
   
   // Render Integrations Grid
   const integrationsGrid = document.getElementById("integrations-grid");
@@ -415,10 +423,10 @@ function toggleAction(id) {
   const label = checkbox.nextElementSibling;
   if (checkbox.checked) {
     label.classList.add("line-through", "text-slate-500");
-    logToConsole(`Completed task: "${label.textContent}"`, "emerald");
+    logToConsole(`Marked locally: "${label.textContent}". This checklist is not saved to the task service.`, "emerald");
   } else {
     label.classList.remove("line-through", "text-slate-500");
-    logToConsole(`Reopened task: "${label.textContent}"`, "indigo");
+    logToConsole(`Unmarked locally: "${label.textContent}". This checklist is not saved to the task service.`, "indigo");
   }
 }
 
@@ -447,19 +455,10 @@ function logToConsole(msg, color = "slate") {
   logsEl.scrollTop = logsEl.scrollHeight;
 }
 
-// Trigger Daily Digest mock regeneration
-function regenerateDigest() {
-  logToConsole("Triggering Daily Digest engine update...", "amber");
-  setTimeout(() => {
-    logToConsole("Google Calendar data parsed successfully.", "emerald");
-  }, 600);
-  setTimeout(() => {
-    logToConsole("Daily Digest regenerated successfully and dispatched to active routes.", "emerald");
-    const digestEl = document.getElementById("digest-content");
-    digestEl.innerHTML = `<h3>KOVA Daily Digest — 2026-07-23 (REGENERATED)</h3>
-    <p class="text-emerald-400 font-bold mb-2">✓ Successfully updated with latest live telemetry!</p>
-    ${fallbackDigestText}`;
-  }, 1200);
+// Refresh configuration without claiming a provider read or dispatch.
+async function regenerateDigest() {
+  await loadDashboardData();
+  logToConsole("Configuration snapshot refreshed. Live digest generation is not connected.", "amber");
 }
 
 // Console Command submission
@@ -477,19 +476,19 @@ function submitConsoleCommand() {
   logToConsole(`User: ${cmd}`, "slate");
   inputEl.value = "";
   
-  // Simulate responses based on commands
+  // Show local configuration guidance; this does not execute commands.
   setTimeout(() => {
     const lower = cmd.toLowerCase();
     if (lower.includes("hello") || lower.includes("hi")) {
       logToConsole("KOVA: Hello Katy. How can I help organize your life today?", "indigo");
     } else if (lower.includes("status")) {
-      logToConsole("KOVA: System status: ACTIVE. Integrations partially active. 6 blockers identified.", "indigo");
+      logToConsole(`KOVA: ${describeSystemStatus(currentDashboardData.system_status).detail}`, "indigo");
     } else if (lower.includes("export") || lower.includes("zip")) {
       logToConsole("KOVA: You can download the final website ZIP or images ZIP from the top bar actions.", "indigo");
     } else if (lower.includes("priority")) {
-      logToConsole("KOVA: Current top priority is building the Dashboard v1 shell.", "indigo");
+      logToConsole(`KOVA: ${currentDashboardData.top_priorities?.[0]?.title || "No priority has been configured."}`, "indigo");
     } else {
-      logToConsole("KOVA: Understood. Action logged. You clearly need me.", "indigo");
+      logToConsole("KOVA: Command execution is not connected on this reference dashboard.", "indigo");
     }
   }, 650);
 }

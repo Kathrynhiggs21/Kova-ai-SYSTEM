@@ -1,339 +1,304 @@
-# Kova AI System Development Instructions
+# KOVA OS Permanent Copilot Instructions
 
-**Always follow these instructions first and fallback to additional search and context gathering only if the information in these instructions is incomplete or found to be in error.**
+You are the primary coding/remediation agent for KOVA OS. Your job is to make the existing KOVA ecosystem operational, secure, testable, and maintainable by auditing first, preserving working behavior, and applying safe incremental fixes.
 
-The Kova AI System is a comprehensive AI-powered development automation platform built with FastAPI, PostgreSQL, Docker, and monitoring tools. It provides automatic error detection, AI integrations, and real-time monitoring capabilities.
+## 1. What KOVA OS Is
 
-## Working Effectively
+KOVA OS is a modular personal AI operating system that coordinates:
 
-### System Requirements
-- **Docker** & **Docker Compose** (latest versions) - REQUIRED
-- **Python 3.11+** (for local development)
-- **Git**
-- **4GB RAM minimum** (8GB recommended)
-- **10GB free disk space**
+- AI assistance and agents
+- memory and retrieval
+- workflow automation and jobs
+- connectors to external services
+- documents/files and operational data
+- notifications and status
+- web and mobile experiences
+- project/domain-specific experiences called KOVA Worlds
 
-### Bootstrap and Build (Docker - Recommended)
-Run these commands in sequence from the repository root:
+Primary production domain: `https://kovaos.com`
 
-```bash
-# Verify platform completeness (optional but recommended)
-chmod +x verify_platform.sh
-./verify_platform.sh
+Goal: one coherent operating layer with explicit boundaries, not parallel prototypes.
 
-# Setup and build system
-chmod +x setup_kova_system.sh
-./setup_kova_system.sh
-```
+## 2. Non-Negotiable Operating Rules
 
-**TIMING**: Complete Docker setup takes approximately 25-30 seconds. **NEVER CANCEL** builds. Set timeout to 60+ minutes if using automation.
+- Audit before changing. Read repo docs/config/tests and verify live code paths.
+- Preserve working behavior unless a verified bug/security issue requires change.
+- Prefer smallest complete fix over broad rewrite.
+- Do not create new repositories/components to bypass an incomplete existing one.
+- Never claim a feature/integration is live unless runtime verification exists.
+- Never expose or commit credentials/secrets.
+- Never migrate the legacy Zoo/card renderer into KOVA OS unless explicitly instructed.
+- Keep normal KOVA operation no-code for the owner; maintenance should not require the owner to write or debug code for routine tasks.
+- Follow one-home-per-artifact: each canonical artifact has one authoritative storage location; do not introduce mirrored duplicate storage.
+- Keep user-facing behavior dyslexia-first and accessibility-first, including plain-language status/errors and readable structure.
 
-**NOTE**: The Dockerfile has been fixed to handle SSL certificate issues with `--trusted-host` flags for pip installations.
+## 3. Repository Classification First
 
-### Alternative Local Development Setup
-If Docker is not available, you can run the application locally:
+At task start, classify the repository from current evidence as one of:
 
-```bash
-cd kova-ai
+- `ACTIVE CORE`
+- `ACTIVE COMMAND CENTER`
+- `ACTIVE PUBLIC SITE`
+- `ACTIVE WORLD`
+- `TRANSITION`
+- `DONOR`
+- `LEGACY`
+- `EXPERIMENT`
+- `ARCHIVE CANDIDATE`
+- `UNKNOWN`
 
-# Install Python dependencies
-pip3 install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org -r requirements.txt
+State why, with file/config evidence.
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys
+## 4. Canonical Architecture and Ownership
 
-# Run application
-python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+Use merged repository evidence, `kova_repos_config.json`, and current ADR/docs as source of truth.
 
-**TIMING**: Local Python setup takes 30-60 seconds for dependency installation. **NEVER CANCEL** pip installs.
+Current canonical active runtime repositories:
 
-### Environment Configuration
-Before running the system, you MUST configure API keys in `kova-ai/.env`:
+- `Kathrynhiggs21/Kova-ai-SYSTEM`: KOVA Core backend/orchestration authority
+- `Kathrynhiggs21/kovaos-site`: canonical KOVA web application for `kovaos.com`
 
-```bash
-# Essential API keys (MUST configure for full functionality)
-OPENAI_API_KEY=sk-your-actual-key-here
-ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
-GITHUB_TOKEN=ghp_your-actual-token-here
-PINECONE_API_KEY=your-actual-key-here
-
-# Database configuration (defaults work for development)
-POSTGRES_DB=kova
-POSTGRES_USER=kova
-POSTGRES_PASSWORD=kova_pass
-```
-
-### Managing the System
-
-#### Docker Commands (Primary Method)
-```bash
-cd kova-ai
-
-# Start services
-docker compose up -d
-
-# View logs (all services)
-docker compose logs -f
-
-# View logs (specific service)
-docker compose logs -f api
-docker compose logs -f db
-
-# Stop services
-docker compose down
-
-# Reset everything (if needed)
-docker compose down -v
-rm -rf postgres_data redis_data
-./setup_kova_system.sh
-```
-
-#### Service Status Check
-```bash
-# Check running containers
-docker compose ps
-
-# Check API health
-curl http://localhost:8000/health
-```
-
-### Key Access Points
-When the system is running, access these URLs:
-
-- **API Health**: http://localhost:8000/health
-- **API Documentation (Swagger)**: http://localhost:8000/docs
-- **API Documentation (ReDoc)**: http://localhost:8000/redoc
-- **Prometheus Metrics**: http://localhost:8000/metrics
-
-## Validation and Testing
-
-### ALWAYS Run These Validation Steps
-After making any changes to the codebase:
-
-1. **Verify Platform**: `./verify_platform.sh`
-2. **Build and Start**: `./setup_kova_system.sh` (NEVER CANCEL - takes ~25 seconds)
-3. **Test Health Endpoint**: `curl http://localhost:8000/health`
-4. **Test AI Command**: 
-   ```bash
-   curl -X POST http://localhost:8000/ai/command \
-     -H "Content-Type: application/json" \
-     -d '{"command": "test command"}'
-   ```
-5. **Verify Documentation**: Access http://localhost:8000/docs in browser
-
-### Manual Testing Scenarios
-**CRITICAL**: Always manually validate these complete scenarios after making changes:
-
-#### Scenario 1: Basic API Functionality
-1. Start the system with `./setup_kova_system.sh`
-2. Verify health endpoint returns `{"status":"ok"}`
-3. Test AI command endpoint with sample data
-4. Check Swagger documentation loads correctly
-5. Verify metrics endpoint is accessible
-
-#### Scenario 2: Database Integration
-1. Ensure PostgreSQL container is running
-2. Verify database schema exists (check init.sql is applied)
-3. Test any database-dependent endpoints
-
-#### Scenario 3: Environment Configuration
-1. Modify .env file with test values
-2. Restart services: `docker compose restart`
-3. Verify configuration changes take effect
-
-### No Automated Testing Infrastructure
-**IMPORTANT**: This repository does not have pytest, flake8, or black configured. Manual testing is required.
-
-## Common Development Tasks
-
-### Key Project Files and Directories
-```
-Kova-ai-SYSTEM/
-├── setup_kova_system.sh       # Main installation script
-├── verify_platform.sh         # Platform verification
-├── kova-ai/
-│   ├── docker-compose.yml     # Docker services configuration
-│   ├── Dockerfile             # Container configuration (SSL fixed)
-│   ├── requirements.txt       # Python dependencies
-│   ├── .env.example          # Environment template
-│   ├── app/
-│   │   ├── main.py           # FastAPI application entry point
-│   │   ├── api/              # API endpoints
-│   │   │   ├── health.py     # Health check endpoint
-│   │   │   ├── ai_endpoints.py # AI command processing
-│   │   │   └── webhooks.py   # GitHub webhooks
-│   │   ├── database/         # Database models and sessions
-│   │   ├── core/             # Core business logic
-│   │   ├── security/         # Authentication and security
-│   │   ├── tasks/            # Background tasks
-│   │   ├── utils/            # Utility functions
-│   │   └── integrations/     # External service integrations
-│   ├── scripts/
-│   │   ├── init.sql          # Database schema initialization
-│   │   └── quickstart.sh     # Alternative startup script
-│   ├── monitoring/
-│   │   ├── prometheus/       # Prometheus configuration
-│   │   └── grafana/          # Grafana dashboards
-│   ├── deployment/
-│   │   ├── nginx/            # Nginx configuration
-│   │   └── kubernetes/       # Kubernetes manifests
-│   └── appsheet_config.json  # AppSheet integration config
-```
-
-### API Endpoints
-The application exposes these key endpoints:
-- `GET /health` - Health check (always returns `{"status":"ok"}`)
-- `POST /ai/command` - Execute AI commands
-- `POST /webhooks/github` - GitHub webhook handler
-- `GET /docs` - Swagger UI documentation
-- `GET /redoc` - ReDoc documentation
-- `GET /metrics` - Prometheus metrics
-
-### Modifying API Endpoints
-When changing API endpoints in `kova-ai/app/api/`:
-1. Always check that router definitions exist (`router = APIRouter`)
-2. Restart the application to see changes
-3. Verify changes appear in `/docs` Swagger UI
-4. Test the endpoint with curl or HTTP client
-
-### Database Changes
-Database schema is defined in `kova-ai/scripts/init.sql`:
-- `repository` table: stores repository information
-- `error` table: stores error logs with timestamps
-
-For schema changes:
-1. Modify `init.sql`
-2. Reset database: `docker compose down -v && (cd .. && ./setup_kova_system.sh)`
-3. Verify schema changes with database client
-
-## Troubleshooting
-
-### Common Issues and Solutions
-
-#### Docker Build Failures
-**Symptom**: SSL certificate errors during pip install
-**Solution**: The Dockerfile includes `--trusted-host` flags (already fixed)
-
-#### Services Won't Start
-```bash
-# Check Docker
-docker --version
-docker compose version
-
-# Reset everything
-docker compose down -v
-./setup_kova_system.sh
-```
-
-#### Database Connection Errors
-```bash
-# Check PostgreSQL logs
-docker compose logs db
-
-# Verify database is running
-docker compose ps
-```
-
-#### API Key Errors
-```bash
-# Verify .env file exists and has values
-cat kova-ai/.env | grep API_KEY
-
-# Restart services after changing .env
-docker compose restart
-```
-
-#### Port Conflicts
-```bash
-# Check if ports are in use
-netstat -tulpn | grep -E '8000|5432'
-
-# Change ports in docker-compose.yml if needed
-```
-
-### Logs and Debugging
-```bash
-# View all service logs
-docker compose logs -f
-
-# View specific service logs
-docker compose logs -f api
-docker compose logs -f db
-
-# Follow logs in real-time while testing
-docker compose logs -f api &
-curl http://localhost:8000/health
-```
-
-## Critical Timing and Timeout Information
-
-### **NEVER CANCEL** Operations
-- **Docker Build**: 25-30 seconds typical, can take up to 5 minutes on slow networks
-- **Service Startup**: 10-15 seconds for all containers to be ready
-- **Database Initialization**: 5-10 seconds for PostgreSQL to accept connections
-
-### Recommended Timeouts for Automation
-- **Build commands**: Set timeout to 300 seconds (5 minutes) minimum
-- **Service startup**: Set timeout to 60 seconds minimum
-- **Health checks**: Set timeout to 30 seconds minimum
-
-## Production Deployment Notes
-
-### Security Checklist
-1. **Change default passwords** in production
-2. **Use HTTPS** with proper SSL certificates
-3. **Restrict API access** with authentication
-4. **Keep API keys secure** and rotate regularly
-5. **Enable firewall** for production deployment
-
-### Monitoring Setup
-The system includes Prometheus metrics at `/metrics` endpoint. Configure external monitoring tools to scrape:
-- `http://your-domain:8000/metrics`
-
-Grafana dashboards are available in `monitoring/grafana/` directory.
-
-## Additional Information
-
-### Platform Verification
-Always run `./verify_platform.sh` before reporting issues. This script checks:
-- Required files and directory structure
-- Python syntax validation
-- Docker configuration validity
-- API router definitions
-
-### Performance Expectations
-- **API Response Time**: < 100ms for health endpoint
-- **Memory Usage**: ~100MB for API container, ~50MB for PostgreSQL
-- **Startup Time**: Complete system ready in 30-45 seconds
-
-### Integration Points
-- **GitHub Webhooks**: Configure webhooks to point to `/webhooks/github`
-- **AppSheet**: Configuration in `appsheet_config.json`
-- **External APIs**: OpenAI, Anthropic, Pinecone integrations via environment variables
-
-## Code Style and Conventions
-
-### Python Code Style
-- Follow existing code patterns and conventions in the repository
-- Use FastAPI patterns for API endpoints with `APIRouter`
-- Keep environment configuration in `.env` files
-- Use type hints where existing code does
-- Maintain consistency with existing error handling patterns
-
-### Making Changes
-- **Make minimal modifications** - change as few lines as possible to achieve goals
-- **Don't delete working code** unless absolutely necessary to fix the specific issue
-- **Test changes** using the validation steps outlined above
-- **Follow existing project structure** - don't reorganize unless specifically required
-
-### Dependencies and Libraries
-- Use existing libraries when possible (FastAPI, PostgreSQL, Docker)
-- Only add new dependencies if absolutely necessary
-- Pin dependency versions in requirements.txt
-- Use `--trusted-host` flags for pip when needed (already configured)
-
-<tool_calling>
-You have the capability to call multiple tools in a single response. For maximum efficiency, whenever you need to perform multiple independent operations, ALWAYS invoke all relevant tools simultaneously rather than sequentially. Especially when exploring repository, reading files, viewing directories, validating changes or replying to comments.
-</tool_calling>
+Current donor/disabled examples (not runtime authorities unless explicitly promoted):
+
+- `Kathrynhiggs21/kova-ai-dash`
+- `Kathrynhiggs21/kova-ai`
+- `Kathrynhiggs21/kova-ai-site`
+- `Kathrynhiggs21/kova-ai-mem0`
+- `Kathrynhiggs21/Kova-os-docengine`
+- `Kathrynhiggs21/Kova-AI-Scribbles`
+
+Do not infer ownership from repository names alone.
+
+## 5. Core vs Frontend Boundaries
+
+### KOVA Core (`Kova-ai-SYSTEM`)
+
+Owns backend APIs, orchestration, policy, jobs/runtime controls, connector adapters, MCP transport, server-side AI/provider logic, observability, and shared service contracts.
+
+### Frontend (`kovaos-site`)
+
+Owns authenticated app UX and public-facing web delivery for `kovaos.com`.
+
+Do not move frontend-only UX logic into Core. Do not move Core orchestration/security logic into frontend bundles.
+
+## 6. KOVA Worlds
+
+KOVA Worlds are domain products that consume KOVA services but keep their domain business logic outside Core.
+
+Examples include Scribbles and Zoo/educational-card repositories. They may integrate with Core APIs/connectors, but they do not become Core by default.
+
+Explicit exclusion: legacy Zoo/card renderer scripts/pipelines are not part of KOVA Core architecture.
+
+## 7. Connector Architecture
+
+Use standardized connector boundaries with explicit capabilities and lifecycle state.
+
+A connector should expose (where applicable):
+
+- authenticate
+- refresh credentials
+- health
+- search/fetch
+- create/update
+- webhook/subscribe
+- revoke/disconnect
+
+Track and present status clearly:
+
+- `configured`
+- `connected`
+- `runtime_verified`
+- `degraded`
+- `disabled`
+
+Never represent `configured` as `runtime_verified` without evidence.
+
+## 8. Memory Architecture
+
+KOVA memory must be provider-independent and support:
+
+- ingestion/normalization
+- provenance
+- retrieval
+- deduplication
+- retention/deletion controls
+- privacy classification
+
+Treat provider implementations (for example Mem0 adapters) as replaceable adapters, not architectural definitions.
+
+## 9. AI / Model Gateway
+
+Do not scatter provider calls across unrelated modules.
+
+Use a gateway pattern for model routing across providers (OpenAI/Gemini/Claude/future), with:
+
+- routing and fallback
+- timeout/retry policy
+- error handling
+- cost/usage telemetry
+- policy enforcement
+- no secret leakage in logs
+
+## 10. Automation and Jobs
+
+Automation must be explicit, auditable, and reversible.
+
+Required qualities:
+
+- deterministic triggers/schedules
+- retries/backoff
+- failure reporting
+- run history/audit trail
+- safe defaults (mutations disabled by default unless validated)
+
+## 11. MCP
+
+MCP endpoints/tools are server-side Core responsibilities and must remain authenticated where required.
+
+Do not expose owner/admin capabilities in unauthenticated MCP routes. Keep tool contracts explicit and stable.
+
+## 12. Android / Mobile
+
+Mobile integration is additive and permission-aware. Keep device-specific concerns (notifications, intents, voice capture) outside Core backend internals except through defined APIs.
+
+## 13. Google Workspace Integration
+
+For Gmail/Drive/Calendar/Contacts integrations:
+
+- use least-privilege scopes
+- keep OAuth/client secrets server-side
+- verify webhook/sync behavior with runtime evidence
+- avoid duplicate content storage when metadata linking is sufficient
+
+## 14. GitHub Integration
+
+For GitHub automation/webhooks/API access:
+
+- scope tokens minimally
+- validate repository/path inputs
+- verify webhook signatures
+- prevent cross-repository writes unless explicitly enabled and reviewed
+- keep disabled automation disabled until ownership/security/tests are proven
+
+## 15. Deployment and `kovaos.com`
+
+- Production routing should align with `https://kovaos.com` through environment-based configuration.
+- Keep localhost/staging/preview values environment-specific; do not hard-code production where config should vary.
+- Do not treat duplicate hosting projects as canonical without architecture approval.
+- Do not change production domains, DNS, authentication ownership, or other destructive production-critical configuration without explicit owner approval.
+
+## 16. Authentication and Security
+
+Always audit for:
+
+- unsafe CORS
+- missing auth on mutation endpoints
+- weak webhook validation
+- exposed secrets/tokens
+- sensitive log leakage
+- path traversal/injection risks
+
+P0 fixes prioritize safe fail-closed behavior and secret hygiene.
+
+## 17. Environment Variables and Secrets
+
+Maintain a clear env-variable inventory:
+
+- name
+- location/consumer
+- required vs optional
+- server-only vs frontend-safe
+- sensitivity
+- stale/duplicate aliases
+
+Rules:
+
+- commit placeholders only
+- no real keys/tokens/passwords in code/docs/logs
+- use `.env.example`/templates with safe placeholder values
+
+## 18. CI/CD and Required Checks
+
+Audit actual checks produced by workflows before changing merge requirements.
+
+- Required status checks must match real check/job names.
+- Do not require impossible/stale checks.
+- Prefer deterministic checks in branch protections/rulesets.
+- Keep lint/security failures non-gating only when explicitly intended and documented.
+
+## 19. Mergify and PR Automation
+
+- Keep Mergify rules aligned with actual branch protection and real checks.
+- Remove stale/contradictory conditions that can never pass.
+- Avoid aggressive auto-merge on legacy/donor repositories.
+- Require explicit `do-not-merge`/manual safety semantics where applicable.
+
+## 20. Testing and Verification
+
+After changes, run applicable existing checks (do not invent new frameworks unless needed):
+
+- `python3 scripts/validate_config.py`
+- `PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v`
+- `node --check site/app.js`
+- `node --test tests/test_site_exports.js`
+- `./verify_platform.sh`
+- any relevant workflow/service checks from current docs when environment supports them
+
+If a check cannot run, report exact blocker and do not claim pass.
+
+## 21. Legacy and Donor Repository Handling
+
+For legacy/donor repositories:
+
+- audit for unique value first
+- migrate only proven useful pieces
+- do not blindly merge or delete
+- archive only after replacement/ownership/tests are verified
+
+## 22. Manus Decoupling
+
+KOVA must not depend on Manus runtime as a hard requirement.
+
+Audit Manus references and classify each as:
+
+- safe to remove now
+- requires replacement first
+- historical documentation only
+- active blocker
+
+Remove/replace only when behavior remains correct and verified.
+
+## 23. Cross-Repository Dependency Rules
+
+- Keep one canonical owner per production responsibility.
+- Use APIs/contracts/shared schemas rather than copy-paste between repos.
+- Do not silently redefine ownership across repositories.
+- For overlap/conflict, report owner/caller boundary and propose migration path.
+
+## 24. Documentation and Source-of-Truth Rules
+
+When docs conflict, prioritize:
+
+1. merged code and runtime behavior
+2. machine-readable config/registry
+3. accepted architecture docs/ADRs
+4. historical plans/backlogs
+
+Update docs only where behavior/ownership/commands changed. Avoid creating duplicate planning docs when canonical docs exist.
+
+## 24.1 Accessibility and Operator Usability
+
+- Keep operator workflows understandable to a non-developer and executable without code changes in normal operation.
+- Default to plain language in user-facing copy, statuses, and error messages.
+- Preserve dyslexia-first readability: avoid dense walls of text, use clear labels, and keep navigation/content structure predictable.
+
+## 25. Standard Work Sequence for Each Task
+
+1. Classify repository role with evidence.
+2. Audit architecture, CI/automation, security, env/secrets, deployment, and integrations.
+3. Produce P0/P1/P2 findings.
+4. Implement safe P0 fixes first.
+5. Verify with existing checks.
+6. Review open PRs/issues for duplicate/conflicting/useful work.
+7. Prepare clean PR with clear scope and rollback notes.
+8. Summarize what changed, what was verified, and what remains blocked by owner-only actions.

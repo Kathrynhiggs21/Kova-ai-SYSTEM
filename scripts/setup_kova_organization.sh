@@ -10,6 +10,13 @@ private_state_dir="${KOVA_PRIVATE_STATE_DIR:-${XDG_DATA_HOME:-$HOME/.local/share
 inventory_dir="$private_state_dir/inventory"
 legacy_inventory_dir="$project_dir/kova_file_inventory"
 registry_path="${2:-$private_state_dir/status_registry.json}"
+snapshot_mode="${3:-full-snapshot}"
+snapshot_args=()
+case "$snapshot_mode" in
+  full-snapshot) snapshot_args+=(--full-snapshot) ;;
+  incremental) ;;
+  *) echo "Third argument must be full-snapshot or incremental." >&2; exit 1 ;;
+esac
 
 if [[ -z "$inventory_path" ]]; then
   if [[ ! -d "$inventory_dir" && -d "$legacy_inventory_dir" ]]; then
@@ -34,5 +41,5 @@ if [[ -z "$inventory_path" || ! -f "$inventory_path" ]]; then
   exit 1
 fi
 
-python3 "$script_dir/file_organizer.py" --inventory "$inventory_path" --registry "$registry_path"
+python3 "$script_dir/file_organizer.py" --inventory "$inventory_path" --registry "$registry_path" "${snapshot_args[@]}"
 echo "KOVA metadata registry updated. No governed files were moved, renamed, or deleted."

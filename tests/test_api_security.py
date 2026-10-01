@@ -20,6 +20,12 @@ from app.main import app, parse_allowed_origins
 OWNER_KEY = "test-owner-api-key"
 ENV_EXAMPLE = Path(__file__).resolve().parents[1] / "kova-ai" / ".env.example"
 SETUP_GUIDE = Path(__file__).resolve().parents[1] / "SETUP_GUIDE.md"
+DEPLOYMENT_ENV_TEMPLATE = (
+    Path(__file__).resolve().parents[1]
+    / "deployment_templates"
+    / "common"
+    / "env.template"
+)
 
 
 class SecureConfigurationDefaultsTests(unittest.TestCase):
@@ -34,6 +40,36 @@ class SecureConfigurationDefaultsTests(unittest.TestCase):
 
                 self.assertIn("KOVA_OWNER_API_KEY", assignments)
                 self.assertEqual(assignments["KOVA_OWNER_API_KEY"], "")
+
+    def test_templates_do_not_use_token_shaped_placeholders(self):
+        token_like_prefixes = ("ghp_", "sk-ant-")
+        for sample_path in (ENV_EXAMPLE, DEPLOYMENT_ENV_TEMPLATE):
+            with self.subTest(sample_path=sample_path.name):
+                contents = sample_path.read_text(encoding="utf-8")
+                for token_prefix in token_like_prefixes:
+                    self.assertNotIn(token_prefix, contents)
+
+    def test_deployment_template_uses_safe_disabled_automation_defaults(self):
+        assignments = {
+            line.partition("=")[0]: line.partition("=")[2]
+            for line in DEPLOYMENT_ENV_TEMPLATE.read_text(encoding="utf-8").splitlines()
+            if "=" in line and not line.lstrip().startswith("#")
+        }
+
+        self.assertEqual(assignments.get("AUTO_DISCOVER_REPOS"), "false")
+        self.assertEqual(assignments.get("ENABLE_AUTO_FIX"), "false")
+        self.assertEqual(assignments.get("ENABLE_CLAUDE_SYNC"), "false")
+        self.assertEqual(assignments.get("ENABLE_WEBHOOKS"), "false")
+        self.assertEqual(assignments.get("ENABLE_MULTI_REPO"), "false")
+        self.assertEqual(assignments.get("DEBUG"), "false")
+        for secret in (
+            "POSTGRES_PASSWORD", "REDIS_PASSWORD", "SECRET_KEY",
+            "JWT_SECRET_KEY", "GITHUB_WEBHOOK_SECRET", "GRAFANA_ADMIN_PASSWORD",
+            "DATABASE_URL",
+        ):
+            with self.subTest(secret=secret):
+                self.assertEqual(assignments.get(secret), "")
+
 
 
 class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
@@ -96,6 +132,29 @@ class OwnerApiBoundaryTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(response.status_code, 200)
+
+    async def test_mcp_rejects_non_object_params(self):
+        with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": OWNER_KEY}):
+            for invalid_params in (None, [], "invalid"):
+                with self.subTest(params=invalid_params):
+                    response = await self.request(
+                        "POST",
+                        "/mcp",
+                        owner_key=OWNER_KEY,
+                        json={
+                            "jsonrpc": "2.0",
+                            "id": 1,
+                            "method": "tools/call",
+                            "params": invalid_params,
+                        },
+                    )
+
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.json()["error"]["code"], -32602)
+                    self.assertEqual(
+                        response.json()["error"]["message"],
+                        "params must be an object",
+                    )
 
     async def test_configured_owner_key_ignores_surrounding_whitespace(self):
         with patch.dict(os.environ, {"KOVA_OWNER_API_KEY": f"  {OWNER_KEY}  "}):

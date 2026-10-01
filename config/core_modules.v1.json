@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "architecture": "modular_two_repository_system",
+  "modules": [
+    {
+      "id": "orchestration",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": [
+        "kova-ai/app/main.py",
+        "kova-ai/app/core",
+        "kova-ai/app/api/multi_repo_endpoints.py",
+        "kova-ai/app/services/multi_repo_sync_service.py"
+      ],
+      "responsibility": "runtime composition, shared contracts, and control-plane rules",
+      "separate_repository": false
+    },
+    {
+      "id": "assistant",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": ["kova-ai/app/api/ai_endpoints.py"],
+      "responsibility": "AI commands and assistant-facing contracts; provider adapters remain in the connectors module",
+      "separate_repository": false
+    },
+    {
+      "id": "mcp",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": ["kova-ai/app/api/mcp_endpoints.py"],
+      "responsibility": "owner-authenticated MCP transport and tool contracts",
+      "separate_repository": false
+    },
+    {
+      "id": "connectors",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": [
+        "kova-ai/app/integrations",
+        "kova-ai/app/services/claude_connector.py",
+        "kova-ai/app/services/claude_bridge_service.py",
+        "kova-ai/app/api/webhooks.py"
+      ],
+      "responsibility": "replaceable provider adapters, OAuth boundaries, and webhook intake",
+      "separate_repository": false
+    },
+    {
+      "id": "automation",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": [
+        "scripts/file_organizer.py",
+        "scripts/setup_kova_organization.sh",
+        "scripts/gdrive_import.py"
+      ],
+      "excluded_paths": [
+        "scripts/batch_renderer.py",
+        "archive/legacy-renderer/v7_1_renderer.yml"
+      ],
+      "responsibility": "implemented lifecycle jobs and steward policies; runtime scheduling and retries remain future work",
+      "separate_repository": false
+    },
+    {
+      "id": "memory_data",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": ["kova-ai/app/database"],
+      "responsibility": "operational records and persistence contracts; memory interface design is future work",
+      "separate_repository": false
+    },
+    {
+      "id": "files_artifacts",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": [
+        "kova-ai/app/api/artifacts_endpoints.py",
+        "kova-ai/app/api/export_endpoints.py",
+        "scripts/export_kova_os.py"
+      ],
+      "responsibility": "file metadata, generated artifacts, and safe exports",
+      "separate_repository": false
+    },
+    {
+      "id": "security_identity",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": ["kova-ai/app/security"],
+      "responsibility": "authentication, authorization, secrets boundaries, and policy enforcement",
+      "separate_repository": false
+    },
+    {
+      "id": "observability",
+      "repository": "Kathrynhiggs21/Kova-ai-SYSTEM",
+      "current_paths": [
+        "kova-ai/app/api/health.py",
+        "kova-ai/app/main.py",
+        "kova-ai/monitoring"
+      ],
+      "responsibility": "health, telemetry, audit events, and operational evidence",
+      "separate_repository": false
+    },
+    {
+      "id": "web_application",
+      "repository": "Kathrynhiggs21/kovaos-site",
+      "current_paths": ["client", "server", "shared", "drizzle"],
+      "responsibility": "authenticated KOVA interface and application delivery",
+      "separate_repository": true
+    }
+  ],
+  "split_policy": {
+    "default": "keep_as_module",
+    "requires_owner_approval": true,
+    "required_controls": [
+      "migration_plan",
+      "ci",
+      "deployment_ownership",
+      "versioned_interfaces",
+      "rollback",
+      "registry_update"
+    ],
+    "qualifying_boundaries": [
+      "independent_deployment",
+      "distinct_security_or_secrets_boundary",
+      "independent_scaling_profile",
+      "independent_release_cycle",
+      "external_team_or_product_ownership"
+    ],
+    "non_qualifying_reasons": [
+      "category_name_only",
+      "future_idea_only",
+      "temporary_experiment",
+      "visual_neatness"
+    ]
+  }
+}

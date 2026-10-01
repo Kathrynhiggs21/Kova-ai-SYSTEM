@@ -14,6 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import re
+import tempfile
 
 try:
     from google.oauth2.credentials import Credentials
@@ -21,7 +22,6 @@ try:
     from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaIoBaseDownload
-    import pickle
     GDRIVE_AVAILABLE = True
 except ImportError:
     GDRIVE_AVAILABLE = False
@@ -33,7 +33,7 @@ except ImportError:
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 KOVA_KEYWORDS = [
     'kova', 'kova-ai', 'kova ai', 'kovaai',
-    'k9va', 'kiva', 'kiva os', 'kiva-ai', 'purgatory', 'claude', 'multi-repo',
+    'k9va', 'kiva os', 'kiva-ai', 'purgatory', 'claude', 'multi-repo',
     'appsheet', 'webhook'
 ]
 
@@ -75,8 +75,9 @@ class Colors:
 class GoogleDriveImporter:
     """Import and analyze Kova files from Google Drive"""
 
-    def __init__(self, credentials_path: str = 'credentials.json'):
-        self.credentials_path = credentials_path
+    def __init__(self, credentials_path: Optional[str] = None):
+        self.auth_dir = default_private_dir() / 'google-drive'
+        self.credentials_path = Path(credentials_path).expanduser() if credentials_path else self.auth_dir / 'credentials.json'
         self.service = None
         self.file_inventory = []
         self.duplicates = []
@@ -93,12 +94,23 @@ class GoogleDriveImporter:
             return False
 
         creds = None
-        token_path = 'token.pickle'
+        token_path = self.auth_dir / 'token.json'
+        if self.auth_dir.is_symlink() or token_path.is_symlink():
+            self.log("❌ Refusing a linked credential directory or token file", Colors.RED)
+            return False
+        if self.auth_dir.exists() and self.auth_dir.stat().st_mode & 0o777 != 0o700:
+            self.log("❌ Google Drive credentials need a dedicated private directory", Colors.RED)
+            return False
+        self.auth_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
         # Load existing credentials
-        if os.path.exists(token_path):
-            with open(token_path, 'rb') as token:
-                creds = pickle.load(token)
+        if token_path.exists():
+            try:
+                os.chmod(token_path, 0o600)
+                creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
+            except (OSError, ValueError):
+                self.log("❌ Stored Google Drive token is unreadable or invalid; reconnect explicitly", Colors.RED)
+                return False
 
         # Refresh or get new credentials
         if not creds or not creds.valid:
@@ -111,12 +123,21 @@ class GoogleDriveImporter:
                     return False
 
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    self.credentials_path, SCOPES)
+                    str(self.credentials_path), SCOPES)
                 creds = flow.run_local_server(port=0)
 
             # Save credentials
-            with open(token_path, 'wb') as token:
-                pickle.dump(creds, token)
+            # Create privately from the first write and replace atomically.
+            # Never deserialize a legacy token.pickle from the working tree.
+            temporary_path = None
+            try:
+                with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=self.auth_dir, delete=False) as token:
+                    temporary_path = Path(token.name)
+                    token.write(creds.to_json())
+                os.replace(temporary_path, token_path)
+            finally:
+                if temporary_path is not None:
+                    temporary_path.unlink(missing_ok=True)
 
         self.service = build('drive', 'v3', credentials=creds)
         self.log("✅ Authenticated with Google Drive", Colors.GREEN)
@@ -391,8 +412,9 @@ class GoogleDriveImporter:
     ):
         """Save inventory to JSON"""
         output_dir = output_dir or (default_private_dir() / 'inventory')
+        if output_dir.is_symlink() or (output_dir.exists() and output_dir.stat().st_mode & 0o777 != 0o700):
+            raise PermissionError("inventory output requires a dedicated private directory")
         output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(output_dir, 0o700)
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
@@ -471,7 +493,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='Import and analyze Kova files from Google Drive')
-    parser.add_argument('--credentials', default='credentials.json', help='Path to Google credentials file')
+    parser.add_argument('--credentials', help='Explicit client credentials path; default is the private Google Drive state directory')
     args = parser.parse_args()
 
     importer = GoogleDriveImporter(credentials_path=args.credentials)

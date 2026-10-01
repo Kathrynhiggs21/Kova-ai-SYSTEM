@@ -100,6 +100,7 @@ def short_title(file_info: dict[str, Any], limit: int = 80) -> str:
     """Return a readable display title while retaining the source name."""
     explicit = file_info.get("suggested_title") or file_info.get("title")
     raw = str(explicit or Path(str(file_info.get("name", "KOVA Item"))).stem)
+    raw = re.sub(r"^\s*\d+(?:[._-]\d+)*[._\s-]+(?=[A-Za-z])", "", raw)
     raw = re.sub(r"[_-]+", " ", raw)
     raw = canonicalize_kova(raw)
     raw = re.sub(r"\s*\(\d+\)\s*$", "", raw)
@@ -252,13 +253,17 @@ def populate_version_metadata(file_info: dict[str, Any]) -> None:
 
 def version_key(file_info: dict[str, Any]) -> str:
     """Key an exact source version; hashes alone are duplicate evidence, not identity."""
+    source = str(file_info.get("source") or "").strip().casefold()
+    if not re.fullmatch(r"[a-z][a-z0-9_.-]*", source) or source == "unknown":
+        raise ValueError("inventory item needs an explicit source namespace")
+    file_info["source"] = source
     if file_info.get("version_key"):
         return str(file_info["version_key"])
     populate_version_metadata(file_info)
     revision = file_info.get("revision_id")
     if not revision:
         raise ValueError(f"inventory item needs version evidence for {source_identity(file_info)}")
-    raw = f"{file_info.get('source', 'unknown')}|{source_identity(file_info)}|{revision}"
+    raw = f"{source}|{source_identity(file_info)}|{revision}"
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -278,16 +283,33 @@ def likely_duplicate_key(file_info: dict[str, Any], title: str) -> str:
     return f"title-size:{normalized}:{file_info.get('size', '')}"
 
 
-def canonical_rank(file_info: dict[str, Any]) -> tuple[int, int, int, str, str]:
+def modified_instant(value: Any) -> float:
+    """Compare instants rather than ISO strings with different UTC offsets."""
+    try:
+        when = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        return when.timestamp()
+    except (ValueError, OverflowError):
+        return float("-inf")
+
+
+def selection_rank(canonical: Any, verified: Any, lifecycle: Any, modified: Any, identity: Any) -> tuple[int, int, int, float, str]:
+    return (
+        1 if canonical is True else 0,
+        1 if verified is True else 0,
+        {"FINAL": 3, "ACTIVE": 2, "REVIEW": 1, "ARCHIVE": 0}.get(lifecycle, 0),
+        modified_instant(modified),
+        str(identity),
+    )
+
+
+def canonical_rank(file_info: dict[str, Any]) -> tuple[int, int, int, float, str]:
     """Deterministically prefer explicit/verified/current items, then a stable ID."""
     lifecycle = lifecycle_for(file_info)[0]
-    explicit_rank = {"FINAL": 3, "ACTIVE": 2, "REVIEW": 1, "ARCHIVE": 0}.get(lifecycle, 0)
-    modified = str(file_info.get("modified") or file_info.get("modifiedTime") or "")
-    return (
-        1 if file_info.get("canonical") is True else 0,
-        1 if file_info.get("verified") is True else 0,
-        explicit_rank,
-        modified,
+    return selection_rank(
+        file_info.get("canonical"), file_info.get("verified"), lifecycle,
+        file_info.get("modified") or file_info.get("modifiedTime"),
         source_identity(file_info),
     )
 
@@ -310,6 +332,7 @@ def version_evidence_for(file_info: dict[str, Any]) -> dict[str, Any]:
         "md5Checksum": file_info.get("md5Checksum"),
         "sha256": file_info.get("sha256"),
         "content_hash": file_info.get("content_hash"),
+        "blob_sha": file_info.get("blob_sha"),
         "version": file_info.get("version"),
         "modified": file_info.get("modified") or file_info.get("modifiedTime"),
     }
@@ -385,6 +408,8 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
                 "sensitivity_basis": sensitivity_basis,
                 "decision_reason": reason,
                 "verification": verification_for(file_info),
+                "canonical": file_info.get("canonical") if isinstance(file_info.get("canonical"), bool) else None,
+                "unresolved_review": file_info.get("unresolved_review") is True,
                 "version_evidence": version_evidence_for(file_info),
                 "source_id": source_identity(file_info),
                 "source_link": file_info.get("web_link") or file_info.get("url"),
@@ -414,8 +439,16 @@ def merge_history(
     else:
         merged = {row["version_key"]: dict(row) for row in previous}
     for row in current:
+        # A newer observed version replaces current status, while preserving history.
+        identity = (row.get("version_evidence", {}).get("source"), row.get("source_id"))
+        for key, old in merged.items():
+            old_identity = (old.get("version_evidence", {}).get("source"), old.get("source_id"))
+            if all(identity) and identity == old_identity and key != row["version_key"]:
+                old["observed_current"] = False
         prior = merged.get(row["version_key"], {})
         combined = {**prior, **row}
+        if row.get("canonical") is None and prior.get("canonical") is not None:
+            combined["canonical"] = prior["canonical"]
         prior_verification = prior.get("verification", {})
         current_verification = row.get("verification", {})
         preserve_prior_classification = prior_verification.get("verified") and not any(
@@ -480,14 +513,12 @@ def merge_history(
     return sorted(merged.values(), key=lambda row: row["version_key"])
 
 
-def reclassify_exact_duplicates(
-    rows: list[dict[str, Any]], historical_current: set[str]
-) -> list[dict[str, Any]]:
+def reclassify_exact_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Reapply exact duplicate flags using current and previously-current hash evidence."""
     candidate_indexes = [
         index
         for index, row in enumerate(rows)
-        if row.get("observed_current") or row.get("version_key") in historical_current
+        if row.get("observed_current")
     ]
     exact_groups: dict[str, list[int]] = {}
     for index in candidate_indexes:
@@ -496,19 +527,24 @@ def reclassify_exact_duplicates(
             version_evidence.get("sha256")
             or version_evidence.get("md5Checksum")
             or version_evidence.get("content_hash")
+            or version_evidence.get("blob_sha")
         )
         if content_hash:
             exact_groups.setdefault(f"hash:{content_hash}", []).append(index)
+            rows[index]["flags"] = [flag for flag in rows[index]["flags"] if flag != "DUPLICATE"]
+            rows[index]["flag_colors"] = [FLAG_COLORS[flag] for flag in rows[index]["flags"]]
+            rows[index]["canonical_version_key"] = None
     for indexes in exact_groups.values():
         if len(indexes) < 2:
             continue
         canonical = max(
             indexes,
-            key=lambda idx: (
-                rows[idx].get("verification", {}).get("verified") is True,
-                {"FINAL": 3, "ACTIVE": 2, "REVIEW": 1, "ARCHIVE": 0}.get(rows[idx].get("lifecycle"), 0),
-                str(rows[idx].get("version_evidence", {}).get("modified") or ""),
-                str(rows[idx].get("source_id") or ""),
+            key=lambda idx: selection_rank(
+                rows[idx].get("canonical"),
+                rows[idx].get("verification", {}).get("verified"),
+                rows[idx].get("lifecycle"),
+                rows[idx].get("version_evidence", {}).get("modified"),
+                rows[idx].get("source_id"),
             ),
         )
         for index in indexes:
@@ -528,22 +564,17 @@ def build_registry_payload(
     full_snapshot: bool = False,
 ) -> dict[str, Any]:
     previous_rows = previous or []
-    historical_current = {
-        row["version_key"]
-        for row in previous_rows
-        if row.get("observed_current") and row.get("version_key")
-    }
     items = reclassify_exact_duplicates(
         merge_history(rows, previous_rows, full_snapshot=full_snapshot),
-        historical_current,
     )
     generated_at = datetime.now(timezone.utc).isoformat()
     exceptions = [
         row for row in items
         if row.get("lifecycle") == "REVIEW"
-        or row.get("sensitivity") in ("SENSITIVE", "UNKNOWN")
-        or row.get("flags")
-        or row.get("possible_duplicate_of")
+        or row.get("sensitivity") == "UNKNOWN"
+        or (row.get("sensitivity") == "SENSITIVE" and not row.get("verification", {}).get("verified"))
+        or row.get("unresolved_review")
+        or (row.get("possible_duplicate_of") and not row.get("verification", {}).get("verified"))
     ]
     exception_payload = {
         "schema_version": 1,
@@ -593,12 +624,12 @@ def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
             os.unlink(temp_name)
 
 
-def write_registry(rows: list[dict[str, Any]], output: Path) -> int:
+def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: bool = False) -> int:
     previous: list[dict[str, Any]] = []
     if output.exists():
         payload = json.loads(output.read_text(encoding="utf-8"))
         previous = payload.get("items", []) if isinstance(payload, dict) else []
-    payload = build_registry_payload(rows, previous, full_snapshot=not rows)
+    payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot)
     atomic_write_private(output, payload)
     exception_output = output.with_name(f"{output.stem}.exceptions.json")
     atomic_write_private(exception_output, payload["exceptions"])
@@ -621,6 +652,7 @@ def main() -> int:
     parser.add_argument("--inventory", type=Path, help="Inventory JSON produced by a source scanner")
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY_PATH)
     parser.add_argument("--dry-run", action="store_true", help="Print the registry without writing it")
+    parser.add_argument("--full-snapshot", action="store_true", help="Inventory contains every current source; mark absent records as historical")
     parser.add_argument("--execute", action="store_true", help="Deprecated; output is always non-destructive")
     args = parser.parse_args()
 
@@ -645,9 +677,9 @@ def main() -> int:
         if registry_path.exists():
             payload = json.loads(registry_path.read_text(encoding="utf-8"))
             previous = payload.get("items", []) if isinstance(payload, dict) else []
-        print(json.dumps(build_registry_payload(rows, previous, full_snapshot=not rows), indent=2))
+        print(json.dumps(build_registry_payload(rows, previous, full_snapshot=args.full_snapshot), indent=2))
     else:
-        exception_count = write_registry(rows, registry_path)
+        exception_count = write_registry(rows, registry_path, full_snapshot=args.full_snapshot)
         print(f"Wrote {len(rows)} current metadata records to {registry_path}")
         print(f"Wrote {exception_count} review exceptions to {registry_path.with_name(registry_path.stem + '.exceptions.json')}")
     if args.base_path or args.execute:

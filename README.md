@@ -1,601 +1,114 @@
 # KOVA OS — Orchestration Hub
 
-## Architecture, control plane, and repository coordination
+Canonical architecture, control plane, repository registry, deployment references, and validation tooling for KOVA OS.
 
-This is the canonical coordination repository for KOVA OS. It contains the FastAPI control plane, MCP endpoint, architecture records, repository registry, deployment references, and validation tooling. It is not a promise that every historical integration or generated artifact is production-ready.
+This repository coordinates one KOVA system. It is not a second document library, a mirror of the frontend, or proof that every catalogued integration is live.
 
-Start with [the canonical repository map](KOVA_REPO_MAP.md). It distinguishes enabled runtime repositories from catalogued migration sources, experiments, and excluded generic starters.
+## Start here
 
-For the full KOVA OS vision, runtime options, integration strategy, and phased roadmap, see the [KOVA OS Final Guide](docs/command-center/KOVA_OS_FINAL_GUIDE.md).
+1. Read [`AGENTS.md`](AGENTS.md) before changing code or configuration.
+2. Use [`docs/architecture/KOVA_REPOSITORY_MAP.md`](docs/architecture/KOVA_REPOSITORY_MAP.md) for canonical repository roles.
+3. Use [`kova_repos_config.json`](kova_repos_config.json) for machine-readable repository status and boundaries.
+4. Use [`docs/command-center/KOVA_OS_FINAL_GUIDE.md`](docs/command-center/KOVA_OS_FINAL_GUIDE.md) for the product vision and phased roadmap.
 
-## 📋 Table of Contents
+Historical guides and generated exports may still exist in the repository. Verify current code, configuration, and runtime evidence before treating an older document as authoritative.
 
-1. [Quick Start](#-quick-start)
-2. [Multi-Repository Management](#-multi-repository-management) 🆕
-3. [File Organization System](#-file-organization-system) 🆕
-4. [KOVA OS Dashboard & Final Exports](#-kova-os-dashboard--final-exports)
-5. [System Requirements](#-system-requirements)
-6. [Installation Steps](#-installation-steps)
-7. [Configuration](#-configuration)
-8. [Testing the System](#-testing-the-system)
-9. [AppSheet Setup](#-appsheet-setup)
-10. [Features](#-features)
-11. [Troubleshooting](#-troubleshooting)
+## Canonical runtime repositories
 
-## 🎯 Quick Start
+| Repository                                                                          | Role                                        | Boundary                                                            |
+| ----------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------- |
+| [`Kathrynhiggs21/Kova-ai-SYSTEM`](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM) | Orchestration hub and backend/control plane | Architecture, MCP, validation, shared services, repository registry |
+| [`Kathrynhiggs21/kovaos-site`](https://github.com/Kathrynhiggs21/kovaos-site)       | Canonical KOVA web app for `kovaos.com`     | Frontend routes, accessibility, owner workflows, web deployment     |
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM.git
-cd Kova-ai-SYSTEM
+Other KOVA repositories are migration sources, experiments, provider adapters, optional worlds, or archived references unless the canonical registry explicitly promotes them. Do not create a new repository to bypass unfinished work in either active runtime repository.
 
-# 2. Run the setup script
-chmod +x setup_kova_system.sh
-./setup_kova_system.sh
+## System boundaries
 
-# 3. Edit your API keys in kova-ai/.env
+- **GitHub** stores source code and review history.
+- **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
+- **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
+- **Vercel** hosts the canonical web and core deployments.
+- **The frontend** never becomes an orchestration or document source of truth.
 
-# 4. Access the system at http://localhost:8000
-```
+One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
 
-## 🔗 Multi-Repository Management
+## Evidence-based status
 
-The registry records the complete known KOVA portfolio, but only entries with
-`enabled: true` participate in runtime status and synchronization operations.
-This service reads GitHub metadata; it does not copy code or perform magical
-cross-repository synchronization.
+Use these labels consistently:
 
-### Managed Repositories
+| Label              | Meaning                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------- |
+| `Configured`       | A setting or adapter exists; runtime has not been proven                           |
+| `Connected`        | Authentication and a current end-to-end read through the intended source succeeded |
+| `Runtime verified` | The intended production path passed a current check                                |
+| `Needs connection` | Required authorization or configuration is missing                                 |
+| `Broken`           | A current check failed with recorded evidence                                      |
+| `Unknown`          | No current evidence exists                                                         |
 
-The currently enabled runtime repositories are:
+Never infer a live connection from a document, environment-variable name, mock response, or provider logo.
 
-- **Kova-ai-SYSTEM** - Canonical orchestration hub and FastAPI backend (this repo)
-- **kovaos-site** - Canonical authenticated web application for `kovaos.com`
+## Security defaults
 
-Other KOVA-named repositories are catalogued with `enabled: false` until their
-code, ownership boundary, tests, secrets, and deployment path are audited. See
-`KOVA_REPO_MAP.md` for their precise roles.
+- Never commit credentials, tokens, recovery codes, private keys, private records, or production secrets.
+- Keep real values in the approved deployment/provider secret store. Commit only safe templates.
+- Fail closed when authentication, owner approval, runtime evidence, or a required scope is missing.
+- Use least privilege and the minimum context needed for every agent, connector, and workflow.
+- Keep destructive or production-critical changes reversible. DNS, domain ownership, authentication ownership, deployment deletion, and live private-data cutover require explicit owner approval.
+- Static Git-tracked evidence cannot authorize live family data. The Vault remains in sample mode until independent server-side authorization and runtime gates exist.
 
-`kova_repos_config.json` is the runtime source of truth. `MULTI_REPO_GUIDE.md`,
-`SETUP_GUIDE.md`, older repository lists, and legacy deployment scripts are
-archival unless they explicitly match that registry and its disabled-by-default
-integration settings.
+## Local validation
 
-### Key Features
-
-- **Available now:** configured-repository listing, GitHub metadata retrieval,
-  status inspection, and configuration validation.
-- **Disabled until implemented and secured:** automatic discovery, push/PR
-  synchronization, cross-repository notifications, and unified AI analysis.
-- Dashboard integration badges are recorded state, not verified live health.
-
-### Authenticated Local Checks
-
-The API now requires the owner key for repository, AI, artifact, webhook-status,
-and export/upload mutations. Keep it on a trusted network until the full
-deployment stack has been reviewed, and never embed the key in browser code.
-
-Public routes are limited to `/health`, documentation, metrics, the signed
-GitHub webhook receiver, and side-effect-free reads of already-published export
-archives at `/api/export/status`, `/api/export/site`, and
-`/api/export/images`. Missing archives return 404 and are not compiled on
-demand.
+Python 3.11 and Node.js 22 match CI. Install dependencies in an isolated environment, then run the same gates used by GitHub:
 
 ```bash
-# Check configured repository metadata locally
-curl -H "X-Kova-API-Key: $KOVA_OWNER_API_KEY" \
-  http://localhost:8000/multi-repo/status
-```
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r kova-ai/requirements.txt
 
-### Live MCP server
-
-KOVA exposes an authenticated MCP JSON-RPC endpoint at `POST /mcp`. It supports
-the MCP `initialize`, `ping`, `tools/list`, and `tools/call` methods. Send the
-owner key in `X-Kova-API-Key`; the server fails closed when
-`KOVA_OWNER_API_KEY` is not configured.
-
-The initial tools are `kova_health`, `kova_export_status`,
-`kova_list_repositories`, and `kova_repository_status`. The endpoint uses the
-MCP Streamable HTTP JSON transport and returns standard JSON-RPC errors.
-
-### Testing & Validation
-
-```bash
-# Validate configuration
-python3 scripts/validate_config.py
-
-# Run full test suite
-python3 scripts/test_multi_repo.py
-```
-
-📚 **Documentation:**
-- **[Historical Multi-Repo Reference](MULTI_REPO_GUIDE.md)** - legacy workflows; do not use to change the runtime registry
-- **[Historical Setup Reference](SETUP_GUIDE.md)** - legacy setup examples retained for migration context
-
----
-
-## 📂 File Organization System
-
-KOVA organizes files with non-destructive metadata rather than manufacturing a large folder tree or moving originals.
-
-### What It Does
-
-- **Imports** all Kova-related files from Google Drive
-- **Analyzes** files for relevance, duplicates, and categorization
-- **Generates** short topic/subtopic display titles while preserving source names
-- **Maintains** lifecycle, sensitivity, duplicate, source-chat and version metadata
-
-### Key Features
-
-✅ **Automated Import** - Scan and import from Google Drive
-✅ **Smart Categorization** - Auto-categorize files by type and purpose
-✅ **Duplicate Detection** - Find exact and similar duplicates
-✅ **Relevance Scoring** - Score files 1-10 for importance
-✅ **Lifecycle States** - ACTIVE, FINAL, REVIEW and ARCHIVE with accessible colors
-✅ **Source Preservation** - No automatic rename, move, overwrite or deletion
-✅ **Minimal Folders** - Create a physical folder only when operationally necessary
-
-### Quick Start
-
-```bash
-# Create or refresh an inventory from a configured source
-python3 scripts/gdrive_import.py
-
-# Build the registry from the newest inventory
-./scripts/setup_kova_organization.sh
-
-# Or select exact input/output paths
-python3 scripts/file_organizer.py \
-  --inventory path/to/inventory.json \
-  --registry path/to/status_registry.json
-```
-
-### Tools Included
-
-- **`gdrive_import.py`** - Import and analyze Google Drive files
-- **`file_organizer.py`** - Build the non-destructive metadata registry
-- **`setup_kova_organization.sh`** - Refresh the registry without prompts
-
-### Analysis Features
-
-The system provides comprehensive file analysis:
-
-- **Relevance Scoring**: 1-10 score based on keywords, recency, type
-- **Category Detection**: CORE, INT, DATA, DEV, OPS, COM, RES
-- **Duplicate Finding**: Exact name, similar name, semantic duplicates
-- **Metadata Extraction**: Size, dates, owners, links
-
-### Sample Output
-
-```
-📊 KOVA FILE ANALYSIS REPORT
-
-📁 Total Files: 342
-💾 Total Size: 1.2 GB
-
-📂 Files by Category:
-  CORE      :   45 files (13.2%)
-  INT       :   78 files (22.8%)
-  DATA      :   23 files (6.7%)
-  ...
-
-⭐ Files by Relevance:
-  Critical (9-10)      :   23 files (6.7%)
-  Important (7-8)      :   87 files (25.4%)
-  Useful (5-6)         :  145 files (42.4%)
-  ...
-
-🔁 Duplicates Found: 15
-```
-
-### Maintenance Workflows
-
-- **Daily**: Inventory changed items and update high-confidence metadata
-- **On change**: Reclassify the exact new version while preserving prior version status
-- **Exceptions only**: Group ambiguous conflicts for review
-- **Never by age alone**: Archive only after a replacement or explicit disposition is recorded
-
-📚 **Documentation:**
-- **[File Organization Reference](KOVA_FILE_ORGANIZATION.md)** - Complete structure details
-- **[Organization Guide](KOVA_ORGANIZATION_GUIDE.md)** - Step-by-step usage guide
-- **[Automation Policy](docs/architecture/KOVA_AUTOMATION_POLICY.md)** - Canonical automatic and approval boundaries
-
----
-
-## 📦 KOVA OS Dashboard & Final Exports
-
-The system now includes a premium **KOVA OS Dashboard v1** website along with compiled assets and automation scripts for running KOVA completely outside of Manus!
-
-### Dashboard & Images Package
-- **Interactive Local Dashboard**: Located at `site/index.html`. Open this file directly in any web browser to view the interactive command center!
-- **Compiled SVG Images**: Located at `site/images/` for use with `kovoas.com`.
-- **`site_final.zip`**: Contains the complete dashboard website, app scripts, and images. Ready to unzip and deploy to your server!
-- **`images.zip`**: Contains only the standalone compiled SVG images/icons.
-
-### Exports & Compilation Scripts
-- **`scripts/generate_svg_assets.py`**: Generates all beautiful, scalable SVG logos and icons programmatically.
-- **`scripts/export_kova_os.py`**: Compiles the latest website configuration, packs `site_final.zip` and `images.zip`, and integrates with the Google Drive API to upload them directly to your Drive!
-
-### API Download & Integration Endpoints
-When the backend API server is running, you can access these routes to manage and download exports:
-- `GET /api/export/status` - View status, sizes, and timestamps of compiled archives.
-- `GET /api/export/site` - Download the already-published website ZIP; returns 404 rather than compiling on demand.
-- `GET /api/export/images` - Download the already-published images archive; returns 404 rather than compiling on demand.
-- `POST /api/export/gdrive-upload` - Owner-authenticated compilation and Google Drive upload; send `X-Kova-API-Key` from a trusted client.
-
-📚 **Running Outside Manus Documentation:**
-- **[Working Outside Manus Guide](docs/command-center/KOVA_RUN_OUTSIDE_MANUS.md)** - Comprehensive local setup, MCP downloads, and Google Drive syncing guide.
-
----
-
-## 📦 Complete Platform Structure
-
-All required files are included in this repository and organized as follows:
-
-### Essential Files (All Included!)
-
-1. **`setup_kova_system.sh`** - Main installation script ✅
-2. **`docker-compose.yml`** - Docker services configuration ✅
-3. **`Dockerfile`** - Container configuration ✅
-4. **`requirements.txt`** - Python dependencies ✅
-5. **`.env.example`** - Environment configuration template ✅
-6. **`app/main.py`** - Main application file ✅
-7. **`scripts/init.sql`** - Database initialization ✅
-8. **`appsheet_config.json`** - AppSheet dashboard configuration ✅
-
-### Current Repository Structure
-
-```
-Kova-ai-SYSTEM/
-├── setup_kova_system.sh
-├── verify_platform.sh
-├── kova-ai/
-│   ├── docker-compose.yml
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── .env.example
-│   ├── app/
-│   │   ├── main.py
-│   │   ├── api/
-│   │   │   ├── health.py
-│   │   │   ├── ai_endpoints.py
-│   │   │   └── webhooks.py
-│   │   ├── database/
-│   │   │   ├── session.py
-│   │   │   └── models.py
-│   │   └── (other modules)
-│   ├── scripts/
-│   │   └── init.sql
-│   ├── monitoring/
-│   │   ├── prometheus/
-│   │   └── grafana/
-│   ├── deployment/
-│   │   ├── nginx/
-│   │   └── kubernetes/
-│   └── appsheet_config.json
-```
-
-## 💻 System Requirements
-
-### Required Software
-- **Docker** & **Docker Compose** (latest versions)
-- **Python 3.11+**
-- **Git**
-- **4GB RAM minimum** (8GB recommended)
-- **10GB free disk space**
-
-### Required API Keys
-You'll need to obtain these API keys:
-
-1. **OpenAI API Key** (Required)
-   - Get from: https://platform.openai.com/api-keys
-   - Cost: ~$0.01-0.03 per request
-
-2. **Anthropic API Key** (Required)
-   - Get from: https://console.anthropic.com/
-   - Cost: ~$0.01-0.03 per request
-
-3. **GitHub Personal Access Token** (Required)
-   - Get from: https://github.com/settings/tokens
-   - Permissions needed: repo, webhook
-
-4. **Pinecone API Key** (Required)
-   - Get from: https://www.pinecone.io/
-   - Free tier available
-
-5. **Google Cloud Service Account** (Optional)
-   - For Google Workspace integration
-
-## 📝 Installation Steps
-
-### Step 1: Clone Repository
-
-```bash
-# Clone the repository
-git clone https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM.git
-cd Kova-ai-SYSTEM
-
-# Verify platform completeness (optional)
-chmod +x verify_platform.sh
 ./verify_platform.sh
+python3 scripts/validate_config.py
+PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v
+python3 -m compileall -q kova-ai/app
+node --check site/app.js
+node --test tests/test_site_exports.js
 ```
 
-### Step 2: Configure Environment
+Do not put real secrets in command history or test fixtures. If a credentialed integration cannot be exercised safely, report it as unverified rather than substituting a mock success.
 
-```bash
-# Copy environment template
-cd kova-ai
-cp .env.example .env
+## Development workflow
 
-# Edit .env with your actual API keys
-nano .env  # or your preferred editor
-```
+1. Inspect the existing implementation and canonical docs.
+2. Work on a branch and open a focused pull request.
+3. Update behavior, tests, documentation, and registry records together.
+4. Run relevant local checks and require CI before merge.
+5. Record what was actually verified and what remains external or owner-only.
 
-#### `kova-ai/.env` (fill in your actual values)
-```bash
-# MUST FILL THESE:
-OPENAI_API_KEY=sk-your-actual-key-here
-ANTHROPIC_API_KEY=sk-ant-your-actual-key-here
-GITHUB_TOKEN=ghp_your-actual-token-here
-PINECONE_API_KEY=your-actual-key-here
-```
+The owner should not need to write or debug code for ordinary maintenance. User-facing KOVA workflows should remain no-code, dyslexia-first, and plain-language.
 
-### Step 3: Run Installation
+## Current production baseline
 
-```bash
-# Return to root directory
-cd ..
+As reconciled on September 29, 2026:
 
-# Make script executable and run
-chmod +x setup_kova_system.sh
-./setup_kova_system.sh
-```
+- the core `main` branch includes the fail-closed Vault live-cutover controls;
+- the canonical core Vercel deployment reports ready;
+- the canonical frontend repository is linked to its Vercel project and assigned `kovaos.com` and `www.kovaos.com`;
+- anonymous Google Drive editing has been removed from the KOVA and AI World roots; and
+- duplicate/legacy Vercel projects and Manus-derived frontend runtime paths still require controlled review before retirement or replacement.
 
-# Run installation
-./setup_kova_system.sh
-```
+This is a dated baseline, not a permanent health guarantee. Re-run checks before reporting current status.
 
-### Step 4: Verify Installation
+## Key references
 
-```bash
-# Check if services are running
-docker-compose ps
+- [`docs/architecture/KOVA_REPOSITORY_MAP.md`](docs/architecture/KOVA_REPOSITORY_MAP.md) — repository ownership and runtime boundary
+- [`docs/architecture/PERSONAL_FAMILY_RECORDS_VAULT.md`](docs/architecture/PERSONAL_FAMILY_RECORDS_VAULT.md) — Vault security and cutover boundary
+- [`CONNECTOR_TRAY.md`](CONNECTOR_TRAY.md) — connector design and status model
+- [`SETUP_GUIDE.md`](SETUP_GUIDE.md) — historical setup reference only; use the validation section above for current checks
+- [`archive/`](archive/) — historical material, not current operating instructions
 
-# Test the API
-curl http://localhost:8000/health
+When documents disagree, current code plus the repository map, machine-readable registry, tests, and runtime evidence take precedence.
 
-# View logs
-docker-compose logs -f api
-```
+## Metadata file lifecycle
 
-## ⚙️ Configuration
+`scripts/file_organizer.py` indexes source identities, versions, readable titles, lifecycle labels, sensitivity, and duplicate evidence without moving, renaming, deleting, or copying originals. Private registry and exception reports are stored outside this repository with user-only filesystem permissions.
 
-### Environment Variables
-
-Edit `.env` file with your actual values:
-
-```bash
-# Essential (MUST configure)
-OPENAI_API_KEY=sk-...          # Your OpenAI key
-ANTHROPIC_API_KEY=sk-ant-...   # Your Anthropic key
-GITHUB_TOKEN=ghp_...            # Your GitHub token
-PINECONE_API_KEY=...            # Your Pinecone key
-
-# Optional (can use defaults)
-POSTGRES_PASSWORD=...           # Database password
-SECRET_KEY=...                  # JWT secret key
-ADMIN_EMAIL=...                 # Admin email
-```
-
-### GitHub Webhook Setup
-
-1. Go to your repository settings on GitHub
-2. Add webhook:
-   - URL: `http://your-domain:8000/webhooks/github`
-   - Content type: `application/json`
-   - Secret: (same as GITHUB_WEBHOOK_SECRET in .env)
-   - Events: Push, Pull Request, Issues
-
-## 🧪 Testing the System
-
-### Basic Health Check
-```bash
-curl http://localhost:8000/health
-```
-
-### Test AI Command
-```bash
-curl -X POST http://localhost:8000/ai/command \
-  -H "Content-Type: application/json" \
-  -d '{"command": "create a REST API for user management"}'
-```
-
-### Test Error Scanning
-```bash
-curl -X POST http://localhost:8000/api/scan \
-  -H "Content-Type: application/json" \
-  -d '{"name": "test-repo"}'
-```
-
-### Access Dashboards
-- **API Documentation**: http://localhost:8000/docs
-- **Grafana Monitoring**: http://localhost:3000 (admin/admin)
-- **Prometheus Metrics**: http://localhost:9090
-
-## 📱 AppSheet Setup
-
-### Import Configuration
-
-1. Open Google AppSheet: https://www.appsheet.com/
-2. Create new app → Start with your own data
-3. Choose "Import from JSON"
-4. Upload `appsheet_config.json`
-5. Configure data source:
-   - URL: Your API endpoint (e.g., http://your-domain:8000)
-   - Authentication: API Key (from your .env file)
-
-### Configure Tables
-
-1. Go to Data → Tables
-2. For each table, set:
-   - Source: REST API
-   - Endpoint: As specified in JSON
-   - Authentication: Bearer token
-
-### Deploy App
-
-1. Go to Deploy → Deployment Check
-2. Fix any warnings
-3. Click "Deploy App"
-4. Share with your team
-
-## ✨ Features
-
-### Core Capabilities
-
-- **🔍 Automatic Error Detection**
-  - Syntax errors
-  - Security vulnerabilities
-  - Performance issues
-  - Style violations
-
-- **🔧 Auto-Fix System**
-  - High-confidence automatic fixes
-  - Rollback on failure
-  - Test validation
-
-- **🤖 AI Integration**
-  - GPT-4 for code generation
-  - Claude for code analysis
-  - Natural language commands
-
-- **📊 Real-time Monitoring**
-  - WebSocket updates
-  - Grafana dashboards
-  - Prometheus metrics
-
-- **🔗 Integrations**
-  - GitHub webhooks
-  - Google Workspace
-  - Slack notifications
-  - AppSheet dashboard
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-#### Services won't start
-```bash
-# Check Docker
-docker --version
-docker-compose --version
-
-# Reset everything
-docker-compose down -v
-docker-compose up -d
-```
-
-#### Database connection errors
-```bash
-# Check PostgreSQL
-docker-compose logs postgres
-
-# Reinitialize database
-docker-compose exec postgres psql -U kova -d kova < scripts/init.sql
-```
-
-#### API key errors
-```bash
-# Verify that the owner key is present without printing it
-grep -Eq '^KOVA_OWNER_API_KEY=[[:space:]]*[^[:space:]]' kova-ai/.env \
-  && echo 'KOVA owner key is configured' \
-  || echo 'KOVA owner key is missing'
-
-# Restart services after changing .env
-docker-compose restart
-```
-
-#### Port conflicts
-```bash
-# Check ports
-netstat -tulpn | grep -E '8000|5432|6379|3000'
-
-# Change ports in docker-compose.yml if needed
-```
-
-### View Logs
-
-```bash
-# All services
-docker-compose logs -f
-
-# Specific service
-docker-compose logs -f api
-docker-compose logs -f postgres
-docker-compose logs -f redis
-```
-
-### Reset Everything
-
-```bash
-# Stop and remove everything
-docker-compose down -v
-rm -rf postgres_data redis_data
-
-# Restart fresh
-./setup_kova_system.sh
-```
-
-## 📚 API Documentation
-
-Once running, access interactive API docs at:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
-
-### Key Endpoints
-
-- `POST /ai/command` - Execute AI command
-- `POST /api/scan` - Scan repository
-- `POST /webhooks/github` - GitHub webhook
-- `GET /health` - Health check
-- `GET /metrics` - Prometheus metrics
-
-## 🔒 Security Notes
-
-1. **Change default passwords** in production
-2. **Use HTTPS** with proper SSL certificates
-3. **Restrict API access** with authentication
-4. **Keep API keys secure** and rotate regularly
-5. **Enable firewall** for production deployment
-
-## 🚀 Production Deployment
-
-For production deployment:
-
-1. Use environment-specific `.env` files
-2. Enable SSL/TLS with Let's Encrypt
-3. Use managed databases (RDS, Cloud SQL)
-4. Implement proper logging (ELK stack)
-5. Set up backup strategies
-6. Use Kubernetes for orchestration
-
-## 📞 Support
-
-- **Documentation**: Check `/docs` endpoint
-- **Logs**: `docker-compose logs -f`
-- **Health Check**: `curl http://localhost:8000/health`
-
-## 🎉 Success!
-
-Your Kova AI System is now ready! The system will:
-- ✅ Continuously scan for errors
-- ✅ Auto-fix issues with high confidence
-- ✅ Process natural language commands
-- ✅ Learn from your codebase
-- ✅ Provide real-time monitoring
-
-Access your system at: **http://localhost:8000**
-
----
-
-**Enjoy your AI-powered development platform! 🚀**
+Use `config/automation_policy.v1.json` and [KOVA_FILE_ORGANIZATION.md](KOVA_FILE_ORGANIZATION.md) for the current policy and commands. The implementation can process an explicit metadata inventory; it does not itself connect every provider or scan inaccessible accounts. Live provider scheduling and private-data cutover still require separately verified authorization.

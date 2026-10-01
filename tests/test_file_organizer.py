@@ -14,6 +14,80 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_connector_identity_requires_namespace_and_separates_same_ids(self):
+        with self.assertRaisesRegex(ValueError, "source namespace"):
+            MODULE.version_key({"id": "same", "version": "1"})
+        self.assertNotEqual(
+            MODULE.version_key({"source": "google_drive", "id": "same", "version": "1"}),
+            MODULE.version_key({"source": "github", "id": "same", "version": "1"}),
+        )
+
+    def test_canonical_ranking_compares_absolute_instants(self):
+        rows = MODULE.build_registry([
+            {"source": "test", "id": "older", "name": "A", "md5Checksum": "same", "modified": "2026-01-01T01:00:00+02:00"},
+            {"source": "test", "id": "newer", "name": "B", "md5Checksum": "same", "modified": "2026-01-01T00:30:00Z"},
+        ])
+        self.assertEqual([r['source_id'] for r in rows if 'DUPLICATE' not in r['flags']], ['newer'])
+        payload = MODULE.build_registry_payload(rows)
+        self.assertEqual([r['source_id'] for r in payload['items'] if 'DUPLICATE' not in r['flags']], ['newer'])
+
+    def test_explicit_canonical_and_blob_evidence_survive_incremental_publish(self):
+        canonical = MODULE.build_registry([{
+            "source": "github", "id": "explicit", "name": "A", "blob_sha": "same", "canonical": True,
+        }])
+        previous = MODULE.build_registry_payload(canonical)['items']
+        newer = MODULE.build_registry([{
+            "source": "github", "id": "newer", "name": "B", "blob_sha": "same", "modified": "2026-01-01T00:30:00Z",
+        }])
+        payload = MODULE.build_registry_payload(newer, previous)
+        rows = {r['source_id']: r for r in payload['items']}
+        self.assertTrue(rows['explicit']['canonical'])
+        self.assertEqual(rows['explicit']['version_evidence']['blob_sha'], 'same')
+        self.assertNotIn('DUPLICATE', rows['explicit']['flags'])
+        self.assertEqual(rows['newer']['canonical_version_key'], rows['explicit']['version_key'])
+
+    def test_new_canonical_clears_old_duplicate_marker(self):
+        original = MODULE.build_registry([
+            {"source": "test", "id": "a", "name": "A", "md5Checksum": "same"},
+            {"source": "test", "id": "b", "name": "B", "md5Checksum": "same"},
+        ])
+        current = MODULE.build_registry([{
+            "source": "test", "id": "a", "name": "A", "md5Checksum": "same", "canonical": True,
+        }])
+        payload = MODULE.build_registry_payload(current, original)
+        rows = {r['source_id']: r for r in payload['items']}
+        self.assertNotIn('DUPLICATE', rows['a']['flags'])
+        self.assertIsNone(rows['a']['canonical_version_key'])
+        self.assertIn('DUPLICATE', rows['b']['flags'])
+
+    def test_complete_snapshot_expires_absent_items_but_delta_preserves_them(self):
+        previous = MODULE.build_registry([
+            {"source": "test", "id": "a", "name": "A", "version": "1"},
+            {"source": "test", "id": "b", "name": "B", "version": "1"},
+        ])
+        current = MODULE.build_registry([{"source": "test", "id": "a", "name": "A", "version": "1"}])
+        snapshot = MODULE.build_registry_payload(current, previous, full_snapshot=True)
+        self.assertFalse(next(r for r in snapshot['items'] if r['source_id'] == 'b')['observed_current'])
+        delta = MODULE.build_registry_payload(current, previous)
+        self.assertTrue(next(r for r in delta['items'] if r['source_id'] == 'b')['observed_current'])
+        self.assertTrue(all(r['observed_current'] for r in MODULE.build_registry_payload([], previous)['items']))
+
+    def test_new_revision_retires_previous_current_version(self):
+        previous = MODULE.build_registry([{"source": "test", "id": "a", "name": "A", "version": "1"}])
+        current = MODULE.build_registry([{"source": "test", "id": "a", "name": "A", "version": "2"}])
+        payload = MODULE.build_registry_payload(current, previous)
+        self.assertEqual(sum(r['observed_current'] for r in payload['items']), 1)
+        self.assertFalse(next(r for r in payload['items'] if r['version_evidence']['version'] == '1')['observed_current'])
+
+    def test_resolved_sensitive_and_duplicate_flags_do_not_create_exceptions(self):
+        rows = MODULE.build_registry([
+            {"source": "test", "id": "a", "name": "Medical A", "md5Checksum": "same", "verified": True, "lifecycle": "FINAL"},
+            {"source": "test", "id": "b", "name": "Medical B", "md5Checksum": "same", "verified": True, "lifecycle": "FINAL"},
+        ])
+        self.assertEqual(MODULE.build_registry_payload(rows)['exceptions']['exception_count'], 0)
+        rows[0]['unresolved_review'] = True
+        self.assertEqual(MODULE.build_registry_payload(rows)['exceptions']['exception_count'], 1)
+
     def test_explicit_area_is_case_insensitive_and_canonical(self):
         self.assertEqual(MODULE.area_for({"area": "KOVA", "name": "Notes.txt"}), "KOVA")
         self.assertEqual(MODULE.area_for({"area": "reagan", "name": "Notes.txt"}), "Reagan")
@@ -21,6 +95,12 @@ class FileOrganizerTests(unittest.TestCase):
     def test_short_title_normalizes_kova_and_removes_copy_noise(self):
         item = {"name": "K9va_OS_Automation_Plan_FINAL (2).docx"}
         self.assertEqual(MODULE.short_title(item), "KOVA Operating System Automation Plan")
+
+    def test_short_title_removes_atlas_numbering_without_renaming_source(self):
+        item = {"name": "02-07-KOVA-Identity-and-Security.png"}
+        self.assertEqual(MODULE.short_title(item), "KOVA Identity and Security")
+        self.assertEqual(item["name"], "02-07-KOVA-Identity-and-Security.png")
+        self.assertEqual(MODULE.short_title({"name": "03-00-KOVA-OS-Atlas-Cover.png"}), "KOVA Operating System Atlas Cover")
 
     def test_short_title_keeps_meaningful_trailing_year(self):
         self.assertEqual(MODULE.short_title({"name": "KOVA Roadmap 2026.docx"}), "KOVA Roadmap 2026")
@@ -52,8 +132,8 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_exact_duplicate_requires_hash_and_is_deterministic(self):
         items = [
-            {"id": "older", "name": "KOVA Plan.docx", "md5Checksum": "same", "modified": "2026-01-01T00:00:00Z"},
-            {"id": "newer", "name": "KOVA Plan.docx", "md5Checksum": "same", "modified": "2026-02-01T00:00:00Z"},
+            {"source": "test_connector", "id": "older", "name": "KOVA Plan.docx", "md5Checksum": "same", "modified": "2026-01-01T00:00:00Z"},
+            {"source": "test_connector", "id": "newer", "name": "KOVA Plan.docx", "md5Checksum": "same", "modified": "2026-02-01T00:00:00Z"},
         ]
         rows = MODULE.build_registry(items)
         self.assertIn("DUPLICATE", rows[0]["flags"])
@@ -66,16 +146,16 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_exact_duplicate_uses_blob_sha_evidence(self):
         rows = MODULE.build_registry([
-            {"id": "older", "name": "KOVA Plan.docx", "blob_sha": "same", "modified": "2026-01-01T00:00:00Z"},
-            {"id": "newer", "name": "KOVA Plan.docx", "blob_sha": "same", "modified": "2026-02-01T00:00:00Z"},
+            {"source": "test_connector", "id": "older", "name": "KOVA Plan.docx", "blob_sha": "same", "modified": "2026-01-01T00:00:00Z"},
+            {"source": "test_connector", "id": "newer", "name": "KOVA Plan.docx", "blob_sha": "same", "modified": "2026-02-01T00:00:00Z"},
         ])
         self.assertIn("DUPLICATE", rows[0]["flags"])
         self.assertNotIn("DUPLICATE", rows[1]["flags"])
 
     def test_same_title_without_hash_is_only_a_review_candidate(self):
         rows = MODULE.build_registry([
-            {"id": "1", "name": "KOVA Plan.docx", "size": 9, "version": "1", "modified": "2026-01-01T00:00:00Z"},
-            {"id": "2", "name": "KOVA Plan.docx", "size": 9, "version": "2", "modified": "2026-02-01T00:00:00Z"},
+            {"source": "test_connector", "id": "1", "name": "KOVA Plan.docx", "size": 9, "version": "1", "modified": "2026-01-01T00:00:00Z"},
+            {"source": "test_connector", "id": "2", "name": "KOVA Plan.docx", "size": 9, "version": "2", "modified": "2026-02-01T00:00:00Z"},
         ])
         self.assertNotIn("DUPLICATE", rows[0]["flags"])
         self.assertNotIn("DUPLICATE", rows[1]["flags"])
@@ -85,8 +165,8 @@ class FileOrganizerTests(unittest.TestCase):
 
     def test_mixed_hash_likely_group_is_marked_for_review(self):
         rows = MODULE.build_registry([
-            {"id": "hashless-newer", "name": "KOVA Plan.docx", "size": 9, "version": "2", "modified": "2026-02-01T00:00:00Z"},
-            {"id": "hashed-older", "name": "KOVA Plan.docx", "size": 9, "md5Checksum": "abc", "modified": "2026-01-01T00:00:00Z"},
+            {"source": "test_connector", "id": "hashless-newer", "name": "KOVA Plan.docx", "size": 9, "version": "2", "modified": "2026-02-01T00:00:00Z"},
+            {"source": "test_connector", "id": "hashed-older", "name": "KOVA Plan.docx", "size": 9, "md5Checksum": "abc", "modified": "2026-01-01T00:00:00Z"},
         ])
         candidates = [row for row in rows if row["possible_duplicate_of"] is not None]
         self.assertEqual(len(candidates), 1)
@@ -94,13 +174,13 @@ class FileOrganizerTests(unittest.TestCase):
         self.assertEqual(candidates[0]["lifecycle"], "REVIEW")
 
     def test_version_identity_includes_source(self):
-        a = MODULE.version_key({"id": "a", "md5Checksum": "same"})
-        b = MODULE.version_key({"id": "b", "md5Checksum": "same"})
+        a = MODULE.version_key({"source": "test_connector", "id": "a", "md5Checksum": "same"})
+        b = MODULE.version_key({"source": "test_connector", "id": "b", "md5Checksum": "same"})
         self.assertNotEqual(a, b)
 
     def test_version_identity_rejects_modified_timestamp_only_evidence(self):
         with self.assertRaises(ValueError):
-            MODULE.version_key({"id": "a", "modified": "2026-02-01T00:00:00Z"})
+            MODULE.version_key({"source": "test_connector", "id": "a", "modified": "2026-02-01T00:00:00Z"})
 
     def test_local_version_identity_uses_content(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -143,12 +223,12 @@ class FileOrganizerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "private" / "registry.json"
             old = MODULE.build_registry([{
-                "id": "1", "name": "KOVA Guide.docx", "modified": "2026-01-01T00:00:00Z",
+                "source": "test_connector", "id": "1", "name": "KOVA Guide.docx", "modified": "2026-01-01T00:00:00Z",
                 "version": "1",
                 "lifecycle": "FINAL", "verified": True, "verification_evidence": "Owner approved"
             }])
             MODULE.write_registry(old, output)
-            MODULE.write_registry(MODULE.build_registry([]), output)
+            MODULE.write_registry(MODULE.build_registry([]), output, full_snapshot=True)
             payload = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(len(payload["items"]), 1)
             self.assertFalse(payload["items"][0]["observed_current"])
@@ -167,13 +247,13 @@ class FileOrganizerTests(unittest.TestCase):
             output = parent / "registry.json"
 
             with self.assertRaises(PermissionError):
-                MODULE.write_registry(MODULE.build_registry([]), output)
+                MODULE.write_registry(MODULE.build_registry([]), output, full_snapshot=True)
 
     def test_history_preserves_superseded_relationship(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "private" / "registry.json"
             original = MODULE.build_registry([{
-                "id": "1",
+                "source": "test_connector", "id": "1",
                 "name": "KOVA Old Guide.docx",
                 "superseded_by": "source:2",
                 "version": "1",
@@ -181,7 +261,7 @@ class FileOrganizerTests(unittest.TestCase):
             }])
             MODULE.write_registry(original, output)
             refresh = MODULE.build_registry([{
-                "id": "1",
+                "source": "test_connector", "id": "1",
                 "name": "KOVA Old Guide.docx",
                 "version": "1",
                 "modified": "2026-01-01T00:00:00Z",
@@ -195,13 +275,13 @@ class FileOrganizerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "private" / "registry.json"
             MODULE.write_registry(MODULE.build_registry([{
-                "id": "1",
+                "source": "test_connector", "id": "1",
                 "name": "KOVA Plan A.docx",
                 "md5Checksum": "same",
                 "modified": "2026-01-01T00:00:00Z",
             }]), output)
             MODULE.write_registry(MODULE.build_registry([{
-                "id": "2",
+                "source": "test_connector", "id": "2",
                 "name": "KOVA Plan B.docx",
                 "md5Checksum": "same",
                 "modified": "2026-02-01T00:00:00Z",
@@ -359,7 +439,7 @@ class FileOrganizerTests(unittest.TestCase):
             inventory.write_text("[]", encoding="utf-8")
             MODULE.write_registry(
                 MODULE.build_registry([{
-                    "id": "1",
+                    "source": "test_connector", "id": "1",
                     "name": "KOVA Guide.docx",
                     "version": "1",
                     "modified": "2026-01-01T00:00:00Z",
@@ -369,7 +449,7 @@ class FileOrganizerTests(unittest.TestCase):
                 registry,
             )
             result = subprocess.run(
-                ["python3", str(SCRIPT), "--inventory", str(inventory), "--registry", str(registry), "--dry-run"],
+                ["python3", str(SCRIPT), "--inventory", str(inventory), "--registry", str(registry), "--dry-run", "--full-snapshot"],
                 check=True,
                 capture_output=True,
                 text=True,

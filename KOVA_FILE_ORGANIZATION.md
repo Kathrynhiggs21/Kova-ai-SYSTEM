@@ -39,3 +39,7 @@ python3 scripts/file_organizer.py \
 ```
 
 Legacy positional paths and `--execute` are accepted only to prevent accidental breakage; they are ignored and never move governed files.
+
+Every item needs an explicit source namespace, a stable source identifier, and revision or content-hash evidence. Direct registry updates are incremental by default, including an empty update. Use `--full-snapshot` only with a complete inventory of every current source represented by that registry. The setup runner defaults to complete inventories; pass `incremental` as its third argument for delta inventories. A dry run performs the same history merge and canonical selection as a write.
+
+The optional Google Drive inventory tool stores client credentials and JSON tokens under the private state directory, outside the repository by default. It requests read-only access and never loads a legacy `token.pickle`. Put the owner-approved client credentials in `<private state>/google-drive/credentials.json`, or supply an explicit `--credentials` path. Existing pickle tokens require a fresh, explicit sign-in; do not copy them into source control. This local tool is not evidence that the deployed KOVA connection is working.
