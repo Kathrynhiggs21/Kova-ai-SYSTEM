@@ -23,6 +23,3 @@ queue_rules:
       - base = main
       - -draft
       - -label = do-not-merge
-scopes:
-  source:
-    files: {}
