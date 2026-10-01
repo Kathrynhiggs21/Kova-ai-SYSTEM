@@ -289,7 +289,8 @@ def populate_version_metadata(file_info: dict[str, Any]) -> None:
         file_info["content_hash"] = file_info.get("sha256") or file_info.get("md5Checksum")
     revision = supported_revision(file_info)
     supplied = file_info.get("revision_id")
-    if supplied and (revision is None or str(supplied) != revision):
+    digest_revision = next((field for field in ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version") if file_info.get(field)), None) in {"sha256", "blob_sha", "md5Checksum"}
+    if supplied and (revision is None or (str(supplied) != revision and not (digest_revision and str(supplied).casefold() == revision.casefold()))):
         raise ValueError("supplied revision must match supported version evidence")
     if revision is not None:
         file_info["revision_id"] = revision
