@@ -74,9 +74,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-xl font-extrabold tracking-wider bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">KOVA OS</h1>
-            <span id="badge-status" class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 rounded-full border border-emerald-500/20 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Active
-            </span>
+            <span id="badge-status" class="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400 rounded-full border border-amber-500/20">Needs verification</span>
           </div>
           <p class="text-xs text-slate-400 font-medium" id="tagline">You clearly need me.</p>
         </div>
@@ -113,8 +111,8 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </span>
         <div>
-          <p class="font-bold">System Orchestrator Mode (Outside Manus)</p>
-          <p class="text-xs text-slate-400 mt-0.5">Fully verified KOVA OS configurations compiled. Exports generated and configured for Google Drive & Local download.</p>
+          <p class="font-bold">Core reference dashboard</p>
+          <p id="system-status-detail" class="text-xs text-slate-400 mt-0.5">Configuration snapshot only. Production routes and provider connections still need verification.</p>
         </div>
       </div>
       <button onclick="document.getElementById('top-notification-bar').remove()" class="text-slate-400 hover:text-slate-200">&times;</button>
@@ -166,8 +164,8 @@
               Daily Digest
             </h2>
             <div class="flex items-center gap-2">
-              <span class="px-2 py-0.5 text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 rounded border border-indigo-500/20">Sent (Email/Dash)</span>
-              <button onclick="regenerateDigest()" class="p-1 text-slate-400 hover:text-purple-400 transition-colors" title="Regenerate Digest">
+              <span class="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400 rounded border border-amber-500/20">Delivery not connected</span>
+              <button onclick="regenerateDigest()" class="p-1 text-slate-400 hover:text-purple-400 transition-colors" title="Refresh configuration" aria-label="Refresh configuration">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 12H16"/></svg>
               </button>
             </div>

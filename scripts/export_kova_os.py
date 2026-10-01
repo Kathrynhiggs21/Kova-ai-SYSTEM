@@ -7,6 +7,7 @@ integrations to download locally or upload directly to Google Drive.
 
 import os
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -14,27 +15,34 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SITE_DIR = PROJECT_ROOT / "site"
 IMAGES_DIR = SITE_DIR / "images"
+CONFIG_FILE = PROJECT_ROOT / "config" / "dashboard.v1.json"
 
 def log(msg, success=True):
     prefix = "✅" if success else "⚠️"
     print(f"{prefix} {msg}")
 
-def package_zip(source_dir: Path, target_zip: Path, include_parent=False):
+def package_zip(source_dir: Path, target_zip: Path, include_parent=False, extra_files=None):
     """Zips a directory recursively using Python's standard zipfile module."""
     if not source_dir.exists():
         log(f"Source directory does not exist: {source_dir}", False)
         return False
         
-    with zipfile.ZipFile(target_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for root, dirs, files in os.walk(source_dir):
-            for file in files:
-                file_path = Path(root) / file
-                # Determine relative path in the archive
-                if include_parent:
-                    arc_name = file_path.relative_to(source_dir.parent)
-                else:
-                    arc_name = file_path.relative_to(source_dir)
-                zipf.write(file_path, arc_name)
+    descriptor, temporary = tempfile.mkstemp(dir=target_zip.parent, suffix='.zip.tmp')
+    os.close(descriptor)
+    try:
+        with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(source_dir):
+                for file in files:
+                    file_path = Path(root) / file
+                    arc_name = file_path.relative_to(source_dir.parent if include_parent else source_dir)
+                    zipf.write(file_path, arc_name)
+            for source, name in (extra_files or {}).items():
+                zipf.write(source, name)
+        os.chmod(temporary, 0o644)
+        os.replace(temporary, target_zip)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
     return True
 
 def export_kova_os():
@@ -57,7 +65,7 @@ def export_kova_os():
     # 2. Package site_final.zip
     site_zip = PROJECT_ROOT / "site_final.zip"
     log(f"Compiling entire site into {site_zip}...")
-    if package_zip(SITE_DIR, site_zip):
+    if package_zip(SITE_DIR, site_zip, extra_files={CONFIG_FILE: Path("config") / CONFIG_FILE.name}):
         log(f"Successfully packaged site_final.zip ({site_zip.stat().st_size / 1024:.1f} KB)")
     else:
         log("Failed to package site_final.zip", False)

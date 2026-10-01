@@ -64,5 +64,24 @@
     "Implement and test the versioned Core-to-site API.",
     "Verify one authenticated connector path with audit evidence.",
     "Migrate unique donor features before archiving any repository."
-  ]
+  ],
+  "organization_model": {
+    "area": [
+      "KOVA",
+      "Personal",
+      "Reagan",
+      "Other"
+    ],
+    "lifecycle": [
+      "ACTIVE",
+      "FINAL",
+      "REVIEW",
+      "ARCHIVE"
+    ],
+    "optional_flags": [
+      "SENSITIVE",
+      "DUPLICATE"
+    ],
+    "rule": "File type and content origin are metadata fields. Exact duplicates require content or revision evidence; source files are never moved or copied."
+  }
 }

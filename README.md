@@ -106,3 +106,9 @@ This is a dated baseline, not a permanent health guarantee. Re-run checks before
 - [`archive/`](archive/) — historical material, not current operating instructions
 
 When documents disagree, current code plus the repository map, machine-readable registry, tests, and runtime evidence take precedence.
+
+## Metadata file lifecycle
+
+`scripts/file_organizer.py` indexes source identities, versions, readable titles, lifecycle labels, sensitivity, and duplicate evidence without moving, renaming, deleting, or copying originals. Private registry and exception reports are stored outside this repository with user-only filesystem permissions.
+
+Use `config/automation_policy.v1.json` and [KOVA_FILE_ORGANIZATION.md](KOVA_FILE_ORGANIZATION.md) for the current policy and commands. The implementation can process an explicit metadata inventory; it does not itself connect every provider or scan inaccessible accounts. Live provider scheduling and private-data cutover still require separately verified authorization.

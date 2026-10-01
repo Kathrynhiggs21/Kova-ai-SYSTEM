@@ -7,6 +7,7 @@ and prepares them for organization into the Kova Master Hub structure.
 """
 
 import os
+import sys
 import json
 import hashlib
 import mimetypes
@@ -14,6 +15,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 import re
+from uuid import uuid4
+
+try:
+    from scripts.private_state import private_directory, read_private_text, validate_unlinked_path, write_private_text, write_text_at
+except ModuleNotFoundError:
+    from private_state import private_directory, read_private_text, validate_unlinked_path, write_private_text, write_text_at
 
 try:
     from google.oauth2.credentials import Credentials
@@ -21,7 +28,6 @@ try:
     from google.auth.transport.requests import Request
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaIoBaseDownload
-    import pickle
     GDRIVE_AVAILABLE = True
 except ImportError:
     GDRIVE_AVAILABLE = False
@@ -33,7 +39,7 @@ except ImportError:
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 KOVA_KEYWORDS = [
     'kova', 'kova-ai', 'kova ai', 'kovaai',
-    'purgatory', 'claude', 'multi-repo',
+    'k9va', 'kiva os', 'kiva-ai', 'purgatory', 'claude', 'multi-repo',
     'appsheet', 'webhook'
 ]
 
@@ -48,6 +54,16 @@ CATEGORIES = {
     'COM': ['email', 'meeting', 'notes', 'discussion', 'thread'],
     'RES': ['tutorial', 'guide', 'reference', 'asset', 'template']
 }
+
+
+def default_private_dir() -> Path:
+    override = (os.environ.get("KOVA_PRIVATE_STATE_DIR") or "").strip()
+    if override:
+        return Path(override).expanduser()
+    xdg_data_home = (os.environ.get("XDG_DATA_HOME") or "").strip()
+    if xdg_data_home:
+        return Path(xdg_data_home).expanduser() / "kova" / "private"
+    return Path.home() / ".local" / "share" / "kova" / "private"
 
 
 class Colors:
@@ -65,8 +81,9 @@ class Colors:
 class GoogleDriveImporter:
     """Import and analyze Kova files from Google Drive"""
 
-    def __init__(self, credentials_path: str = 'credentials.json'):
-        self.credentials_path = credentials_path
+    def __init__(self, credentials_path: Optional[str] = None):
+        self.auth_dir = default_private_dir() / 'google-drive'
+        self.credentials_path = Path(credentials_path).expanduser() if credentials_path else self.auth_dir / 'credentials.json'
         self.service = None
         self.file_inventory = []
         self.duplicates = []
@@ -83,12 +100,37 @@ class GoogleDriveImporter:
             return False
 
         creds = None
-        token_path = 'token.pickle'
+        token_path = self.auth_dir / 'token.json'
+        try:
+            validate_unlinked_path(self.auth_dir)
+            validate_unlinked_path(token_path)
+            validate_unlinked_path(self.credentials_path)
+        except PermissionError:
+            self.log("❌ Refusing linked Google Drive credential paths", Colors.RED)
+            return False
+        if self.auth_dir.is_symlink() or token_path.is_symlink():
+            self.log("❌ Refusing a linked credential directory or token file", Colors.RED)
+            return False
+        if self.auth_dir.exists() and self.auth_dir.stat().st_mode & 0o777 != 0o700:
+            self.log("❌ Google Drive credentials need a dedicated private directory", Colors.RED)
+            return False
+        try:
+            with private_directory(self.auth_dir, create=True):
+                pass
+        except (OSError, PermissionError):
+            self.log("❌ Google Drive credentials need a dedicated unlinked private directory", Colors.RED)
+            return False
 
         # Load existing credentials
-        if os.path.exists(token_path):
-            with open(token_path, 'rb') as token:
-                creds = pickle.load(token)
+        if token_path.exists():
+            try:
+                token_data = json.loads(read_private_text(token_path, restrict_permissions=True))
+                if not isinstance(token_data, dict):
+                    raise ValueError("stored token must be a JSON object")
+                creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+            except (OSError, ValueError, TypeError, AttributeError):
+                self.log("❌ Stored Google Drive token is unreadable or invalid; reconnect explicitly", Colors.RED)
+                return False
 
         # Refresh or get new credentials
         if not creds or not creds.valid:
@@ -100,13 +142,24 @@ class GoogleDriveImporter:
                     self.log("   Get credentials from: https://console.cloud.google.com/", Colors.YELLOW)
                     return False
 
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self.credentials_path, SCOPES)
+                try:
+                    client_data = json.loads(read_private_text(self.credentials_path))
+                    if not isinstance(client_data, dict):
+                        raise ValueError("client credentials must be a JSON object")
+                except (OSError, ValueError):
+                    self.log("❌ Client credentials need a private, valid JSON file", Colors.RED)
+                    return False
+                try:
+                    flow = InstalledAppFlow.from_client_config(client_data, SCOPES)
+                except (ValueError, TypeError, AttributeError):
+                    self.log("❌ Client credentials are malformed; reconnect explicitly", Colors.RED)
+                    return False
                 creds = flow.run_local_server(port=0)
 
             # Save credentials
-            with open(token_path, 'wb') as token:
-                pickle.dump(creds, token)
+            # Create privately from the first write and replace atomically.
+            # Never deserialize a legacy token.pickle from the working tree.
+            write_private_text(token_path, creds.to_json())
 
         self.service = build('drive', 'v3', credentials=creds)
         self.log("✅ Authenticated with Google Drive", Colors.GREEN)
@@ -131,7 +184,7 @@ class GoogleDriveImporter:
                     q=query,
                     pageSize=100,
                     pageToken=page_token,
-                    fields="nextPageToken, files(id, name, mimeType, size, modifiedTime, createdTime, owners, parents, webViewLink)"
+                    fields="nextPageToken, files(id, name, description, mimeType, size, modifiedTime, createdTime, owners, parents, webViewLink, md5Checksum, headRevisionId, version, appProperties)"
                 ).execute()
 
                 files = results.get('files', [])
@@ -147,8 +200,8 @@ class GoogleDriveImporter:
             return all_files
 
         except Exception as e:
-            self.log(f"❌ Error searching files: {e}", Colors.RED)
-            return []
+            self.log("❌ Drive scan failed; no snapshot was published", Colors.RED)
+            raise RuntimeError("Drive scan failed; retry before updating the registry") from None
 
     def analyze_file(self, file_info: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze a single file"""
@@ -199,6 +252,14 @@ class GoogleDriveImporter:
             'owners': file_info.get('owners', []),
             'parents': file_info.get('parents', []),
             'web_link': file_info.get('webViewLink'),
+            'description': file_info.get('description'),
+            'md5Checksum': file_info.get('md5Checksum'),
+            'headRevisionId': file_info.get('headRevisionId'),
+            'version': file_info.get('version'),
+            'appProperties': file_info.get('appProperties', {}),
+            'source': 'google_drive',
+            'content_inspected': False,
+            'sensitivity_checked': False,
             'relevance_score': min(relevance_score, 10),
             'category': category,
             'keywords_found': [kw for kw in KOVA_KEYWORDS if kw in name]
@@ -227,12 +288,12 @@ class GoogleDriveImporter:
                 by_name[name] = []
             by_name[name].append(f)
 
-        # Find exact name duplicates
+        # Same names are review candidates, not verified duplicates
         exact_duplicates = []
         for name, file_list in by_name.items():
             if len(file_list) > 1:
                 exact_duplicates.append({
-                    'type': 'exact_name',
+                    'type': 'same_name_candidate',
                     'name': name,
                     'count': len(file_list),
                     'files': file_list
@@ -253,7 +314,7 @@ class GoogleDriveImporter:
                         'files': by_name[name1] + by_name[name2]
                     })
 
-        self.log(f"  Found {len(exact_duplicates)} exact name duplicates", Colors.YELLOW)
+        self.log(f"  Found {len(exact_duplicates)} same-name review candidates", Colors.YELLOW)
         self.log(f"  Found {len(similar_duplicates)} similar name duplicates", Colors.YELLOW)
 
         return exact_duplicates + similar_duplicates
@@ -332,8 +393,8 @@ class GoogleDriveImporter:
         self.log(f"\n🔁 Duplicates Found: {len(duplicates)}", Colors.BOLD)
         if duplicates:
             for dup in duplicates[:10]:  # Show first 10
-                if dup['type'] == 'exact_name':
-                    self.log(f"  Exact: '{dup['name']}' ({dup['count']} copies)", Colors.YELLOW)
+                if dup['type'] == 'same_name_candidate':
+                    self.log(f"  Same name: '{dup['name']}' ({dup['count']} candidates)", Colors.YELLOW)
                 else:
                     self.log(f"  Similar: {dup['similarity']:.0%} - '{dup['name1']}' & '{dup['name2']}'", Colors.YELLOW)
 
@@ -345,17 +406,17 @@ class GoogleDriveImporter:
 
         low_relevance = sum(1 for f in analyzed_files if f['relevance_score'] < 5)
         if low_relevance > 0:
-            self.log(f"  • Review {low_relevance} low-relevance files for deletion", Colors.CYAN)
+            self.log(f"  • Review {low_relevance} low-relevance files; do not delete automatically", Colors.CYAN)
 
         if duplicates:
-            self.log(f"  • Resolve {len(duplicates)} duplicate file groups", Colors.CYAN)
+            self.log(f"  • Verify {len(duplicates)} possible duplicate groups with hashes or revision evidence", Colors.CYAN)
 
         unknown_cat = category_counts.get('UNKNOWN', 0)
         if unknown_cat > 0:
             self.log(f"  • Categorize {unknown_cat} unknown files", Colors.CYAN)
 
-        self.log(f"  • Move questionable files to Purgatory folder", Colors.CYAN)
-        self.log(f"  • Archive files older than 6 months", Colors.CYAN)
+        self.log(f"  • Mark unclear files REVIEW in the metadata registry", Colors.CYAN)
+        self.log(f"  • Archive only when a replacement or explicit decision is recorded", Colors.CYAN)
 
     def format_size(self, size: int) -> str:
         """Format file size"""
@@ -365,42 +426,42 @@ class GoogleDriveImporter:
             size /= 1024.0
         return f"{size:.1f} TB"
 
-    def save_inventory(self, analyzed_files: List[Dict[str, Any]], duplicates: List[Dict[str, Any]]):
+    def save_inventory(
+        self,
+        analyzed_files: List[Dict[str, Any]],
+        duplicates: List[Dict[str, Any]],
+        output_dir: Optional[Path] = None,
+    ):
         """Save inventory to JSON"""
-        output_dir = Path(__file__).parent.parent / 'kova_file_inventory'
-        output_dir.mkdir(exist_ok=True)
-
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = output_dir or (default_private_dir() / 'inventory')
+        validate_unlinked_path(output_dir)
+        if output_dir.is_symlink() or (output_dir.exists() and output_dir.stat().st_mode & 0o777 != 0o700):
+            raise PermissionError("inventory output requires a dedicated private directory")
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex
 
         # Save analyzed files
         inventory_file = output_dir / f'inventory_{timestamp}.json'
-        with open(inventory_file, 'w') as f:
-            json.dump(analyzed_files, f, indent=2)
-
         # Save duplicates
         duplicates_file = output_dir / f'duplicates_{timestamp}.json'
-        with open(duplicates_file, 'w') as f:
-            json.dump(duplicates, f, indent=2)
-
         # Save summary
         summary_file = output_dir / f'summary_{timestamp}.txt'
-        with open(summary_file, 'w') as f:
-            f.write(f"Kova File Analysis Summary\n")
-            f.write(f"Generated: {datetime.now().isoformat()}\n")
-            f.write(f"\nTotal Files: {len(analyzed_files)}\n")
-            f.write(f"Total Duplicates: {len(duplicates)}\n")
-            f.write(f"\nFiles by Category:\n")
-            category_counts = {}
-            for file in analyzed_files:
-                cat = file['category']
-                category_counts[cat] = category_counts.get(cat, 0) + 1
-            for cat, count in sorted(category_counts.items()):
-                f.write(f"  {cat}: {count}\n")
+        category_counts = {}
+        for file in analyzed_files:
+            cat = file['category']
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+        summary = (f"Kova File Analysis Summary\nGenerated: {datetime.now().isoformat()}\n"
+                   f"\nTotal Files: {len(analyzed_files)}\nTotal Duplicates: {len(duplicates)}\n\nFiles by Category:\n")
+        summary += ''.join(f"  {cat}: {count}\n" for cat, count in sorted(category_counts.items()))
+        with private_directory(output_dir, create=True) as directory:
+            write_text_at(directory, inventory_file.name, json.dumps(analyzed_files, indent=2))
+            write_text_at(directory, duplicates_file.name, json.dumps(duplicates, indent=2))
+            write_text_at(directory, summary_file.name, summary)
 
         self.log(f"\n💾 Inventory saved:", Colors.BOLD)
         self.log(f"  Files: {inventory_file}", Colors.GREEN)
         self.log(f"  Duplicates: {duplicates_file}", Colors.GREEN)
         self.log(f"  Summary: {summary_file}", Colors.GREEN)
+        return inventory_file
 
     def run(self):
         """Main execution"""
@@ -411,13 +472,13 @@ class GoogleDriveImporter:
         # Authenticate
         if not self.authenticate():
             self.log("\n❌ Authentication failed. Exiting.", Colors.RED)
-            return
+            raise RuntimeError("Drive authentication failed; no snapshot was published")
 
         # Search files
         files = self.search_kova_files()
         if not files:
             self.log("\n⚠️  No files found", Colors.YELLOW)
-            return
+            return self.save_inventory([], [])
 
         # Analyze files
         self.log(f"\n🔍 Analyzing {len(files)} files...", Colors.BOLD)
@@ -434,9 +495,10 @@ class GoogleDriveImporter:
         self.generate_report(analyzed_files, duplicates)
 
         # Save inventory
-        self.save_inventory(analyzed_files, duplicates)
+        inventory_file = self.save_inventory(analyzed_files, duplicates)
 
         self.log("\n✅ Analysis complete!", Colors.GREEN)
+        return inventory_file
 
 
 def main():
@@ -444,12 +506,17 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description='Import and analyze Kova files from Google Drive')
-    parser.add_argument('--credentials', default='credentials.json', help='Path to Google credentials file')
+    parser.add_argument('--credentials', help='Explicit client credentials path; default is the private Google Drive state directory')
     args = parser.parse_args()
 
     importer = GoogleDriveImporter(credentials_path=args.credentials)
-    importer.run()
+    try:
+        importer.run()
+    except RuntimeError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

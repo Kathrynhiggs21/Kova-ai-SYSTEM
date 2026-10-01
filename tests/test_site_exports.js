@@ -14,6 +14,7 @@ function loadApp(responses) {
   const links = [];
   const logs = [];
   const revokedUrls = [];
+  const elements = new Map();
   let responseIndex = 0;
 
   const context = {
@@ -38,17 +39,22 @@ function loadApp(responses) {
     },
     document: {
       addEventListener: () => {},
-      getElementById: () => ({
-        appendChild() {},
-        scrollHeight: 0,
-        scrollTop: 0,
-      }),
+      getElementById: (id) => {
+        if (!elements.has(id)) elements.set(id, {
+          children: [],
+          appendChild(child) { this.children.push(child); },
+          scrollHeight: 0,
+          scrollTop: 0,
+        });
+        return elements.get(id);
+      },
       createTextNode: (text) => ({ text }),
       createElement: (tag) => {
         const element = {
           tag,
           clickCount: 0,
-          appendChild() {},
+          children: [],
+          appendChild(child) { this.children.push(child); },
           click() {
             this.clickCount += 1;
           },
@@ -76,8 +82,27 @@ function loadApp(responses) {
   vm.runInContext(source, context);
   context.logToConsole = (message, color) => logs.push({ message, color });
 
-  return { context, fetchCalls, links, logs, revokedUrls };
+  return { context, fetchCalls, links, logs, revokedUrls, elements };
 }
+
+test("reference header reflects an unverified configured system", () => {
+  const app = loadApp([]);
+  app.context.renderSystemStatus({ system_status: "architecture_aligned_runtime_integrations_unverified" });
+  assert.equal(app.elements.get("badge-status").textContent, "Needs verification");
+  assert.match(app.elements.get("system-status-detail").textContent, /provider connections still need verification/);
+  app.context.renderSystemStatus({ system_status: "blocked" });
+  assert.equal(app.elements.get("badge-status").textContent, "Blocked");
+  assert.match(app.elements.get("badge-status").className, /text-rose-400/);
+});
+
+test("digest uses the same configuration snapshot and does not invent live telemetry", () => {
+  const app = loadApp([]);
+  app.context.renderDigest({ dashboard_date: "2026-10-01", blockers: ["Authentication not verified"] });
+  const digest = app.elements.get("digest-content");
+  assert.equal(digest.children[0].textContent, "KOVA configuration snapshot — 2026-10-01");
+  assert.match(digest.children[1].textContent, /live digest and current calendar reads have not been verified/);
+  assert.equal(digest.children[2].children[0].textContent, "Authentication not verified");
+});
 
 test("downloads the API archive without requesting the fallback", async () => {
   const app = loadApp([{ ok: true, status: 200, blob: zipBlob() }]);
@@ -183,5 +208,20 @@ test("export buttons describe retrieval rather than compilation", async () => {
   assert.doesNotMatch(
     app.logs.map(({ message }) => message).join(" "),
     /compil/i
+  );
+});
+
+test("maps new dashboard integration evidence states to non-blocked labels", () => {
+  const app = loadApp([]);
+
+  assert.equal(app.context.describeIntegrationStatus("partial").label, "Partial");
+  assert.equal(app.context.describeIntegrationStatus("unverified").label, "Unverified");
+  assert.equal(
+    app.context.describeIntegrationStatus("implemented_not_production_verified").label,
+    "Implemented"
+  );
+  assert.equal(
+    app.context.describeIntegrationStatus("disabled_until_named_gap").label,
+    "Optional"
   );
 });

@@ -67,28 +67,74 @@ const fallbackDashboardData = {
     "Implement and test the versioned Core-to-site API.",
     "Verify one authenticated connector path with audit evidence.",
     "Migrate unique donor features before archiving any repository."
-  ]
+  ],
+  "organization_model": {
+    "area": [
+      "KOVA",
+      "Personal",
+      "Reagan",
+      "Other"
+    ],
+    "lifecycle": [
+      "ACTIVE",
+      "FINAL",
+      "REVIEW",
+      "ARCHIVE"
+    ],
+    "optional_flags": [
+      "SENSITIVE",
+      "DUPLICATE"
+    ],
+    "rule": "File type and content origin are metadata fields. Exact duplicates require content or revision evidence; source files are never moved or copied."
+  }
 };
 
-// Fallback Digest text
-const fallbackDigestText = `<h3>KOVA Architecture Status — 2026-09-15</h3>
-<p><strong>Status:</strong> The Core and application repository roles are aligned. External integrations remain disabled or unverified until production evidence exists.</p>
-
-<h4 class="font-bold text-indigo-400 mt-3">Project Pulse</h4>
-<div class="space-y-1.5 text-slate-300">
-  <p><strong>KOVA Core:</strong> Owns backend orchestration, MCP, connectors, automation, data, security, files, and observability.</p>
-  <p><strong>KOVA application:</strong> <code>kovaos-site</code> is the sole canonical authenticated application for <code>kovaos.com</code>.</p>
-</div>`;
-
-// Calendar Agenda Fallback
+// The reference dashboard holds configuration, not verified live provider data.
+let currentDashboardData = fallbackDashboardData;
 const fallbackCalendarEvents = [];
+
+function describeSystemStatus(status) {
+  const value = String(status || "unknown");
+  return {
+    label: value === "blocked" ? "Blocked" : "Needs verification",
+    badgeClass: value === "blocked"
+      ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+      : "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    detail: `Configuration status: ${value.replaceAll("_", " ")}. Production routes and provider connections still need verification.`
+  };
+}
+
+function renderSystemStatus(data) {
+  const status = describeSystemStatus(data.system_status);
+  document.getElementById("badge-status").textContent = status.label;
+  document.getElementById("badge-status").className = `px-2 py-0.5 text-[10px] font-semibold rounded-full ${status.badgeClass}`;
+  document.getElementById("system-status-detail").textContent = status.detail;
+}
+
+function renderDigest(data) {
+  const target = document.getElementById("digest-content");
+  target.innerHTML = "";
+  const heading = document.createElement("h3");
+  heading.textContent = `KOVA configuration snapshot — ${data.dashboard_date || "date unknown"}`;
+  const detail = document.createElement("p");
+  detail.textContent = "A live digest and current calendar reads have not been verified. Check the canonical web application for authenticated work.";
+  target.appendChild(heading);
+  target.appendChild(detail);
+  const blockers = document.createElement("ul");
+  (data.blockers || []).forEach(blocker => {
+    const row = document.createElement("li");
+    row.textContent = blocker;
+    blockers.appendChild(row);
+  });
+  target.appendChild(blockers);
+}
 
 // Memory list
 const fallbackMemory = [
   { key: "Preferred Timezone", val: "America/New_York (Eastern Time)" },
-  { key: "Access Model", val: "Private by default" },
+  { key: "Primary Owner", val: "Katy (Kathrynhiggs21)" },
   { key: "Orchestrator Path", val: "Kova-ai-SYSTEM" },
-  { key: "Deployment Goal", val: "kovaos.com" },
+  { key: "Deployment Goal", val: "kovaos.com via the canonical kovaos-site application" },
   { key: "Tone and Voice", val: "Slightly playful, helpful, says 'You clearly need me.'" }
 ];
 
@@ -119,13 +165,14 @@ async function loadDashboardData() {
   let data = fallbackDashboardData;
   
   try {
-    const res = await fetch("../config/dashboard.v1.json");
-    if (res.ok) {
-      const liveData = await res.json();
-      data = { ...fallbackDashboardData, ...liveData };
-      logToConsole("Loaded dashboard configuration from live config/dashboard.v1.json", "emerald");
-    } else {
-      logToConsole("Using local high-fidelity fallback dashboard data.", "slate");
+    for (const configPath of ["./config/dashboard.v1.json", "../config/dashboard.v1.json"]) {
+      const res = await fetch(configPath);
+      if (res.ok) {
+        const liveData = await res.json();
+        data = { ...fallbackDashboardData, ...liveData };
+        logToConsole(`Loaded dashboard configuration from ${configPath}`, "emerald");
+        break;
+      }
     }
   } catch (err) {
     logToConsole("Using localized fallback data (CORS or local mode).", "slate");
@@ -134,8 +181,68 @@ async function loadDashboardData() {
   renderDashboard(data);
 }
 
+function describeIntegrationStatus(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "canonical") {
+    return {
+      label: "Canonical",
+      badgeClass: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+      dotClass: "bg-sky-400"
+    };
+  }
+  if (normalized === "active") {
+    return {
+      label: "Active",
+      badgeClass: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+      dotClass: "bg-emerald-400"
+    };
+  }
+  if (normalized.includes("partial")) {
+    return {
+      label: "Partial",
+      badgeClass: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+      dotClass: "bg-amber-400"
+    };
+  }
+  if (normalized.includes("implemented")) {
+    return {
+      label: "Implemented",
+      badgeClass: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+      dotClass: "bg-sky-400"
+    };
+  }
+  if (normalized.includes("ready") || normalized.includes("connected")) {
+    return {
+      label: "Ready",
+      badgeClass: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+      dotClass: "bg-indigo-400 animate-pulse"
+    };
+  }
+  if (normalized.includes("unverified")) {
+    return {
+      label: "Unverified",
+      badgeClass: "bg-slate-500/10 text-slate-300 border border-slate-500/20",
+      dotClass: "bg-slate-300"
+    };
+  }
+  if (normalized.includes("disabled") || normalized.includes("optional")) {
+    return {
+      label: "Optional",
+      badgeClass: "bg-violet-500/10 text-violet-400 border border-violet-500/20",
+      dotClass: "bg-violet-400"
+    };
+  }
+  return {
+    label: "Blocked",
+    badgeClass: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
+    dotClass: "bg-rose-400"
+  };
+}
+
 // Render dynamic elements to DOM
 function renderDashboard(data) {
+  currentDashboardData = data;
+  renderSystemStatus(data);
   // Update header tagline
   if (data.tagline) {
     document.getElementById("tagline").textContent = data.tagline;
@@ -144,6 +251,9 @@ function renderDashboard(data) {
   // Render Calendar Agenda (Today card)
   const agendaList = document.getElementById("calendar-agenda-list");
   agendaList.innerHTML = "";
+  if (fallbackCalendarEvents.length === 0) {
+    agendaList.textContent = "No verified calendar feed is connected to this reference dashboard.";
+  }
   fallbackCalendarEvents.forEach(evt => {
     const item = document.createElement("div");
     item.className = "flex justify-between items-center bg-slate-900/60 p-3 rounded-lg border border-slate-800 text-xs";
@@ -185,8 +295,7 @@ function renderDashboard(data) {
   });
   
   // Render Daily Digest Content
-  const digestEl = document.getElementById("digest-content");
-  digestEl.innerHTML = fallbackDigestText;
+  renderDigest(data);
   
   // Render Integrations Grid
   const integrationsGrid = document.getElementById("integrations-grid");
@@ -230,20 +339,10 @@ function renderDashboard(data) {
       dot.className = "w-1 h-1 rounded-full";
       
       const label = document.createElement("span");
-      
-      if (status === "active") {
-        badge.className += " bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-        dot.className += " bg-emerald-400";
-        label.textContent = "Active";
-      } else if (status.includes("ready") || status.includes("connected")) {
-        badge.className += " bg-indigo-500/10 text-indigo-400 border border-indigo-500/20";
-        dot.className += " bg-indigo-400 animate-pulse";
-        label.textContent = "Ready";
-      } else {
-        badge.className += " bg-rose-500/10 text-rose-400 border border-rose-500/20";
-        dot.className += " bg-rose-400";
-        label.textContent = "Blocked";
-      }
+      const statusView = describeIntegrationStatus(status);
+      badge.className += ` ${statusView.badgeClass}`;
+      dot.className += ` ${statusView.dotClass}`;
+      label.textContent = statusView.label;
       
       badge.appendChild(dot);
       badge.appendChild(label);
@@ -335,10 +434,10 @@ function toggleAction(id) {
   const label = checkbox.nextElementSibling;
   if (checkbox.checked) {
     label.classList.add("line-through", "text-slate-500");
-    logToConsole(`Completed task: "${label.textContent}"`, "emerald");
+    logToConsole(`Marked locally: "${label.textContent}". This checklist is not saved to the task service.`, "emerald");
   } else {
     label.classList.remove("line-through", "text-slate-500");
-    logToConsole(`Reopened task: "${label.textContent}"`, "indigo");
+    logToConsole(`Unmarked locally: "${label.textContent}". This checklist is not saved to the task service.`, "indigo");
   }
 }
 
@@ -367,19 +466,10 @@ function logToConsole(msg, color = "slate") {
   logsEl.scrollTop = logsEl.scrollHeight;
 }
 
-// Trigger Daily Digest mock regeneration
-function regenerateDigest() {
-  logToConsole("Triggering Daily Digest engine update...", "amber");
-  setTimeout(() => {
-    logToConsole("Google Calendar data parsed successfully.", "emerald");
-  }, 600);
-  setTimeout(() => {
-    logToConsole("Daily Digest regenerated successfully and dispatched to active routes.", "emerald");
-    const digestEl = document.getElementById("digest-content");
-    digestEl.innerHTML = `<h3>KOVA Daily Digest — 2026-07-23 (REGENERATED)</h3>
-    <p class="text-emerald-400 font-bold mb-2">✓ Successfully updated with latest live telemetry!</p>
-    ${fallbackDigestText}`;
-  }, 1200);
+// Refresh configuration without claiming a provider read or dispatch.
+async function regenerateDigest() {
+  await loadDashboardData();
+  logToConsole("Configuration snapshot refreshed. Live digest generation is not connected.", "amber");
 }
 
 // Console Command submission
@@ -397,19 +487,19 @@ function submitConsoleCommand() {
   logToConsole(`User: ${cmd}`, "slate");
   inputEl.value = "";
   
-  // Simulate responses based on commands
+  // Show local configuration guidance; this does not execute commands.
   setTimeout(() => {
     const lower = cmd.toLowerCase();
     if (lower.includes("hello") || lower.includes("hi")) {
-      logToConsole("KOVA: Ready. How can I help organize things today?", "indigo");
+      logToConsole("KOVA: Hello Katy. How can I help organize your life today?", "indigo");
     } else if (lower.includes("status")) {
-      logToConsole("KOVA: System status: ACTIVE. Integrations partially active. 6 blockers identified.", "indigo");
+      logToConsole(`KOVA: ${describeSystemStatus(currentDashboardData.system_status).detail}`, "indigo");
     } else if (lower.includes("export") || lower.includes("zip")) {
       logToConsole("KOVA: You can download the final website ZIP or images ZIP from the top bar actions.", "indigo");
     } else if (lower.includes("priority")) {
-      logToConsole("KOVA: Current top priority is building the Dashboard v1 shell.", "indigo");
+      logToConsole(`KOVA: ${currentDashboardData.top_priorities?.[0]?.title || "No priority has been configured."}`, "indigo");
     } else {
-      logToConsole("KOVA: Understood. Action logged. You clearly need me.", "indigo");
+      logToConsole("KOVA: Command execution is not connected on this reference dashboard.", "indigo");
     }
   }, 650);
 }
