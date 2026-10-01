@@ -55,6 +55,10 @@ function loadApp(responses) {
           clickCount: 0,
           children: [],
           appendChild(child) { this.children.push(child); },
+          setAttribute(name, value) {
+            this[name] = value;
+          },
+          addEventListener() {},
           click() {
             this.clickCount += 1;
           },
@@ -223,4 +227,49 @@ test("maps new dashboard integration evidence states to non-blocked labels", () 
     app.context.describeIntegrationStatus("disabled_until_named_gap").label,
     "Optional"
   );
+});
+
+test("renders safe external integration source links", () => {
+  const app = loadApp([]);
+  app.context.renderDashboard({
+    system_status: "architecture_aligned_runtime_integrations_unverified",
+    top_priorities: [],
+    blockers: [],
+    next_actions: [],
+    integrations: [
+      {
+        name: "KOVA Voice (Manus Export)",
+        status: "unverified",
+        evidence: "External surface",
+        next_action: "Review",
+        source_url: "https://kovavoice-2deymnxc.manus.space",
+      },
+    ],
+  });
+
+  assert.equal(app.links.length, 1);
+  assert.equal(app.links[0].href, "https://kovavoice-2deymnxc.manus.space");
+  assert.equal(app.links[0].target, "_blank");
+  assert.equal(app.links[0].rel, "noopener noreferrer");
+});
+
+test("ignores unsafe integration source links", () => {
+  const app = loadApp([]);
+  app.context.renderDashboard({
+    system_status: "architecture_aligned_runtime_integrations_unverified",
+    top_priorities: [],
+    blockers: [],
+    next_actions: [],
+    integrations: [
+      {
+        name: "Unsafe Source",
+        status: "unverified",
+        evidence: "Untrusted input",
+        next_action: "Reject",
+        source_url: "javascript:alert(1)",
+      },
+    ],
+  });
+
+  assert.equal(app.links.length, 0);
 });

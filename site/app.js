@@ -54,19 +54,63 @@ const fallbackDashboardData = {
       "status": "disabled_or_unverified",
       "evidence": "No repository evidence currently proves production health for optional providers.",
       "next_action": "Enable one least-privilege connector only after authentication, health, audit, and revocation tests pass."
+    },
+    {
+      "name": "KOVA Voice (Manus Export)",
+      "status": "unverified",
+      "evidence": "External Manus-hosted surface provided for consolidation into canonical KOVA web flows.",
+      "next_action": "Inventory unique capabilities and migrate required UX into kovaos-site with verified Core contracts.",
+      "source_url": "https://kovavoice-2deymnxc.manus.space"
+    },
+    {
+      "name": "KOVA Control (Manus Export A)",
+      "status": "unverified",
+      "evidence": "External Manus-hosted control surface provided for migration review.",
+      "next_action": "Compare against canonical command-center requirements and promote only proven features.",
+      "source_url": "https://kovacontrol-7lvznhvx.manus.space"
+    },
+    {
+      "name": "KOVA Control (Manus Export B)",
+      "status": "unverified",
+      "evidence": "Second Manus-hosted control variant needs deduplication and ownership review.",
+      "next_action": "Select one canonical behavior set and archive duplicate variants after migration evidence.",
+      "source_url": "https://kovacontrol-wadqboyv.manus.space"
+    },
+    {
+      "name": "KOVA Integrate (Manus Export)",
+      "status": "unverified",
+      "evidence": "External integration-focused Manus surface is listed but not runtime-verified in KOVA.",
+      "next_action": "Map each integration feature to connector-tray states and verify one end-to-end path.",
+      "source_url": "https://kovaintegrate-kywzhjdn.manus.space"
+    },
+    {
+      "name": "AI World Library (Manus Export)",
+      "status": "unverified",
+      "evidence": "AI World-facing Manus endpoint is discoverable but not promoted as canonical runtime.",
+      "next_action": "Link by stable references only; avoid mirrored storage and verify provenance handling.",
+      "source_url": "https://aiworldlib-nezz2efp.manus.space"
+    },
+    {
+      "name": "KOVA OS ChatGPT Site",
+      "status": "unverified",
+      "evidence": "Alternate hosted site URL was provided and requires canonical ownership and parity review.",
+      "next_action": "Treat as migration input and keep kovaos-site as canonical production web authority.",
+      "source_url": "https://kova-os.kathrynmarsh.chatgpt.site"
     }
   ],
   "blockers": [
     "No verified production Core-to-site API contract.",
     "No proof-backed end-to-end connector path.",
     "Durable run history, queueing, retries, and connector telemetry remain incomplete.",
-    "The duplicate legacy Core Vercel project still creates configuration-drift risk."
+    "The duplicate legacy Core Vercel project still creates configuration-drift risk.",
+    "Domain typos and external Manus surfaces still need canonical redirect and migration handling for kovaos.com."
   ],
   "next_actions": [
     "Merge architecture changes only after exact-head CI and review pass.",
     "Implement and test the versioned Core-to-site API.",
     "Verify one authenticated connector path with audit evidence.",
-    "Migrate unique donor features before archiving any repository."
+    "Migrate unique donor features before archiving any repository.",
+    "Inventory Manus-derived pages and map each required feature into kovaos-site routes with evidence."
   ],
   "organization_model": {
     "area": [
@@ -228,6 +272,17 @@ function describeIntegrationStatus(status) {
   };
 }
 
+function normalizeIntegrationSourceUrl(sourceUrl) {
+  const raw = String(sourceUrl || "").trim();
+  if (!raw) {
+    return null;
+  }
+  if (!/^https?:\/\/[^\s]+$/i.test(raw)) {
+    return null;
+  }
+  return raw;
+}
+
 // Render dynamic elements to DOM
 function renderDashboard(data) {
   currentDashboardData = data;
@@ -306,6 +361,11 @@ function renderDashboard(data) {
     // Build DOM safely without innerHTML injection for user data
     const img = document.createElement("img");
     img.src = svgIcon;
+    img.onerror = () => {
+      if (img.src !== "images/kova_logo.svg") {
+        img.src = "images/kova_logo.svg";
+      }
+    };
     img.alt = "";
     img.className = "w-8 h-8 p-1.5 bg-slate-800 rounded-lg text-slate-300";
     
@@ -355,6 +415,23 @@ function renderDashboard(data) {
     nextLabel.textContent = "Next:";
     actionP.appendChild(nextLabel);
     actionP.appendChild(document.createTextNode(" " + integration.next_action));
+
+    const sourceUrl = normalizeIntegrationSourceUrl(integration.source_url);
+    if (sourceUrl) {
+      const sourceP = document.createElement("p");
+      sourceP.className = "text-[10px] text-slate-400 mt-1";
+      sourceP.appendChild(document.createTextNode("Source: "));
+
+      const sourceLink = document.createElement("a");
+      sourceLink.href = sourceUrl;
+      sourceLink.target = "_blank";
+      sourceLink.rel = "noopener noreferrer";
+      sourceLink.className = "text-indigo-300 underline underline-offset-2 break-all";
+      sourceLink.textContent = sourceUrl;
+      sourceP.appendChild(sourceLink);
+      actionP.appendChild(document.createElement("br"));
+      actionP.appendChild(sourceP);
+    }
     
     contentDiv.appendChild(headerDiv);
     contentDiv.appendChild(evidenceP);
