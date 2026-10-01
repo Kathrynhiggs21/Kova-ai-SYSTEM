@@ -67,11 +67,19 @@ python3 -m pip install -r kova-ai/requirements.txt
 
 ./verify_platform.sh
 python3 scripts/validate_config.py
+python3 scripts/audit_repo_governance.py
 PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v
 python3 -m compileall -q kova-ai/app
 node --check site/app.js
 node --test tests/test_site_exports.js
 ```
+
+`scripts/audit_repo_governance.py` checks each repository listed in `kova_repos_config.json` for:
+- `.mergify.yml` with queue injection settings;
+- at least one active ruleset targeting `main`; and
+- legacy misleading ruleset names such as `Mergify`.
+
+For active runtime repositories (enabled `core`/`frontend` entries), missing governance is treated as a failure. If GitHub access is blocked or insufficient, the script exits with a blocked status so you can fix token/repository access first.
 
 Do not put real secrets in command history or test fixtures. If a credentialed integration cannot be exercised safely, report it as unverified rather than substituting a mock success.
 

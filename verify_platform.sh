@@ -106,6 +106,21 @@ else
     missing_files+=("configuration validator tests")
 fi
 
+echo ""
+echo "🔐 Checking cross-repository Mergify/ruleset governance..."
+if python3 scripts/audit_repo_governance.py; then
+    echo "   ✅ Cross-repository governance audit passed"
+else
+    audit_exit_code=$?
+    if [ "$audit_exit_code" -eq 3 ]; then
+        echo "   ⚠️  Cross-repository governance audit blocked by GitHub access"
+        echo "      Resolve repository visibility/token access and rerun scripts/audit_repo_governance.py"
+    else
+        echo "   ❌ Cross-repository governance audit failed"
+        missing_files+=("cross-repository governance audit")
+    fi
+fi
+
 # Check Docker configuration
 echo ""
 echo "🐳 Checking Docker configuration..."
