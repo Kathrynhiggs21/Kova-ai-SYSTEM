@@ -16,6 +16,32 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GoogleDriveImportTests(unittest.TestCase):
+    def test_non_object_tokens_fail_closed_before_provider_access(self):
+        for content in ("null", "[]", '"token"', "42"):
+            with self.subTest(content=content), tempfile.TemporaryDirectory() as directory:
+                with mock.patch.dict(MODULE.os.environ, {"KOVA_PRIVATE_STATE_DIR": directory}):
+                    importer = MODULE.GoogleDriveImporter()
+                importer.auth_dir.mkdir(mode=0o700)
+                token = importer.auth_dir / "token.json"
+                token.write_text(content)
+                with mock.patch.object(MODULE, "GDRIVE_AVAILABLE", True), mock.patch.object(MODULE, "Credentials", create=True) as credentials:
+                    self.assertFalse(importer.authenticate())
+                    credentials.from_authorized_user_info.assert_not_called()
+                self.assertEqual(token.read_text(), content)
+
+    def test_malformed_provider_token_errors_return_false(self):
+        for error in (TypeError("malformed"), AttributeError("malformed")):
+            with self.subTest(error=type(error).__name__), tempfile.TemporaryDirectory() as directory:
+                with mock.patch.dict(MODULE.os.environ, {"KOVA_PRIVATE_STATE_DIR": directory}):
+                    importer = MODULE.GoogleDriveImporter()
+                importer.auth_dir.mkdir(mode=0o700)
+                token = importer.auth_dir / "token.json"
+                token.write_text("{}")
+                with mock.patch.object(MODULE, "GDRIVE_AVAILABLE", True), mock.patch.object(MODULE, "Credentials", create=True) as credentials:
+                    credentials.from_authorized_user_info.side_effect = error
+                    self.assertFalse(importer.authenticate())
+                self.assertEqual(token.read_text(), "{}")
+
     def test_successful_empty_scan_publishes_a_new_empty_snapshot(self):
         importer = MODULE.GoogleDriveImporter()
         with tempfile.TemporaryDirectory() as directory, \

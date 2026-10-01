@@ -125,8 +125,10 @@ class GoogleDriveImporter:
         if token_path.exists():
             try:
                 token_data = json.loads(read_private_text(token_path, restrict_permissions=True))
+                if not isinstance(token_data, dict):
+                    raise ValueError("stored token must be a JSON object")
                 creds = Credentials.from_authorized_user_info(token_data, SCOPES)
-            except (OSError, ValueError):
+            except (OSError, ValueError, TypeError, AttributeError):
                 self.log("❌ Stored Google Drive token is unreadable or invalid; reconnect explicitly", Colors.RED)
                 return False
 
@@ -142,10 +144,16 @@ class GoogleDriveImporter:
 
                 try:
                     client_data = json.loads(read_private_text(self.credentials_path))
+                    if not isinstance(client_data, dict):
+                        raise ValueError("client credentials must be a JSON object")
                 except (OSError, ValueError):
                     self.log("❌ Client credentials need a private, valid JSON file", Colors.RED)
                     return False
-                flow = InstalledAppFlow.from_client_config(client_data, SCOPES)
+                try:
+                    flow = InstalledAppFlow.from_client_config(client_data, SCOPES)
+                except (ValueError, TypeError, AttributeError):
+                    self.log("❌ Client credentials are malformed; reconnect explicitly", Colors.RED)
+                    return False
                 creds = flow.run_local_server(port=0)
 
             # Save credentials
