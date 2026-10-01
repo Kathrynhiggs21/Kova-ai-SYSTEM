@@ -14,6 +14,27 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_supplied_version_keys_cannot_bypass_evidence_or_collapse_identities(self):
+        with self.assertRaisesRegex(ValueError, "version evidence"):
+            MODULE.version_key({"source": "test", "id": "a", "version_key": "arbitrary"})
+        with self.assertRaisesRegex(ValueError, "does not match"):
+            MODULE.version_key({"source": "test", "id": "a", "version": "1", "version_key": "arbitrary"})
+        valid = {"source": "test", "id": "a", "version": "1"}
+        key = MODULE.version_key(valid)
+        self.assertEqual(MODULE.version_key({**valid, "version_key": key}), key)
+
+    def test_canonical_ties_across_source_namespaces_are_order_independent(self):
+        items = [
+            {"source": "google_drive", "id": "same", "name": "A", "md5Checksum": "same"},
+            {"source": "github", "id": "same", "name": "B", "md5Checksum": "same"},
+        ]
+        def winner(payload):
+            return next(r['version_key'] for r in payload if 'DUPLICATE' not in r['flags'])
+        initial = MODULE.build_registry(items)
+        reversed_rows = MODULE.build_registry(list(reversed(items)))
+        self.assertEqual(winner(initial), winner(reversed_rows))
+        self.assertEqual(winner(initial), winner(MODULE.build_registry_payload(initial)['items']))
+
     def test_connector_identity_requires_namespace_and_separates_same_ids(self):
         with self.assertRaisesRegex(ValueError, "source namespace"):
             MODULE.version_key({"id": "same", "version": "1"})

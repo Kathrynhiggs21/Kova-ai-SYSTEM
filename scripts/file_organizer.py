@@ -257,14 +257,15 @@ def version_key(file_info: dict[str, Any]) -> str:
     if not re.fullmatch(r"[a-z][a-z0-9_.-]*", source) or source == "unknown":
         raise ValueError("inventory item needs an explicit source namespace")
     file_info["source"] = source
-    if file_info.get("version_key"):
-        return str(file_info["version_key"])
     populate_version_metadata(file_info)
     revision = file_info.get("revision_id")
     if not revision:
         raise ValueError(f"inventory item needs version evidence for {source_identity(file_info)}")
     raw = f"{source}|{source_identity(file_info)}|{revision}"
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    derived = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    if file_info.get("version_key") and str(file_info["version_key"]) != derived:
+        raise ValueError("supplied version key does not match source and revision evidence")
+    return derived
 
 
 def exact_duplicate_key(file_info: dict[str, Any]) -> str | None:
@@ -310,7 +311,7 @@ def canonical_rank(file_info: dict[str, Any]) -> tuple[int, int, int, float, str
     return selection_rank(
         file_info.get("canonical"), file_info.get("verified"), lifecycle,
         file_info.get("modified") or file_info.get("modifiedTime"),
-        source_identity(file_info),
+        version_key(file_info),
     )
 
 
@@ -544,7 +545,7 @@ def reclassify_exact_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, An
                 rows[idx].get("verification", {}).get("verified"),
                 rows[idx].get("lifecycle"),
                 rows[idx].get("version_evidence", {}).get("modified"),
-                rows[idx].get("source_id"),
+                rows[idx].get("version_key"),
             ),
         )
         for index in indexes:

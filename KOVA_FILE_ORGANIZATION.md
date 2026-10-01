@@ -33,9 +33,7 @@ The legacy Zapier starter-action pack is retained only as historical setup refer
 ## Local registry builder
 
 ```bash
-python3 scripts/file_organizer.py \
-  --inventory path/to/inventory.json \
-  --registry path/to/status_registry.json
+python3 scripts/file_organizer.py --inventory path/to/inventory.json
 ```
 
 Legacy positional paths and `--execute` are accepted only to prevent accidental breakage; they are ignored and never move governed files.
