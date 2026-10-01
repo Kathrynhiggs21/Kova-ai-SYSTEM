@@ -339,8 +339,10 @@ def likely_duplicate_key(file_info: dict[str, Any], title: str) -> str:
 def comparable_digest_conflict(left: dict[str, Any], right: dict[str, Any]) -> bool:
     """A shared digest algorithm with different values proves two files differ."""
     for field in ("sha256", "md5Checksum", "blob_sha", "content_hash"):
-        if left.get(field) and right.get(field) and str(left[field]).casefold() != str(right[field]).casefold():
-            return True
+        if left.get(field) and right.get(field):
+            lhs, rhs = str(left[field]), str(right[field])
+            if (lhs != rhs) if field == "content_hash" else (lhs.casefold() != rhs.casefold()):
+                return True
     return False
 
 
