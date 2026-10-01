@@ -17,6 +17,11 @@ import re
 import tempfile
 
 try:
+    from scripts.private_state import validate_unlinked_path
+except ModuleNotFoundError:
+    from private_state import validate_unlinked_path
+
+try:
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
     from google.auth.transport.requests import Request
@@ -95,6 +100,13 @@ class GoogleDriveImporter:
 
         creds = None
         token_path = self.auth_dir / 'token.json'
+        try:
+            validate_unlinked_path(self.auth_dir)
+            validate_unlinked_path(token_path)
+            validate_unlinked_path(self.credentials_path)
+        except PermissionError:
+            self.log("❌ Refusing linked Google Drive credential paths", Colors.RED)
+            return False
         if self.auth_dir.is_symlink() or token_path.is_symlink():
             self.log("❌ Refusing a linked credential directory or token file", Colors.RED)
             return False
@@ -412,6 +424,7 @@ class GoogleDriveImporter:
     ):
         """Save inventory to JSON"""
         output_dir = output_dir or (default_private_dir() / 'inventory')
+        validate_unlinked_path(output_dir)
         if output_dir.is_symlink() or (output_dir.exists() and output_dir.stat().st_mode & 0o777 != 0o700):
             raise PermissionError("inventory output requires a dedicated private directory")
         output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -420,18 +433,21 @@ class GoogleDriveImporter:
 
         # Save analyzed files
         inventory_file = output_dir / f'inventory_{timestamp}.json'
+        validate_unlinked_path(inventory_file)
         with open(inventory_file, 'w') as f:
             json.dump(analyzed_files, f, indent=2)
         os.chmod(inventory_file, 0o600)
 
         # Save duplicates
         duplicates_file = output_dir / f'duplicates_{timestamp}.json'
+        validate_unlinked_path(duplicates_file)
         with open(duplicates_file, 'w') as f:
             json.dump(duplicates, f, indent=2)
         os.chmod(duplicates_file, 0o600)
 
         # Save summary
         summary_file = output_dir / f'summary_{timestamp}.txt'
+        validate_unlinked_path(summary_file)
         with open(summary_file, 'w') as f:
             f.write(f"Kova File Analysis Summary\n")
             f.write(f"Generated: {datetime.now().isoformat()}\n")

@@ -16,6 +16,38 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GoogleDriveImportTests(unittest.TestCase):
+    def test_linked_parent_is_rejected_before_credential_access(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            target = root / 'target'
+            target.mkdir(mode=0o700)
+            alias = root / 'alias'
+            alias.symlink_to(target, target_is_directory=True)
+            with mock.patch.dict(MODULE.os.environ, {'KOVA_PRIVATE_STATE_DIR': str(alias)}):
+                importer = MODULE.GoogleDriveImporter()
+            with mock.patch.object(MODULE, 'GDRIVE_AVAILABLE', True), \
+                    mock.patch.object(MODULE, 'Credentials', create=True) as credentials:
+                self.assertFalse(importer.authenticate())
+                credentials.from_authorized_user_file.assert_not_called()
+            self.assertEqual(list(target.iterdir()), [])
+
+    def test_hardlinked_token_is_rejected_without_chmod_or_read(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with mock.patch.dict(MODULE.os.environ, {'KOVA_PRIVATE_STATE_DIR': str(root)}):
+                importer = MODULE.GoogleDriveImporter()
+            importer.auth_dir.mkdir(mode=0o700)
+            target = root / 'original.json'
+            target.write_text('{}')
+            target.chmod(0o644)
+            (importer.auth_dir / 'token.json').hardlink_to(target)
+            with mock.patch.object(MODULE, 'GDRIVE_AVAILABLE', True), \
+                    mock.patch.object(MODULE, 'Credentials', create=True) as credentials:
+                self.assertFalse(importer.authenticate())
+                credentials.from_authorized_user_file.assert_not_called()
+            self.assertEqual(target.stat().st_mode & 0o777, 0o644)
+            self.assertEqual(target.read_text(), '{}')
+
     def test_authentication_writes_private_json_and_ignores_legacy_pickle(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             state = Path(temp_dir) / 'state'

@@ -10,12 +10,13 @@ private_state_dir="${KOVA_PRIVATE_STATE_DIR:-${XDG_DATA_HOME:-$HOME/.local/share
 inventory_dir="$private_state_dir/inventory"
 legacy_inventory_dir="$project_dir/kova_file_inventory"
 registry_path="${2:-$private_state_dir/status_registry.json}"
-snapshot_mode="${3:-full-snapshot}"
+snapshot_mode="${3:-drive-snapshot}"
 snapshot_args=()
 case "$snapshot_mode" in
+  drive-snapshot) snapshot_args+=(--full-snapshot --snapshot-source google_drive) ;;
   full-snapshot) snapshot_args+=(--full-snapshot) ;;
   incremental) ;;
-  *) echo "Third argument must be full-snapshot or incremental." >&2; exit 1 ;;
+  *) echo "Third argument must be drive-snapshot, full-snapshot, or incremental." >&2; exit 1 ;;
 esac
 
 if [[ -z "$inventory_path" ]]; then

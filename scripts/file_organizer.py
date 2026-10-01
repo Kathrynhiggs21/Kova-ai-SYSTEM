@@ -17,6 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+try:
+    from scripts.private_state import validate_unlinked_path
+except ModuleNotFoundError:
+    from private_state import validate_unlinked_path
+
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_POLICY_PATH = Path(
@@ -236,7 +241,7 @@ def source_identity(file_info: dict[str, Any]) -> str:
 def populate_version_metadata(file_info: dict[str, Any]) -> None:
     """Populate revision/content metadata before deriving canonical identity."""
     local_path = file_info.get("path")
-    if local_path and not file_info.get("sha256"):
+    if local_path:
         candidate = Path(str(local_path))
         if candidate.is_file():
             digest = hashlib.sha256()
@@ -246,11 +251,13 @@ def populate_version_metadata(file_info: dict[str, Any]) -> None:
             file_info["sha256"] = digest.hexdigest()
     if not file_info.get("content_hash"):
         file_info["content_hash"] = file_info.get("sha256") or file_info.get("md5Checksum")
-    if not file_info.get("revision_id"):
-        for key in ("headRevisionId", "blob_sha", "sha256", "md5Checksum", "content_hash", "version"):
-            if file_info.get(key):
-                file_info["revision_id"] = str(file_info[key])
-                break
+    evidence_fields = ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version")
+    revision = next((str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
+    supplied = file_info.get("revision_id")
+    if supplied and (revision is None or str(supplied) != revision):
+        raise ValueError("supplied revision must match supported version evidence")
+    if revision is not None:
+        file_info["revision_id"] = revision
 
 
 def version_key(file_info: dict[str, Any]) -> str:
@@ -435,10 +442,17 @@ def merge_history(
     previous: list[dict[str, Any]],
     *,
     full_snapshot: bool = False,
+    snapshot_sources: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Retain exact-version history and prior decisions across scanner runs."""
     if full_snapshot:
-        merged = {row["version_key"]: {**row, "observed_current": False} for row in previous}
+        merged = {
+            row["version_key"]: {
+                **row,
+                "observed_current": False if snapshot_sources is None or row.get("version_evidence", {}).get("source") in snapshot_sources else row.get("observed_current", False),
+            }
+            for row in previous
+        }
     else:
         merged = {row["version_key"]: dict(row) for row in previous}
     for row in current:
@@ -565,10 +579,13 @@ def build_registry_payload(
     previous: list[dict[str, Any]] | None = None,
     *,
     full_snapshot: bool = False,
+    snapshot_sources: set[str] | None = None,
 ) -> dict[str, Any]:
     previous_rows = previous or []
+    if snapshot_sources is not None and any(row.get("version_evidence", {}).get("source") not in snapshot_sources for row in rows):
+        raise ValueError("snapshot inventory contains records outside the selected source namespaces")
     items = reclassify_exact_duplicates(
-        merge_history(rows, previous_rows, full_snapshot=full_snapshot),
+        merge_history(rows, previous_rows, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources),
     )
     generated_at = datetime.now(timezone.utc).isoformat()
     exceptions = [
@@ -597,6 +614,7 @@ def build_registry_payload(
 
 def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
     """Atomically publish private JSON with user-only filesystem permissions."""
+    output = validate_unlinked_path(output)
     parent = output.parent
     if parent.exists():
         if parent.stat().st_mode & 0o777 != 0o700:
@@ -627,12 +645,13 @@ def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
             os.unlink(temp_name)
 
 
-def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: bool = False) -> int:
+def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: bool = False, snapshot_sources: set[str] | None = None) -> int:
+    output = validate_unlinked_path(output)
     previous: list[dict[str, Any]] = []
     if output.exists():
         payload = json.loads(output.read_text(encoding="utf-8"))
         previous = payload.get("items", []) if isinstance(payload, dict) else []
-    payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot)
+    payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources)
     atomic_write_private(output, payload)
     exception_output = output.with_name(f"{output.stem}.exceptions.json")
     atomic_write_private(exception_output, payload["exceptions"])
@@ -641,7 +660,7 @@ def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: b
 
 def validate_registry_output_path(inventory: Path, registry: Path) -> Path:
     resolved_inventory = inventory.expanduser().resolve()
-    resolved_registry = registry.expanduser().resolve()
+    resolved_registry = validate_unlinked_path(registry).resolve()
     if resolved_registry == resolved_inventory:
         raise ValueError("--registry must not overwrite the input inventory")
     if resolved_registry.is_relative_to(PROJECT_DIR):
@@ -656,6 +675,7 @@ def main() -> int:
     parser.add_argument("--registry", type=Path, default=DEFAULT_REGISTRY_PATH)
     parser.add_argument("--dry-run", action="store_true", help="Print the registry without writing it")
     parser.add_argument("--full-snapshot", action="store_true", help="Inventory contains every current source; mark absent records as historical")
+    parser.add_argument("--snapshot-source", action="append", help="Limit full-snapshot expiry to this explicit source namespace; repeat for multiple sources")
     parser.add_argument("--execute", action="store_true", help="Deprecated; output is always non-destructive")
     args = parser.parse_args()
 
@@ -668,21 +688,26 @@ def main() -> int:
         parser.error("--inventory must point to a JSON file")
     try:
         registry_path = validate_registry_output_path(args.inventory, args.registry)
-    except ValueError as exc:
+    except (ValueError, PermissionError) as exc:
         parser.error(str(exc))
 
     inventory = json.loads(args.inventory.read_text(encoding="utf-8"))
     if not isinstance(inventory, list):
         parser.error("inventory must be a JSON array")
     rows = build_registry(inventory)
+    snapshot_sources = set(args.snapshot_source) if args.snapshot_source else None
+    if snapshot_sources and not args.full_snapshot:
+        parser.error("--snapshot-source requires --full-snapshot")
+    if snapshot_sources and any(not re.fullmatch(r"[a-z][a-z0-9_.-]*", source) or source == "unknown" for source in snapshot_sources):
+        parser.error("snapshot sources must be explicit normalized namespaces")
     if args.dry_run:
         previous: list[dict[str, Any]] = []
         if registry_path.exists():
             payload = json.loads(registry_path.read_text(encoding="utf-8"))
             previous = payload.get("items", []) if isinstance(payload, dict) else []
-        print(json.dumps(build_registry_payload(rows, previous, full_snapshot=args.full_snapshot), indent=2))
+        print(json.dumps(build_registry_payload(rows, previous, full_snapshot=args.full_snapshot, snapshot_sources=snapshot_sources), indent=2))
     else:
-        exception_count = write_registry(rows, registry_path, full_snapshot=args.full_snapshot)
+        exception_count = write_registry(rows, registry_path, full_snapshot=args.full_snapshot, snapshot_sources=snapshot_sources)
         print(f"Wrote {len(rows)} current metadata records to {registry_path}")
         print(f"Wrote {exception_count} review exceptions to {registry_path.with_name(registry_path.stem + '.exceptions.json')}")
     if args.base_path or args.execute:

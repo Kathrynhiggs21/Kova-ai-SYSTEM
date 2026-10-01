@@ -14,6 +14,48 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_generic_revision_cannot_stand_in_for_supported_evidence(self):
+        with self.assertRaisesRegex(ValueError, "supported version evidence"):
+            MODULE.version_key({"source": "test", "id": "a", "revision_id": "invented"})
+        with self.assertRaisesRegex(ValueError, "supported version evidence"):
+            MODULE.version_key({"source": "test", "id": "a", "revision_id": "wrong", "version": "1"})
+
+    def test_scoped_drive_snapshot_preserves_other_sources(self):
+        previous = MODULE.build_registry([
+            {"source": "google_drive", "id": "drive", "name": "Drive", "version": "1"},
+            {"source": "github", "id": "git", "name": "Git", "version": "1"},
+            {"source": "local", "id": "local", "name": "Local", "version": "1"},
+        ])
+        payload = MODULE.build_registry_payload([], previous, full_snapshot=True, snapshot_sources={"google_drive"})
+        rows = {row['source_id']: row for row in payload['items']}
+        self.assertFalse(rows['drive']['observed_current'])
+        self.assertTrue(rows['git']['observed_current'])
+        self.assertTrue(rows['local']['observed_current'])
+        with self.assertRaisesRegex(ValueError, "outside the selected"):
+            MODULE.build_registry_payload(previous, full_snapshot=True, snapshot_sources={"google_drive"})
+
+    def test_registry_rejects_linked_parent_before_touching_target(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            target = root / 'target'
+            target.mkdir(mode=0o700)
+            alias = root / 'alias'
+            alias.symlink_to(target, target_is_directory=True)
+            with self.assertRaises(PermissionError):
+                MODULE.write_registry([], alias / 'registry.json')
+            self.assertEqual(list(target.iterdir()), [])
+
+    def test_registry_rejects_hardlinked_existing_output(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            target = root / 'original.json'
+            target.write_text('{"items": []}')
+            output = root / 'registry.json'
+            output.hardlink_to(target)
+            with self.assertRaises(PermissionError):
+                MODULE.write_registry([], output)
+            self.assertEqual(target.read_text(), '{"items": []}')
+
     def test_supplied_version_keys_cannot_bypass_evidence_or_collapse_identities(self):
         with self.assertRaisesRegex(ValueError, "version evidence"):
             MODULE.version_key({"source": "test", "id": "a", "version_key": "arbitrary"})
