@@ -264,7 +264,7 @@ class InventorySnapshot(dict):
 
 def supported_revision(file_info: dict[str, Any]) -> str | None:
     evidence_fields = ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version")
-    revision = next((str(file_info[key]).lower() if key in {"sha256", "md5Checksum", "blob_sha", "content_hash"} else str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
+    revision = next((str(file_info[key]).lower() if key in {"sha256", "md5Checksum", "blob_sha"} else str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
     if str(file_info.get("source") or "").casefold() == "google_drive" and file_info.get("version"):
         return json.dumps(["drive-version", str(file_info["version"]), revision], separators=(",", ":"))
     return revision
@@ -321,7 +321,8 @@ def exact_duplicate_key(file_info: dict[str, Any]) -> str | None:
 def digest_evidence(evidence: dict[str, Any]) -> tuple[str, str] | None:
     for field, algorithm in (("sha256", "sha256"), ("md5Checksum", "md5"), ("blob_sha", "git-blob-sha1"), ("content_hash", "opaque-content-hash")):
         if evidence.get(field):
-            return algorithm, str(evidence[field]).lower()
+            value = str(evidence[field])
+            return algorithm, value.lower() if field != "content_hash" else value
     return None
 
 

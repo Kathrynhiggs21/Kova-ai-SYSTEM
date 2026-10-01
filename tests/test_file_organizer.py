@@ -50,6 +50,8 @@ class FileOrganizerTests(unittest.TestCase):
         lower = {"source": "test", "id": "a", "name": "A.pdf", "sha256": "ab" * 32}
         upper = {**lower, "sha256": ("ab" * 32).upper()}
         self.assertEqual(MODULE.build_registry([lower])[0]["version_key"], MODULE.build_registry([upper])[0]["version_key"])
+        opaque = {"source": "test", "id": "a", "name": "A.pdf", "content_hash": "ProviderRevA"}
+        self.assertNotEqual(MODULE.build_registry([opaque])[0]["version_key"], MODULE.build_registry([{**opaque, "content_hash": "ProviderReva"}])[0]["version_key"])
 
     def test_failed_publication_keeps_previous_registry_and_no_stale_exception_cache(self):
         with tempfile.TemporaryDirectory() as temp_dir:
