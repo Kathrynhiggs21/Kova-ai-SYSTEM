@@ -8,6 +8,7 @@ merge_queue:
   status_comments: outcomes
   queued_label: queued
   dequeued_label: dequeued
+  reset_on_external_merge: always
 
 queue_rules:
   - name: default
@@ -20,3 +21,6 @@ queue_rules:
     merge_conditions:
       - base = main
       - -draft
+scopes:
+  source:
+    files: {}
