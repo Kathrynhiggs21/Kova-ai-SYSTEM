@@ -106,6 +106,7 @@ class ConfigValidator:
             "architecture_mode": str,
             "repository_creation_policy": dict,
             "deployment_inventory": dict,
+            "vault_live_enablement_policy": dict,
         }
 
         all_valid = True
@@ -950,6 +951,254 @@ class ConfigValidator:
             self.success("No duplicate repositories found")
             return True
 
+    def validate_vault_live_enablement_policy(self) -> bool:
+        """Validate fail-closed Vault live-data gate policy and evidence contract."""
+        pointer = self.config.get("vault_live_enablement_policy")
+        if not isinstance(pointer, dict):
+            self.error("vault_live_enablement_policy must be an object")
+            return False
+
+        description = pointer.get("description")
+        policy_reference = pointer.get("policy_file")
+        if not isinstance(description, str) or not description.strip():
+            self.error("vault_live_enablement_policy.description must be non-empty")
+            return False
+        if not isinstance(policy_reference, str) or not policy_reference.strip():
+            self.error(
+                "vault_live_enablement_policy.policy_file must be a non-empty "
+                "repository-root-relative path"
+            )
+            return False
+
+        relative_policy_path = Path(policy_reference)
+        repository_root = self.get_repository_root()
+        if relative_policy_path.is_absolute():
+            self.error("vault live policy file must be repository-root-relative")
+            return False
+
+        policy_path = (repository_root / relative_policy_path).resolve()
+        if not policy_path.is_relative_to(repository_root):
+            self.error("vault live policy file must stay within the repository root")
+            return False
+        if not policy_path.is_file():
+            self.error(f"vault live policy file not found: {policy_reference}")
+            return False
+
+        resolved_policy_path = policy_path.resolve(strict=False)
+        if not resolved_policy_path.is_relative_to(repository_root):
+            self.error("vault live policy file must stay within the repository root")
+            return False
+
+        try:
+            with open(resolved_policy_path, "r", encoding="utf-8") as file_handle:
+                policy = json.load(file_handle)
+        except json.JSONDecodeError as e:
+            self.error(f"vault live policy file contains invalid JSON: {e}")
+            return False
+        except OSError as e:
+            self.error(f"Failed to read vault live policy file: {e}")
+            return False
+
+        if not isinstance(policy, dict):
+            self.error("vault live policy file top-level JSON value must be an object")
+            return False
+
+        all_valid = True
+        required_policy_fields = {
+            "schema_version": int,
+            "vault_world": str,
+            "live_data_cutover": dict,
+            "required_gates": list,
+        }
+        for field, expected_type in required_policy_fields.items():
+            if field not in policy:
+                self.error(f"vault live policy missing required field: {field}")
+                all_valid = False
+            elif type(policy[field]) is not expected_type:
+                self.error(
+                    "vault live policy field "
+                    f"'{field}' should be {expected_type.__name__}"
+                )
+                all_valid = False
+
+        live_data_cutover = policy.get("live_data_cutover", {})
+        if isinstance(live_data_cutover, dict):
+            required_cutover_fields = {
+                "enabled": bool,
+                "requires_owner_approval": bool,
+                "requires_all_required_gates_runtime_verified": bool,
+            }
+            for field, expected_type in required_cutover_fields.items():
+                if field not in live_data_cutover:
+                    self.error(
+                        "vault live policy live_data_cutover missing required field: "
+                        f"{field}"
+                    )
+                    all_valid = False
+                elif type(live_data_cutover[field]) is not expected_type:
+                    self.error(
+                        "vault live policy live_data_cutover field "
+                        f"'{field}' should be {expected_type.__name__}"
+                    )
+                    all_valid = False
+            if live_data_cutover.get("requires_owner_approval") is not True:
+                self.error(
+                    "vault live policy must require owner approval for live cutover"
+                )
+                all_valid = False
+            if (
+                live_data_cutover.get(
+                    "requires_all_required_gates_runtime_verified"
+                )
+                is not True
+            ):
+                self.error(
+                    "vault live policy must require all required gates to be runtime_verified"
+                )
+                all_valid = False
+
+        allowed_gate_priorities = {"P0", "P1", "P2"}
+        allowed_gate_statuses = {"pending", "in_progress", "runtime_verified", "waived"}
+        allowed_evidence_types = {
+            "runtime_probe",
+            "security_test",
+            "integration_test",
+            "audit_check",
+            "manual_attestation",
+        }
+
+        required_gate_ids = set()
+        required_gate_statuses = []
+        for index, gate in enumerate(policy.get("required_gates", []), start=1):
+            if not isinstance(gate, dict):
+                self.error(f"vault live policy gate #{index} must be an object")
+                all_valid = False
+                continue
+
+            required_gate_fields = {
+                "id": str,
+                "title": str,
+                "priority": str,
+                "required": bool,
+                "status": str,
+                "evidence": list,
+            }
+            for field, expected_type in required_gate_fields.items():
+                if field not in gate:
+                    self.error(
+                        f"vault live policy gate #{index} missing required field: {field}"
+                    )
+                    all_valid = False
+                elif type(gate[field]) is not expected_type:
+                    self.error(
+                        "vault live policy gate "
+                        f"#{index} field '{field}' should be {expected_type.__name__}"
+                    )
+                    all_valid = False
+
+            gate_id = gate.get("id")
+            if isinstance(gate_id, str):
+                normalized_gate_id = gate_id.strip().casefold()
+                if not normalized_gate_id:
+                    self.error(f"vault live policy gate #{index} id cannot be empty")
+                    all_valid = False
+                elif normalized_gate_id in required_gate_ids:
+                    self.error(f"vault live policy duplicate gate id: {gate_id}")
+                    all_valid = False
+                required_gate_ids.add(normalized_gate_id)
+
+            if gate.get("priority") not in allowed_gate_priorities:
+                self.error(
+                    f"vault live policy gate #{index} has invalid priority: {gate.get('priority')}"
+                )
+                all_valid = False
+            if gate.get("status") not in allowed_gate_statuses:
+                self.error(
+                    f"vault live policy gate #{index} has invalid status: {gate.get('status')}"
+                )
+                all_valid = False
+            if gate.get("required") is True:
+                required_gate_statuses.append(gate.get("status"))
+
+            evidence = gate.get("evidence", [])
+            if isinstance(evidence, list):
+                for evidence_index, entry in enumerate(evidence, start=1):
+                    if not isinstance(entry, dict):
+                        self.error(
+                            "vault live policy gate "
+                            f"#{index} evidence #{evidence_index} must be an object"
+                        )
+                        all_valid = False
+                        continue
+                    required_evidence_fields = {
+                        "type": str,
+                        "reference": str,
+                        "verified_at": str,
+                        "verifier": str,
+                    }
+                    for field, expected_type in required_evidence_fields.items():
+                        if field not in entry:
+                            self.error(
+                                "vault live policy gate "
+                                f"#{index} evidence #{evidence_index} missing field: {field}"
+                            )
+                            all_valid = False
+                        elif type(entry[field]) is not expected_type:
+                            self.error(
+                                "vault live policy gate "
+                                f"#{index} evidence #{evidence_index} field '{field}' "
+                                f"should be {expected_type.__name__}"
+                            )
+                            all_valid = False
+                        elif not entry[field].strip():
+                            self.error(
+                                "vault live policy gate "
+                                f"#{index} evidence #{evidence_index} field '{field}' "
+                                "cannot be empty"
+                            )
+                            all_valid = False
+                    if entry.get("type") not in allowed_evidence_types:
+                        self.error(
+                            "vault live policy gate "
+                            f"#{index} evidence #{evidence_index} has invalid type: "
+                            f"{entry.get('type')}"
+                        )
+                        all_valid = False
+
+            if gate.get("status") == "runtime_verified" and not evidence:
+                self.error(
+                    f"vault live policy gate #{index} is runtime_verified but has no evidence"
+                )
+                all_valid = False
+
+        # This is a repository-file validator, not an authorization authority.
+        # Git-tracked claims of approval or runtime evidence can be edited by the
+        # same actor enabling the flag. A future server-side cutover mechanism must
+        # verify the owner identity, grant, runtime checks, and deployment state
+        # independently before this policy may enable access to live family data.
+        if live_data_cutover.get("enabled") is True:
+            self.error(
+                "vault live cutover cannot be enabled by a static policy file; "
+                "independent runtime authorization and verification are required"
+            )
+            all_valid = False
+        if live_data_cutover.get("enabled") is True:
+            if not required_gate_statuses:
+                self.error(
+                    "vault live policy cannot enable live cutover without required gates"
+                )
+                all_valid = False
+            elif any(status != "runtime_verified" for status in required_gate_statuses):
+                self.error(
+                    "vault live policy cannot enable live cutover until all required gates "
+                    "are runtime_verified"
+                )
+                all_valid = False
+
+        if all_valid:
+            self.success(f"vault live enablement policy valid: {policy_reference}")
+        return all_valid
+
     def validate_all(self) -> Tuple[bool, Dict[str, Any]]:
         """Run all validations"""
         self.log(f"\n{Colors.BOLD}=== Validating Kova AI Repository Configuration ==={Colors.RESET}\n")
@@ -986,6 +1235,7 @@ class ConfigValidator:
                 ("Repository Catalogs", self.validate_catalog_collections),
                 ("Repository Creation Policy", self.validate_repository_creation_policy),
                 ("Deployment Inventory", self.validate_deployment_inventory),
+                ("Vault Live Enablement Policy", self.validate_vault_live_enablement_policy),
                 ("Duplicate Check", self.check_duplicates),
             ]
             for name, validator in validations:

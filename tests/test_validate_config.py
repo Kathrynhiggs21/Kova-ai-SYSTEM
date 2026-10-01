@@ -53,6 +53,10 @@ def valid_config():
             "vercel_project_inventory_file": "config/vercel_projects.v1.json",
             "destructive_actions_require_owner_approval": True,
         },
+        "vault_live_enablement_policy": {
+            "description": "Vault cutover gate policy",
+            "policy_file": "config/vault_live_enablement.v1.json",
+        },
     }
 
 
@@ -162,6 +166,28 @@ def valid_vercel_inventory():
     }
 
 
+def valid_vault_live_enablement_policy():
+    return {
+        "schema_version": 1,
+        "vault_world": "personal_family_records_vault",
+        "live_data_cutover": {
+            "enabled": False,
+            "requires_owner_approval": True,
+            "requires_all_required_gates_runtime_verified": True,
+        },
+        "required_gates": [
+            {
+                "id": "drive_adapter_private_packet",
+                "title": "Server-side Drive adapter uses canonical private packet",
+                "priority": "P0",
+                "required": True,
+                "status": "pending",
+                "evidence": [],
+            }
+        ],
+    }
+
+
 class ConfigValidatorTests(unittest.TestCase):
     def validate(self, config, extra_files=None):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -191,14 +217,32 @@ class ConfigValidatorTests(unittest.TestCase):
                 if isinstance(config, dict)
                 else {}
             )
-            if (
-                inventory_pointer.get("vercel_project_inventory_file")
-                == "config/vercel_projects.v1.json"
+            if inventory_pointer.get("vercel_project_inventory_file") == (
+                "config/vercel_projects.v1.json"
             ):
-                default_inventory_path = Path(temp_dir) / "config/vercel_projects.v1.json"
+                default_inventory_path = (
+                    Path(temp_dir) / "config/vercel_projects.v1.json"
+                )
                 default_inventory_path.parent.mkdir(parents=True, exist_ok=True)
                 default_inventory_path.write_text(
                     json.dumps(valid_vercel_inventory()), encoding="utf-8"
+                )
+            vault_policy_pointer = (
+                config.get("vault_live_enablement_policy", {})
+                if isinstance(config, dict)
+                else {}
+            )
+            if (
+                vault_policy_pointer.get("policy_file")
+                == "config/vault_live_enablement.v1.json"
+            ):
+                vault_policy_path = (
+                    Path(temp_dir) / "config/vault_live_enablement.v1.json"
+                )
+                vault_policy_path.parent.mkdir(parents=True, exist_ok=True)
+                vault_policy_path.write_text(
+                    json.dumps(valid_vault_live_enablement_policy()),
+                    encoding="utf-8",
                 )
             for relative_path, content in (extra_files or {}).items():
                 file_path = Path(temp_dir) / relative_path
@@ -537,6 +581,97 @@ class ConfigValidatorTests(unittest.TestCase):
             )
         )
 
+    def test_missing_vault_policy_file_is_rejected(self):
+        config = valid_config()
+        config["vault_live_enablement_policy"]["policy_file"] = "config/missing-vault.json"
+
+        passed, results, _ = self.validate(config)
+
+        self.assertFalse(passed)
+        self.assertIn(
+            "vault live policy file not found: config/missing-vault.json",
+            results["errors"],
+        )
+
+    def test_live_cutover_requires_all_required_gates_runtime_verified(self):
+        config = valid_config()
+        policy = valid_vault_live_enablement_policy()
+        policy["live_data_cutover"]["enabled"] = True
+
+        passed, results, _ = self.validate(
+            config,
+            extra_files={"config/vault_live_enablement.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any(
+                "cannot enable live cutover until all required gates are runtime_verified"
+                in error
+                for error in results["errors"]
+            )
+        )
+
+    def test_self_declared_evidence_cannot_authorize_live_cutover(self):
+        policy = valid_vault_live_enablement_policy()
+        policy["live_data_cutover"]["enabled"] = True
+        policy["required_gates"][0]["status"] = "runtime_verified"
+        policy["required_gates"][0]["evidence"] = [{
+            "type": "runtime_probe",
+            "reference": "self-declared",
+            "verified_at": "2026-09-29T00:00:00Z",
+            "verifier": "self",
+        }]
+
+        passed, results, _ = self.validate(
+            valid_config(),
+            extra_files={"config/vault_live_enablement.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(any(
+            "cannot be enabled by a static policy file" in error
+            for error in results["errors"]
+        ))
+
+    def test_runtime_verified_gate_requires_evidence(self):
+        config = valid_config()
+        policy = valid_vault_live_enablement_policy()
+        policy["required_gates"][0]["status"] = "runtime_verified"
+        policy["required_gates"][0]["evidence"] = []
+
+        passed, results, _ = self.validate(
+            config,
+            extra_files={"config/vault_live_enablement.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any("runtime_verified but has no evidence" in error for error in results["errors"])
+        )
+
+    def test_runtime_verified_gate_evidence_fields_must_be_non_empty(self):
+        config = valid_config()
+        policy = valid_vault_live_enablement_policy()
+        policy["required_gates"][0]["status"] = "runtime_verified"
+        policy["required_gates"][0]["evidence"] = [
+            {
+                "type": "runtime_probe",
+                "reference": "  ",
+                "verified_at": "2026-09-29T00:00:00Z",
+                "verifier": "qa@example",
+            }
+        ]
+
+        passed, results, _ = self.validate(
+            config,
+            extra_files={"config/vault_live_enablement.v1.json": json.dumps(policy)},
+        )
+
+        self.assertFalse(passed)
+        self.assertTrue(
+            any("field 'reference' cannot be empty" in error for error in results["errors"])
+        )
 
 if __name__ == "__main__":
     unittest.main()

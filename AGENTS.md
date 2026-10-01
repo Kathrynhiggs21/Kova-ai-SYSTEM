@@ -15,6 +15,9 @@ The goal is one coherent KOVA system, not another parallel prototype.
 5. Keep work reviewable. Stay on the current task branch, make coherent commits, and do not push unreviewed changes directly to `main`.
 6. Do the technical work when it is safe to do so. The project owner should not be required to write or debug code just to complete ordinary KOVA maintenance.
 7. Explain results in plain English. End each task with what changed, what was verified, and any remaining decision that genuinely requires the owner.
+8. Keep normal KOVA operation no-code for the owner whenever practical.
+9. Enforce one-home-per-artifact: each canonical artifact has one authoritative storage location; do not add mirrored duplicate storage.
+10. Keep user-facing output dyslexia-first and accessibility-first, with plain-language statuses and errors.
 
 ## Canonical-system rule
 
@@ -32,6 +35,7 @@ For cross-repository work, treat `README.md`, `KOVA_REPOS_DOCUMENTATION.md`, and
 - If a tracked file appears to contain a real secret, do not repeat the value. Flag the location and replace/remediate it safely when the task allows.
 - Do not delete data, repositories, deployments, integrations, or working functionality merely because they look old or duplicated. Establish that they are superseded first.
 - Prefer reversible migrations and backups for destructive or structural changes.
+- Do not change production domains, DNS, authentication ownership, or other destructive production-critical configuration without explicit owner approval.
 
 ## Validation
 
