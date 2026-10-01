@@ -4,6 +4,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -15,6 +16,48 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_incremental_hashless_title_matches_enter_review(self):
+        first = MODULE.build_registry([{"source": "test", "id": "a", "name": "KOVA Guide", "size": 12, "version": "1", "status": "ACTIVE"}])
+        second = MODULE.build_registry([{"source": "test", "id": "b", "name": "KOVA Guide copy", "size": 12, "version": "1", "status": "ACTIVE"}])
+        rows = MODULE.build_registry_payload(second, first)["items"]
+        candidates = [row for row in rows if row.get("possible_duplicate_of")]
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["lifecycle"], "REVIEW")
+        self.assertNotIn("DUPLICATE", candidates[0]["flags"])
+
+    def test_local_content_is_hashed_once_per_build_and_refreshed_next_build(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "guide.txt"
+            source.write_text("first content")
+            original_open = Path.open
+            reads = []
+            def counted_open(path, *args, **kwargs):
+                if path == source:
+                    reads.append(path)
+                return original_open(path, *args, **kwargs)
+            item = {"source": "local", "id": "a", "path": str(source), "name": "KOVA Guide"}
+            with mock.patch.object(Path, "open", counted_open):
+                first = MODULE.build_registry([item])
+            self.assertEqual(len(reads), 1)
+            source.write_text("second content")
+            second = MODULE.build_registry([item])
+            self.assertNotEqual(first[0]["version_key"], second[0]["version_key"])
+
+    def test_unverified_scan_timestamp_cannot_override_curated_classification(self):
+        item = {"source": "test", "id": "a", "name": "KOVA Connector", "version": "1"}
+        previous = MODULE.build_registry([{**item, "verified": True}])
+        previous[0].update(area="Personal", topic="KOVA Memory", record_role="Decision")
+        current = MODULE.build_registry([{**item, "verified": False, "checked_at": "2026-10-01T00:00:00Z"}])
+        merged = MODULE.merge_history(current, previous)[0]
+        self.assertEqual((merged["area"], merged["topic"], merged["record_role"]), ("Personal", "KOVA Memory", "Decision"))
+
+    def test_ambiguous_multiple_current_revisions_are_rejected_in_either_order(self):
+        items = [{"source": "test", "id": "a", "name": "KOVA Guide", "version": "1"},
+                 {"source": "test", "id": "a", "name": "KOVA Guide", "version": "2"}]
+        for batch in (items, list(reversed(items))):
+            with self.assertRaisesRegex(ValueError, "one current version"):
+                MODULE.build_registry(batch)
+
     def test_drive_metadata_versions_retain_history_when_content_is_unchanged(self):
         item = {"source": "google_drive", "id": "a", "name": "KOVA guide", "md5Checksum": "same", "headRevisionId": "same-revision"}
         first = MODULE.build_registry([{**item, "version": "1"}])
@@ -600,9 +643,25 @@ f.write_registry(rows, Path(sys.argv[1]))
                 text=True,
             )
             payload = json.loads(result.stdout)
-            self.assertEqual(len(payload["items"]), 1)
-            self.assertFalse(payload["items"][0]["observed_current"])
-            self.assertEqual(payload["exceptions"]["exception_count"], 1)
+            self.assertEqual(payload["item_count"], 1)
+            self.assertEqual(payload["current_count"], 0)
+            self.assertEqual(payload["exception_count"], 1)
+
+    def test_dry_run_does_not_print_retained_private_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            registry = root / "private" / "registry.json"
+            inventory = root / "inventory.json"
+            inventory.write_text("[]")
+            MODULE.write_registry(MODULE.build_registry([{
+                "source": "test", "id": "PRIVATE-ID-MARKER", "version": "1",
+                "name": "PRIVATE-FILENAME-MARKER", "url": "https://example.test/?token=TOKEN-MUST-NOT-PRINT",
+                "verification_reference": "PRIVATE-REFERENCE-MARKER",
+            }]), registry)
+            result = subprocess.run([sys.executable, str(SCRIPT), "--inventory", str(inventory), "--registry", str(registry), "--dry-run"], check=True, capture_output=True, text=True)
+            self.assertEqual(json.loads(result.stdout)["item_count"], 1)
+            for marker in ("PRIVATE-ID-MARKER", "PRIVATE-FILENAME-MARKER", "TOKEN-MUST-NOT-PRINT", "PRIVATE-REFERENCE-MARKER", "source_link"):
+                self.assertNotIn(marker, result.stdout)
 
     def test_cli_rejects_registry_that_overwrites_inventory(self):
         with tempfile.TemporaryDirectory() as temp_dir:

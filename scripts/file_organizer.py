@@ -240,6 +240,13 @@ def source_identity(file_info: dict[str, Any]) -> str:
     return str(identity)
 
 
+class InventorySnapshot(dict):
+    """Internal per-build hash cache; JSON fields cannot supply this cache."""
+    def __init__(self, item: dict[str, Any], local_hashes: dict[str, str]):
+        super().__init__(item)
+        self.local_hashes = local_hashes
+
+
 def supported_revision(file_info: dict[str, Any]) -> str | None:
     evidence_fields = ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version")
     revision = next((str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
@@ -254,11 +261,15 @@ def populate_version_metadata(file_info: dict[str, Any]) -> None:
     if local_path:
         candidate = Path(str(local_path))
         if candidate.is_file():
-            digest = hashlib.sha256()
-            with candidate.open("rb") as source:
-                for chunk in iter(lambda: source.read(1024 * 1024), b""):
-                    digest.update(chunk)
-            file_info["sha256"] = digest.hexdigest()
+            cache = file_info.local_hashes if isinstance(file_info, InventorySnapshot) else {}
+            cache_key = str(candidate.absolute())
+            if cache_key not in cache:
+                digest = hashlib.sha256()
+                with candidate.open("rb") as source:
+                    for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                cache[cache_key] = digest.hexdigest()
+            file_info["sha256"] = cache[cache_key]
     if not file_info.get("content_hash"):
         file_info["content_hash"] = file_info.get("sha256") or file_info.get("md5Checksum")
     revision = supported_revision(file_info)
@@ -278,7 +289,7 @@ def version_key(file_info: dict[str, Any]) -> str:
     populate_version_metadata(file_info)
     revision = file_info.get("revision_id")
     if not revision:
-        raise ValueError(f"inventory item needs version evidence for {source_identity(file_info)}")
+        raise ValueError("inventory item needs supported version evidence")
     raw = json.dumps([source, source_identity(file_info), str(revision)], ensure_ascii=False, separators=(",", ":"))
     derived = hashlib.sha256(raw.encode("utf-8")).hexdigest()
     if file_info.get("version_key") and str(file_info["version_key"]) != derived:
@@ -359,9 +370,14 @@ def version_evidence_for(file_info: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
-    items = [dict(item) for item in inventory]
+    local_hashes: dict[str, str] = {}
+    items = [InventorySnapshot(item, local_hashes) for item in inventory]
     for item in items:
         populate_version_metadata(item)
+    version_keys = [version_key(item) for item in items]
+    identities = [(item["source"], source_identity(item)) for item in items]
+    if len(set(identities)) != len(identities):
+        raise ValueError("inventory must contain only one current version per source identity")
     exact_groups: dict[str, list[int]] = {}
     likely_groups: dict[str, list[int]] = {}
     titles: list[str] = []
@@ -388,7 +404,6 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         for key, indexes in likely_groups.items()
         if len(indexes) > 1 and any(exact_duplicate_key(items[idx]) is None for idx in indexes)
     }
-    version_keys = [version_key(item) for item in items]
     rows: list[dict[str, Any]] = []
 
     for index, file_info in enumerate(items):
@@ -412,6 +427,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
             {
                 "version_key": version_keys[index],
                 "source_name": file_info.get("name"),
+                "source_size": file_info.get("size", ""),
                 "display_title": title,
                 "area": area_for(file_info),
                 "topic": topic_for(file_info),
@@ -493,9 +509,11 @@ def merge_history(
             combined["canonical"] = prior["canonical"]
         prior_verification = prior.get("verification", {})
         current_verification = row.get("verification", {})
-        preserve_prior_classification = prior_verification.get("verified") and not any(
-            current_verification.get(field) not in (None, "")
-            for field in ("evidence", "reference", "checked_at")
+        preserve_prior_classification = prior_verification.get("verified") and (
+            not current_verification.get("verified") or not any(
+                current_verification.get(field) not in (None, "")
+                for field in ("evidence", "reference")
+            )
         )
         if prior_verification.get("verified") and not current_verification.get("verified"):
             combined["verification"] = prior_verification
@@ -614,6 +632,31 @@ def reclassify_exact_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, An
     return rows
 
 
+def reclassify_likely_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Review hashless title/size matches across the complete merged current set."""
+    groups: dict[str, list[int]] = {}
+    for index, row in enumerate(rows):
+        if row.get("observed_current"):
+            key = likely_duplicate_key({"size": row.get("source_size", "")}, row.get("display_title", ""))
+            groups.setdefault(key, []).append(index)
+    for indexes in groups.values():
+        if len(indexes) < 2 or all(any(rows[i].get("version_evidence", {}).get(field)
+                                     for field in ("sha256", "md5Checksum", "content_hash", "blob_sha")) for i in indexes):
+            continue
+        canonical = max(indexes, key=lambda i: selection_rank(
+            rows[i].get("canonical"), rows[i].get("verification", {}).get("verified"),
+            rows[i].get("lifecycle"), rows[i].get("version_evidence", {}).get("modified"), rows[i]["version_key"],
+        ))
+        for index in indexes:
+            row = rows[index]
+            row["possible_duplicate_of"] = None if index == canonical else rows[canonical]["version_key"]
+            if index != canonical and row.get("lifecycle") not in {"FINAL", "ARCHIVE"}:
+                row["lifecycle"] = "REVIEW"
+                row["lifecycle_color"] = LIFECYCLE_COLORS["REVIEW"]
+                row["decision_reason"] = "Possible duplicate; content hash unavailable"
+    return rows
+
+
 def build_registry_payload(
     rows: list[dict[str, Any]],
     previous: list[dict[str, Any]] | None = None,
@@ -624,9 +667,9 @@ def build_registry_payload(
     previous_rows = previous or []
     if snapshot_sources is not None and any(row.get("version_evidence", {}).get("source") not in snapshot_sources for row in rows):
         raise ValueError("snapshot inventory contains records outside the selected source namespaces")
-    items = reclassify_exact_duplicates(
+    items = reclassify_likely_duplicates(reclassify_exact_duplicates(
         merge_history(rows, previous_rows, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources),
-    )
+    ))
     generated_at = datetime.now(timezone.utc).isoformat()
     exceptions = [
         row for row in items
@@ -758,7 +801,15 @@ def main() -> int:
         if registry_path.exists():
             payload = json.loads(registry_path.read_text(encoding="utf-8"))
             previous = payload.get("items", []) if isinstance(payload, dict) else []
-        print(json.dumps(build_registry_payload(rows, previous, full_snapshot=args.full_snapshot, snapshot_sources=snapshot_sources), indent=2))
+        preview = build_registry_payload(rows, previous, full_snapshot=args.full_snapshot, snapshot_sources=snapshot_sources)
+        print(json.dumps({
+            "organization_mode": preview["organization_mode"],
+            "physical_changes": False,
+            "item_count": len(preview["items"]),
+            "current_count": sum(bool(row.get("observed_current")) for row in preview["items"]),
+            "lifecycle_counts": {state: sum(row["lifecycle"] == state for row in preview["items"]) for state in LIFECYCLE_COLORS},
+            "exception_count": preview["exceptions"]["exception_count"],
+        }, indent=2))
     else:
         exception_count = write_registry(rows, registry_path, full_snapshot=args.full_snapshot, snapshot_sources=snapshot_sources)
         print(f"Wrote {len(rows)} current metadata records to {registry_path}")
