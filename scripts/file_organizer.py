@@ -690,9 +690,11 @@ def reclassify_likely_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, A
         if row.get("observed_current"):
             row["possible_duplicate_of"] = None
             if row.get("decision_reason") in {"Possible duplicate; content hash unavailable", "Possible duplicate; comparable content hash unavailable"}:
-                row["lifecycle"] = row.get("source_lifecycle") or "REVIEW"
+                source_status = str(row.get("verification", {}).get("source_status") or "").upper()
+                baseline = row.get("source_lifecycle") or (source_status if source_status in LIFECYCLE_COLORS and (source_status != "FINAL" or row.get("verification", {}).get("verified")) else "REVIEW")
+                row["lifecycle"] = baseline
                 row["lifecycle_color"] = LIFECYCLE_COLORS[row["lifecycle"]]
-                row["decision_reason"] = row.get("source_decision_reason") or "Needs current verification"
+                row["decision_reason"] = row.get("source_decision_reason") or ("Explicit source status" if baseline != "REVIEW" else "Needs current verification")
             full_title = row.get("duplicate_title") or short_title({"name": row.get("source_name") or row.get("display_title", "")}, limit=10_000)
             key = likely_duplicate_key({"size": row.get("source_size", "")}, full_title)
             groups.setdefault(key, []).append(index)

@@ -42,6 +42,8 @@ class FileOrganizerTests(unittest.TestCase):
         ]))["items"]
         for row in old:
             row.pop("duplicate_title", None)
+            row.pop("source_lifecycle", None)
+            row.pop("source_decision_reason", None)
         refreshed = MODULE.build_registry_payload(MODULE.build_registry([]), old)["items"]
         self.assertEqual(sum(bool(row["possible_duplicate_of"]) for row in refreshed), 1)
         separated = MODULE.build_registry_payload(MODULE.build_registry([
