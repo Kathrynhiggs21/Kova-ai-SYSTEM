@@ -9,6 +9,14 @@ from scripts import private_state
 
 
 class PrivateStateTests(unittest.TestCase):
+    def test_standard_shared_xdg_parent_can_contain_new_private_state(self):
+        with tempfile.TemporaryDirectory() as directory:
+            xdg = Path(directory) / "share"
+            xdg.mkdir(mode=0o755)
+            private_state.write_private_text(xdg / "kova" / "private" / "state.json", "{}")
+            self.assertEqual(xdg.stat().st_mode & 0o777, 0o755)
+            self.assertEqual((xdg / "kova" / "private").stat().st_mode & 0o777, 0o700)
+
     def test_parent_swap_cannot_redirect_a_private_write(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

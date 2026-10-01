@@ -16,6 +16,40 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_probable_duplicate_on_unmentioned_candidate_clears_after_target_changes(self):
+        previous = MODULE.build_registry([
+            {"source": "test", "id": "a", "name": "KOVA Guide", "size": 12, "version": "1", "canonical": True},
+            {"source": "test", "id": "b", "name": "KOVA Guide copy", "size": 12, "version": "1"},
+        ])
+        self.assertTrue(next(row for row in previous if row["source_id"] == "b")["possible_duplicate_of"])
+        current = MODULE.build_registry([{"source": "test", "id": "a", "name": "Unrelated report", "size": 15, "version": "2", "canonical": True}])
+        merged = MODULE.build_registry_payload(current, previous)["items"]
+        self.assertIsNone(next(row for row in merged if row["source_id"] == "b")["possible_duplicate_of"])
+
+    def test_meaningful_title_words_remain_distinct(self):
+        for title in ("New York Budget", "Old English Notes", "New File Format"):
+            self.assertEqual(MODULE.short_title({"name": title + ".pdf"}), title)
+        self.assertEqual(MODULE.short_title({"name": "Untitled document.docx"}), "KOVA Item")
+
+    def test_incomparable_digest_algorithms_raise_review_instead_of_exact_duplicate(self):
+        rows = MODULE.build_registry([
+            {"source": "test", "id": "a", "name": "KOVA Guide", "size": 12, "sha256": "digest", "status": "ACTIVE"},
+            {"source": "google_drive", "id": "b", "name": "KOVA Guide copy", "size": 12, "md5Checksum": "digest", "status": "ACTIVE"},
+        ])
+        self.assertFalse(any("DUPLICATE" in row["flags"] for row in rows))
+        self.assertEqual(sum(bool(row["possible_duplicate_of"]) for row in rows), 1)
+        merged = MODULE.build_registry_payload([rows[1]], [rows[0]])["items"]
+        self.assertEqual(sum(bool(row["possible_duplicate_of"]) for row in merged), 1)
+
+    def test_current_inspection_can_clear_a_previously_verified_sensitive_classification(self):
+        item = {"source": "test", "id": "a", "name": "KOVA Guide", "version": "1"}
+        previous = MODULE.build_registry([{**item, "sensitive": True, "verified": True, "status": "FINAL"}])
+        current = MODULE.build_registry([{**item, "sensitivity_checked": True}])
+        row = MODULE.merge_history(current, previous)[0]
+        self.assertEqual(row["sensitivity"], "CLEAR")
+        self.assertNotIn("SENSITIVE", row["flags"])
+        self.assertEqual(row["lifecycle"], "FINAL")
+
     def test_local_identity_requires_absolute_paths_and_prefers_canonical_path(self):
         with self.assertRaisesRegex(ValueError, "absolute"):
             MODULE.version_key({"source": "local", "id": "unstable-id", "path": "notes.txt", "version": "1"})

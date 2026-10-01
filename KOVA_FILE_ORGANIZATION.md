@@ -24,6 +24,8 @@ The registry builder performs deterministic, conservative classification. It may
 
 Exact content hashes take priority for duplicate detection. Filename and size similarity may raise a duplicate candidate but never authorizes deletion.
 
+Exact comparisons use matching digest algorithms. Otherwise matching titles and sizes with incomparable digests remain review candidates. Display titles retain meaningful words such as New York and Old English; only recognized copy/version suffixes and complete placeholder titles are shortened.
+
 ## Connector behavior
 
 Use native connectors first, followed by MCP, official OAuth APIs, optional automation bridges, then export/import fallbacks. Connector configuration is not proof of health; each active claim needs a current safe read or readback.

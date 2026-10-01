@@ -80,7 +80,7 @@ SENSITIVE_MARKERS = (
     "tax",
 )
 
-NOISE_WORDS = {"copy", "document", "file", "new", "old", "untitled", "unknown"}
+PLACEHOLDER_TITLES = {"untitled", "unknown", "new file", "new document", "untitled file", "untitled document"}
 
 
 def normalized_words(value: str) -> str:
@@ -111,8 +111,9 @@ def short_title(file_info: dict[str, Any], limit: int = 80) -> str:
     raw = canonicalize_kova(raw)
     raw = re.sub(r"\s*\(\d+\)\s*$", "", raw)
     raw = re.sub(r"(?:[-_ ]+(?:copy|final|draft|v\d+(?:\.\d+)*))+\s*$", "", raw, flags=re.I)
-    words = [word for word in raw.split() if word.lower() not in NOISE_WORDS]
-    title = " ".join(words).strip() or "KOVA Item"
+    title = raw.strip()
+    if not title or title.casefold() in PLACEHOLDER_TITLES:
+        title = "KOVA Item"
     return title if len(title) <= limit else title[: limit - 1].rstrip() + "…"
 
 
@@ -313,13 +314,20 @@ def version_key(file_info: dict[str, Any]) -> str:
 
 def exact_duplicate_key(file_info: dict[str, Any]) -> str | None:
     populate_version_metadata(file_info)
-    content_hash = (
-        file_info.get("sha256")
-        or file_info.get("md5Checksum")
-        or file_info.get("content_hash")
-        or file_info.get("blob_sha")
-    )
-    return f"hash:{content_hash}" if content_hash else None
+    digest = digest_evidence(file_info)
+    return json.dumps(digest, separators=(",", ":")) if digest else None
+
+
+def digest_evidence(evidence: dict[str, Any]) -> tuple[str, str] | None:
+    for field, algorithm in (("sha256", "sha256"), ("md5Checksum", "md5"), ("blob_sha", "git-blob-sha1"), ("content_hash", "opaque-content-hash")):
+        if evidence.get(field):
+            return algorithm, str(evidence[field])
+    return None
+
+
+def needs_hash_review(evidences: Iterable[dict[str, Any]]) -> bool:
+    digests = [digest_evidence(evidence) for evidence in evidences]
+    return any(digest is None for digest in digests) or len({digest[0] for digest in digests if digest}) > 1
 
 
 def likely_duplicate_key(file_info: dict[str, Any], title: str) -> str:
@@ -416,7 +424,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     likely_groups_with_missing_hash = {
         key
         for key, indexes in likely_groups.items()
-        if len(indexes) > 1 and any(exact_duplicate_key(items[idx]) is None for idx in indexes)
+        if len(indexes) > 1 and needs_hash_review(items[idx] for idx in indexes)
     }
     rows: list[dict[str, Any]] = []
 
@@ -435,7 +443,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         if likely in likely_groups_with_missing_hash and likely_canonical is not None and likely_canonical != index:
             possible_duplicate_of = version_keys[likely_canonical]
             if lifecycle not in ("FINAL", "ARCHIVE"):
-                lifecycle, reason = "REVIEW", "Possible duplicate; content hash unavailable"
+                lifecycle, reason = "REVIEW", "Possible duplicate; comparable content hash unavailable"
 
         rows.append(
             {
@@ -538,7 +546,7 @@ def merge_history(
                 },
             }
         if preserve_prior_classification:
-            for field in ("area", "topic", "subtopic", "file_type", "content_origin", "record_role", "lifecycle", "lifecycle_color", "decision_reason", "sensitivity", "sensitivity_basis", "canonical", "unresolved_review"):
+            for field in ("area", "topic", "subtopic", "file_type", "content_origin", "record_role", "lifecycle", "lifecycle_color", "decision_reason", "canonical", "unresolved_review"):
                 if field in prior:
                     combined[field] = prior[field]
         combined["version_evidence"] = {
@@ -586,6 +594,7 @@ def merge_history(
                 or (not current_verification.get("source_status") and row.get("decision_reason") in {
                     "Needs current verification",
                     "Possible duplicate; content hash unavailable",
+                    "Possible duplicate; comparable content hash unavailable",
                     "Recent relevant work",
                 })
             )
@@ -627,14 +636,9 @@ def reclassify_exact_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, An
     exact_groups: dict[str, list[int]] = {}
     for index in candidate_indexes:
         version_evidence = rows[index].get("version_evidence", {})
-        content_hash = (
-            version_evidence.get("sha256")
-            or version_evidence.get("md5Checksum")
-            or version_evidence.get("content_hash")
-            or version_evidence.get("blob_sha")
-        )
-        if content_hash:
-            exact_groups.setdefault(f"hash:{content_hash}", []).append(index)
+        digest = digest_evidence(version_evidence)
+        if digest:
+            exact_groups.setdefault(json.dumps(digest, separators=(",", ":")), []).append(index)
             rows[index]["flags"] = [flag for flag in rows[index]["flags"] if flag != "DUPLICATE"]
             rows[index]["flag_colors"] = [FLAG_COLORS[flag] for flag in rows[index]["flags"]]
             rows[index]["canonical_version_key"] = None
@@ -670,8 +674,7 @@ def reclassify_likely_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, A
             key = likely_duplicate_key({"size": row.get("source_size", "")}, row.get("display_title", ""))
             groups.setdefault(key, []).append(index)
     for indexes in groups.values():
-        if len(indexes) < 2 or all(any(rows[i].get("version_evidence", {}).get(field)
-                                     for field in ("sha256", "md5Checksum", "content_hash", "blob_sha")) for i in indexes):
+        if len(indexes) < 2 or not needs_hash_review(rows[i].get("version_evidence", {}) for i in indexes):
             continue
         canonical = max(indexes, key=lambda i: selection_rank(
             rows[i].get("canonical"), rows[i].get("verification", {}).get("verified"),
@@ -683,7 +686,7 @@ def reclassify_likely_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, A
             if index != canonical and row.get("lifecycle") not in {"FINAL", "ARCHIVE"}:
                 row["lifecycle"] = "REVIEW"
                 row["lifecycle_color"] = LIFECYCLE_COLORS["REVIEW"]
-                row["decision_reason"] = "Possible duplicate; content hash unavailable"
+                row["decision_reason"] = "Possible duplicate; comparable content hash unavailable"
     return rows
 
 
