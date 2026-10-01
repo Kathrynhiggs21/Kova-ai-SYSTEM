@@ -15,6 +15,24 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_drive_metadata_versions_retain_history_when_content_is_unchanged(self):
+        item = {"source": "google_drive", "id": "a", "name": "KOVA guide", "md5Checksum": "same", "headRevisionId": "same-revision"}
+        first = MODULE.build_registry([{**item, "version": "1"}])
+        second = MODULE.build_registry([{**item, "name": "Renamed guide", "version": "2"}])
+        self.assertNotEqual(first[0]["version_key"], second[0]["version_key"])
+        merged = MODULE.merge_history(second, first)
+        self.assertEqual(len(merged), 2)
+        self.assertEqual(sum(row["observed_current"] for row in merged), 1)
+
+    def test_exception_output_cannot_overwrite_the_input_inventory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            inventory = root / "registry.exceptions.json"
+            inventory.write_text("[]")
+            with self.assertRaisesRegex(ValueError, "overwrite the input"):
+                MODULE.validate_registry_output_path(inventory, root / "registry.json")
+            self.assertEqual(inventory.read_text(), "[]")
+
     def test_unverified_explicit_status_cannot_replace_verified_lifecycle(self):
         initial = MODULE.build_registry([{
             "source": "test", "id": "a", "name": "KOVA guide", "version": "1",

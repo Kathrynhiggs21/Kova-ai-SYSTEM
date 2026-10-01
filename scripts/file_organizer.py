@@ -240,6 +240,14 @@ def source_identity(file_info: dict[str, Any]) -> str:
     return str(identity)
 
 
+def supported_revision(file_info: dict[str, Any]) -> str | None:
+    evidence_fields = ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version")
+    revision = next((str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
+    if str(file_info.get("source") or "").casefold() == "google_drive" and file_info.get("version"):
+        return json.dumps(["drive-version", str(file_info["version"]), revision], separators=(",", ":"))
+    return revision
+
+
 def populate_version_metadata(file_info: dict[str, Any]) -> None:
     """Populate revision/content metadata before deriving canonical identity."""
     local_path = file_info.get("path")
@@ -253,8 +261,7 @@ def populate_version_metadata(file_info: dict[str, Any]) -> None:
             file_info["sha256"] = digest.hexdigest()
     if not file_info.get("content_hash"):
         file_info["content_hash"] = file_info.get("sha256") or file_info.get("md5Checksum")
-    evidence_fields = ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version")
-    revision = next((str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
+    revision = supported_revision(file_info)
     supplied = file_info.get("revision_id")
     if supplied and (revision is None or str(supplied) != revision):
         raise ValueError("supplied revision must match supported version evidence")
@@ -453,7 +460,7 @@ def merge_history(
     for row in previous:
         evidence = row.get("version_evidence", {})
         source = str(evidence.get("source") or "").strip().casefold()
-        revision = evidence.get("revision_id")
+        revision = supported_revision({**evidence, "source": source})
         if row.get("source_id") and revision and re.fullmatch(r"[a-z][a-z0-9_.-]*", source) and source != "unknown":
             raw = json.dumps([source, str(row["source_id"]), str(revision)], ensure_ascii=False, separators=(",", ":"))
             new_key = hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -706,7 +713,8 @@ def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: b
 def validate_registry_output_path(inventory: Path, registry: Path) -> Path:
     resolved_inventory = inventory.expanduser().resolve()
     resolved_registry = validate_unlinked_path(registry).resolve()
-    if resolved_registry == resolved_inventory:
+    exception_path = validate_unlinked_path(resolved_registry.with_name(f"{resolved_registry.stem}.exceptions.json")).resolve()
+    if resolved_inventory in {resolved_registry, exception_path}:
         raise ValueError("--registry must not overwrite the input inventory")
     if resolved_registry.is_relative_to(PROJECT_DIR):
         raise ValueError("--registry must point outside the repository checkout")

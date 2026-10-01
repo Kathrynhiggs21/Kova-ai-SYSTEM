@@ -92,6 +92,7 @@ test("reference header reflects an unverified configured system", () => {
   assert.match(app.elements.get("system-status-detail").textContent, /provider connections still need verification/);
   app.context.renderSystemStatus({ system_status: "blocked" });
   assert.equal(app.elements.get("badge-status").textContent, "Blocked");
+  assert.match(app.elements.get("badge-status").className, /text-rose-400/);
 });
 
 test("digest uses the same configuration snapshot and does not invent live telemetry", () => {

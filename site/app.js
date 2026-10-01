@@ -97,6 +97,9 @@ function describeSystemStatus(status) {
   const value = String(status || "unknown");
   return {
     label: value === "blocked" ? "Blocked" : "Needs verification",
+    badgeClass: value === "blocked"
+      ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+      : "bg-amber-500/10 text-amber-400 border border-amber-500/20",
     detail: `Configuration status: ${value.replaceAll("_", " ")}. Production routes and provider connections still need verification.`
   };
 }
@@ -104,6 +107,7 @@ function describeSystemStatus(status) {
 function renderSystemStatus(data) {
   const status = describeSystemStatus(data.system_status);
   document.getElementById("badge-status").textContent = status.label;
+  document.getElementById("badge-status").className = `px-2 py-0.5 text-[10px] font-semibold rounded-full ${status.badgeClass}`;
   document.getElementById("system-status-detail").textContent = status.detail;
 }
 
@@ -179,6 +183,13 @@ async function loadDashboardData() {
 
 function describeIntegrationStatus(status) {
   const normalized = String(status || "").toLowerCase();
+  if (normalized === "canonical") {
+    return {
+      label: "Canonical",
+      badgeClass: "bg-sky-500/10 text-sky-400 border border-sky-500/20",
+      dotClass: "bg-sky-400"
+    };
+  }
   if (normalized === "active") {
     return {
       label: "Active",
