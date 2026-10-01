@@ -429,7 +429,18 @@ class GoogleDriveImporter:
         validate_unlinked_path(output_dir)
         if output_dir.is_symlink() or (output_dir.exists() and output_dir.stat().st_mode & 0o777 != 0o700):
             raise PermissionError("inventory output requires a dedicated private directory")
-        output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+        missing = []
+        cursor = output_dir
+        while not cursor.exists():
+            missing.append(cursor)
+            cursor = cursor.parent
+        for directory in reversed(missing):
+            directory.mkdir(mode=0o700)
+        for directory in [output_dir, *output_dir.parents]:
+            if directory.stat().st_mode & 0o777 != 0o700:
+                raise PermissionError("inventory output requires private parent directories")
+            if directory not in missing:
+                break
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex
 

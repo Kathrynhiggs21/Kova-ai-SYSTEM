@@ -499,10 +499,7 @@ def merge_history(
     for row in current:
         # A newer observed version replaces current status, while preserving history.
         identity = (row.get("version_evidence", {}).get("source"), row.get("source_id"))
-        for key, old in merged.items():
-            old_identity = (old.get("version_evidence", {}).get("source"), old.get("source_id"))
-            if all(identity) and identity == old_identity and key != row["version_key"]:
-                old["observed_current"] = False
+        # Choose the current version after merging; inventory iteration order is not evidence.
         prior = merged.get(row["version_key"], {})
         combined = {**prior, **row}
         if row.get("canonical") is None and prior.get("canonical") is not None:
@@ -527,7 +524,7 @@ def merge_history(
                 },
             }
         if preserve_prior_classification:
-            for field in ("area", "topic", "subtopic", "file_type", "content_origin", "record_role"):
+            for field in ("area", "topic", "subtopic", "file_type", "content_origin", "record_role", "lifecycle", "lifecycle_color", "decision_reason", "sensitivity", "sensitivity_basis", "canonical", "unresolved_review"):
                 if field in prior:
                     combined[field] = prior[field]
         combined["version_evidence"] = {
@@ -542,6 +539,8 @@ def merge_history(
             combined["superseded_by"] = prior["superseded_by"]
         if prior.get("flags"):
             combined["flags"] = list(dict.fromkeys([*prior.get("flags", []), *row.get("flags", [])]))
+        if preserve_prior_classification:
+            combined["flags"] = list(prior.get("flags", []))
         # Sensitivity flags describe the current classification, not history.
         if row.get("sensitivity") == "UNKNOWN" and prior.get("sensitivity") in {"CLEAR", "SENSITIVE"}:
             combined["sensitivity"] = prior["sensitivity"]
@@ -585,6 +584,16 @@ def merge_history(
             combined["lifecycle_color"] = LIFECYCLE_COLORS["ARCHIVE"]
             combined["decision_reason"] = "Known replacement recorded"
         merged[row["version_key"]] = combined
+    by_identity: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in merged.values():
+        identity = (row.get("version_evidence", {}).get("source"), row.get("source_id"))
+        if all(identity) and row.get("observed_current"):
+            by_identity.setdefault(identity, []).append(row)
+    for versions in by_identity.values():
+        if len(versions) > 1:
+            winner = max(versions, key=lambda row: (modified_instant(row.get("version_evidence", {}).get("modified")), str(row.get("version_evidence", {}).get("revision_id") or ""), row["version_key"]))
+            for row in versions:
+                row["observed_current"] = row is winner
     return sorted(merged.values(), key=lambda row: row["version_key"])
 
 
@@ -699,12 +708,7 @@ def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
     """Atomically publish private JSON with user-only filesystem permissions."""
     output = validate_unlinked_path(output)
     parent = output.parent
-    if parent.exists():
-        if parent.stat().st_mode & 0o777 != 0o700:
-            raise PermissionError(f"refusing to write private data under non-private directory: {parent}")
-    else:
-        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        os.chmod(parent, 0o700)
+    ensure_private_parent(parent)
     serialized = json.dumps(payload, indent=2) + "\n"
     temp_name: str | None = None
     try:
@@ -728,6 +732,21 @@ def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
             os.unlink(temp_name)
 
 
+def ensure_private_parent(parent: Path) -> None:
+    missing = []
+    cursor = parent
+    while not cursor.exists():
+        missing.append(cursor)
+        cursor = cursor.parent
+    for directory in reversed(missing):
+        directory.mkdir(mode=0o700)
+    for directory in [parent, *parent.parents]:
+        if directory.stat().st_mode & 0o777 != 0o700:
+            raise PermissionError("private state requires user-only parent directories")
+        if directory not in missing:
+            break
+
+
 def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: bool = False, snapshot_sources: set[str] | None = None) -> int:
     output = validate_unlinked_path(output)
     exception_output = output.with_name(f"{output.stem}.exceptions.json")
@@ -735,7 +754,7 @@ def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: b
     parent = output.parent
     if parent.exists() and parent.stat().st_mode & 0o777 != 0o700:
         raise PermissionError("registry updates require a dedicated private directory")
-    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    ensure_private_parent(parent)
     lock_path = validate_unlinked_path(output.with_name(f".{output.name}.lock"))
     descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, "a") as lock:

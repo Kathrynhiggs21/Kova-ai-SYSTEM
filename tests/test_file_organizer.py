@@ -568,6 +568,14 @@ f.write_registry(rows, Path(sys.argv[1]))
         self.assertTrue(merged["existing"]["observed_current"])
         self.assertTrue(merged["new"]["observed_current"])
 
+    def test_current_version_is_independent_of_merge_order(self):
+        old = {"version_key": "old", "source_id": "one", "observed_current": True, "version_evidence": {"source": "test", "revision_id": "1", "modified": "2026-01-01T00:00:00Z"}}
+        new = {"version_key": "new", "source_id": "one", "observed_current": True, "version_evidence": {"source": "test", "revision_id": "2", "modified": "2026-02-01T00:00:00Z"}}
+        for order in ([old, new], [new, old]):
+            rows = {row["version_key"]: row for row in MODULE.merge_history(order, [])}
+            self.assertFalse(rows["old"]["observed_current"])
+            self.assertTrue(rows["new"]["observed_current"])
+
     def test_default_private_dir_uses_xdg_data_home(self):
         original_private = MODULE.os.environ.get("KOVA_PRIVATE_STATE_DIR")
         original_xdg = MODULE.os.environ.get("XDG_DATA_HOME")
