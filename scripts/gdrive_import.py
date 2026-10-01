@@ -7,6 +7,7 @@ and prepares them for organization into the Kova Master Hub structure.
 """
 
 import os
+import sys
 import json
 import hashlib
 import mimetypes
@@ -15,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import re
 import tempfile
+from uuid import uuid4
 
 try:
     from scripts.private_state import validate_unlinked_path
@@ -190,8 +192,8 @@ class GoogleDriveImporter:
             return all_files
 
         except Exception as e:
-            self.log(f"❌ Error searching files: {e}", Colors.RED)
-            return []
+            self.log("❌ Drive scan failed; no snapshot was published", Colors.RED)
+            raise RuntimeError("Drive scan failed; retry before updating the registry") from None
 
     def analyze_file(self, file_info: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze a single file"""
@@ -429,7 +431,7 @@ class GoogleDriveImporter:
             raise PermissionError("inventory output requires a dedicated private directory")
         output_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
 
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S') + '_' + uuid4().hex
 
         # Save analyzed files
         inventory_file = output_dir / f'inventory_{timestamp}.json'
@@ -466,6 +468,7 @@ class GoogleDriveImporter:
         self.log(f"  Files: {inventory_file}", Colors.GREEN)
         self.log(f"  Duplicates: {duplicates_file}", Colors.GREEN)
         self.log(f"  Summary: {summary_file}", Colors.GREEN)
+        return inventory_file
 
     def run(self):
         """Main execution"""
@@ -476,13 +479,13 @@ class GoogleDriveImporter:
         # Authenticate
         if not self.authenticate():
             self.log("\n❌ Authentication failed. Exiting.", Colors.RED)
-            return
+            raise RuntimeError("Drive authentication failed; no snapshot was published")
 
         # Search files
         files = self.search_kova_files()
         if not files:
             self.log("\n⚠️  No files found", Colors.YELLOW)
-            return
+            return self.save_inventory([], [])
 
         # Analyze files
         self.log(f"\n🔍 Analyzing {len(files)} files...", Colors.BOLD)
@@ -499,9 +502,10 @@ class GoogleDriveImporter:
         self.generate_report(analyzed_files, duplicates)
 
         # Save inventory
-        self.save_inventory(analyzed_files, duplicates)
+        inventory_file = self.save_inventory(analyzed_files, duplicates)
 
         self.log("\n✅ Analysis complete!", Colors.GREEN)
+        return inventory_file
 
 
 def main():
@@ -513,8 +517,13 @@ def main():
     args = parser.parse_args()
 
     importer = GoogleDriveImporter(credentials_path=args.credentials)
-    importer.run()
+    try:
+        importer.run()
+    except RuntimeError as error:
+        print(str(error), file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())

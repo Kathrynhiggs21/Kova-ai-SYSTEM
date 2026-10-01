@@ -8,10 +8,12 @@ deletes them. Labels stay deliberately small: area, topic, lifecycle, and flags.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 import re
+import stat
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -197,6 +199,8 @@ def sensitivity_for(file_info: dict[str, Any]) -> tuple[str, str]:
 
 def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
     """Classify lifecycle conservatively and explain the decision."""
+    if file_info.get("superseded_by"):
+        return "ARCHIVE", "Known replacement recorded"
     explicit = str(file_info.get("lifecycle") or file_info.get("status") or "").upper()
     if explicit == "UNREVIEWED":
         explicit = "REVIEW"
@@ -204,8 +208,6 @@ def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
         return "REVIEW", "Final status requires verification"
     if explicit in LIFECYCLE_COLORS and (explicit != "FINAL" or file_info.get("verified") is True):
         return explicit, "Explicit source status"
-    if file_info.get("superseded_by"):
-        return "ARCHIVE", "Known replacement recorded"
     if file_info.get("verified") is True and re.search(
         r"\b(final|approved|locked|canonical)\b", str(file_info.get("name", "")), re.I
     ):
@@ -270,7 +272,7 @@ def version_key(file_info: dict[str, Any]) -> str:
     revision = file_info.get("revision_id")
     if not revision:
         raise ValueError(f"inventory item needs version evidence for {source_identity(file_info)}")
-    raw = f"{source}|{source_identity(file_info)}|{revision}"
+    raw = json.dumps([source, source_identity(file_info), str(revision)], ensure_ascii=False, separators=(",", ":"))
     derived = hashlib.sha256(raw.encode("utf-8")).hexdigest()
     if file_info.get("version_key") and str(file_info["version_key"]) != derived:
         raise ValueError("supplied version key does not match source and revision evidence")
@@ -445,6 +447,22 @@ def merge_history(
     snapshot_sources: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Retain exact-version history and prior decisions across scanner runs."""
+    # Upgrade earlier delimiter-based keys without losing decisions or pointers.
+    previous = [dict(row) for row in previous]
+    key_updates = {}
+    for row in previous:
+        evidence = row.get("version_evidence", {})
+        source = str(evidence.get("source") or "").strip().casefold()
+        revision = evidence.get("revision_id")
+        if row.get("source_id") and revision and re.fullmatch(r"[a-z][a-z0-9_.-]*", source) and source != "unknown":
+            raw = json.dumps([source, str(row["source_id"]), str(revision)], ensure_ascii=False, separators=(",", ":"))
+            new_key = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+            key_updates[row["version_key"]] = new_key
+            row["version_key"] = new_key
+    for row in previous:
+        for field in ("canonical_version_key", "possible_duplicate_of"):
+            if row.get(field) in key_updates:
+                row[field] = key_updates[row[field]]
     if full_snapshot:
         merged = {
             row["version_key"]: {
@@ -499,7 +517,15 @@ def merge_history(
             combined["superseded_by"] = prior["superseded_by"]
         if prior.get("flags"):
             combined["flags"] = list(dict.fromkeys([*prior.get("flags", []), *row.get("flags", [])]))
-            combined["flag_colors"] = [FLAG_COLORS[flag] for flag in combined["flags"]]
+        # Sensitivity flags describe the current classification, not history.
+        if row.get("sensitivity") == "UNKNOWN" and prior.get("sensitivity") in {"CLEAR", "SENSITIVE"}:
+            combined["sensitivity"] = prior["sensitivity"]
+            combined["sensitivity_basis"] = prior.get("sensitivity_basis")
+        if combined.get("sensitivity") in {"CLEAR", "SENSITIVE"}:
+            combined["flags"] = [flag for flag in combined.get("flags", []) if flag != "SENSITIVE"]
+            if combined["sensitivity"] == "SENSITIVE":
+                combined["flags"].append("SENSITIVE")
+        combined["flag_colors"] = [FLAG_COLORS[flag] for flag in combined.get("flags", [])]
         for field, fallback_values in (
             ("area", {"Other"}),
             ("topic", {"KOVA Reference"}),
@@ -516,16 +542,23 @@ def merge_history(
             combined["possible_duplicate_of"] = prior["possible_duplicate_of"]
         if (
             prior.get("lifecycle")
-            and not current_verification.get("source_status")
-            and row.get("decision_reason") in {
-                "Needs current verification",
-                "Possible duplicate; content hash unavailable",
-                "Recent relevant work",
-            }
+            and not combined.get("superseded_by")
+            and (
+                (prior_verification.get("verified") and not current_verification.get("verified"))
+                or (not current_verification.get("source_status") and row.get("decision_reason") in {
+                    "Needs current verification",
+                    "Possible duplicate; content hash unavailable",
+                    "Recent relevant work",
+                })
+            )
         ):
             combined["lifecycle"] = prior["lifecycle"]
             combined["lifecycle_color"] = LIFECYCLE_COLORS[prior["lifecycle"]]
             combined["decision_reason"] = prior.get("decision_reason", combined["decision_reason"])
+        if combined.get("superseded_by"):
+            combined["lifecycle"] = "ARCHIVE"
+            combined["lifecycle_color"] = LIFECYCLE_COLORS["ARCHIVE"]
+            combined["decision_reason"] = "Known replacement recorded"
         merged[row["version_key"]] = combined
     return sorted(merged.values(), key=lambda row: row["version_key"])
 
@@ -647,15 +680,27 @@ def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
 
 def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: bool = False, snapshot_sources: set[str] | None = None) -> int:
     output = validate_unlinked_path(output)
-    previous: list[dict[str, Any]] = []
-    if output.exists():
-        payload = json.loads(output.read_text(encoding="utf-8"))
-        previous = payload.get("items", []) if isinstance(payload, dict) else []
-    payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources)
-    atomic_write_private(output, payload)
     exception_output = output.with_name(f"{output.stem}.exceptions.json")
-    atomic_write_private(exception_output, payload["exceptions"])
-    return payload["exceptions"]["exception_count"]
+    validate_unlinked_path(exception_output)
+    parent = output.parent
+    if parent.exists() and parent.stat().st_mode & 0o777 != 0o700:
+        raise PermissionError("registry updates require a dedicated private directory")
+    parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    lock_path = validate_unlinked_path(output.with_name(f".{output.name}.lock"))
+    descriptor = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, "a") as lock:
+        metadata = os.fstat(lock.fileno())
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1 or metadata.st_mode & 0o777 != 0o600:
+            raise PermissionError("registry lock must be an unlinked private file")
+        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        previous: list[dict[str, Any]] = []
+        if output.exists():
+            payload = json.loads(output.read_text(encoding="utf-8"))
+            previous = payload.get("items", []) if isinstance(payload, dict) else []
+        payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources)
+        atomic_write_private(output, payload)
+        atomic_write_private(exception_output, payload["exceptions"])
+        return payload["exceptions"]["exception_count"]
 
 
 def validate_registry_output_path(inventory: Path, registry: Path) -> Path:

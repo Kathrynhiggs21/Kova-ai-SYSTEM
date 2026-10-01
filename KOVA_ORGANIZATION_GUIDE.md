@@ -15,13 +15,9 @@ File Type and Content Origin are descriptive fields. Legacy `UNREVIEWED` maps to
 
 ## Safe workflow
 
-1. Run the read-only Google Drive inventory:
+1. Set up the approved read-only Google Drive credentials in the private state directory. The scanner never reuses an executable pickle token.
 
-   ```bash
-   python3 scripts/gdrive_import.py
-   ```
-
-2. Build or refresh the private registry:
+2. Scan Drive and refresh the private registry:
 
    ```bash
    scripts/setup_kova_organization.sh

@@ -16,6 +16,25 @@ SPEC.loader.exec_module(MODULE)
 
 
 class GoogleDriveImportTests(unittest.TestCase):
+    def test_successful_empty_scan_publishes_a_new_empty_snapshot(self):
+        importer = MODULE.GoogleDriveImporter()
+        with tempfile.TemporaryDirectory() as directory, \
+                mock.patch.object(importer, "authenticate", return_value=True), \
+                mock.patch.object(importer, "search_kova_files", return_value=[]), \
+                mock.patch.dict(MODULE.os.environ, {"KOVA_PRIVATE_STATE_DIR": directory}):
+            inventory = importer.run()
+            self.assertEqual(json.loads(inventory.read_text()), [])
+
+    def test_failed_scan_cannot_publish_an_empty_or_stale_snapshot(self):
+        importer = MODULE.GoogleDriveImporter()
+        importer.service = mock.Mock()
+        importer.service.files.return_value.list.return_value.execute.side_effect = RuntimeError("test provider error")
+        with mock.patch.object(importer, "authenticate", return_value=True), \
+                mock.patch.object(importer, "save_inventory") as save:
+            with self.assertRaisesRegex(RuntimeError, "Drive scan failed"):
+                importer.run()
+            save.assert_not_called()
+
     def test_linked_parent_is_rejected_before_credential_access(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -116,12 +135,12 @@ class GoogleDriveImportTests(unittest.TestCase):
             output_dir = Path(temp_dir) / "kova_file_inventory"
             with mock.patch.object(MODULE, "datetime") as mocked_datetime:
                 mocked_datetime.now.return_value = datetime(2026, 9, 16, 18, 0, 0)
-                importer.save_inventory([{"category": "CORE"}], [], output_dir=output_dir)
+                inventory = importer.save_inventory([{"category": "CORE"}], [], output_dir=output_dir)
 
             self.assertEqual(output_dir.stat().st_mode & 0o777, 0o700)
-            self.assertEqual((output_dir / "inventory_20260916_180000.json").stat().st_mode & 0o777, 0o600)
-            self.assertEqual((output_dir / "duplicates_20260916_180000.json").stat().st_mode & 0o777, 0o600)
-            self.assertEqual((output_dir / "summary_20260916_180000.txt").stat().st_mode & 0o777, 0o600)
+            self.assertTrue(inventory.name.startswith("inventory_20260916_180000_"))
+            self.assertEqual(inventory.stat().st_mode & 0o777, 0o600)
+            self.assertTrue(all(path.stat().st_mode & 0o777 == 0o600 for path in output_dir.iterdir()))
 
     def test_save_inventory_defaults_to_private_state_directory(self):
         importer = MODULE.GoogleDriveImporter()
@@ -133,7 +152,7 @@ class GoogleDriveImportTests(unittest.TestCase):
 
             output_dir = Path(temp_dir) / "inventory"
             self.assertEqual(output_dir.stat().st_mode & 0o777, 0o700)
-            self.assertTrue((output_dir / "inventory_20260916_180000.json").exists())
+            self.assertEqual(len(list(output_dir.glob("inventory_20260916_180000_*.json"))), 1)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build KOVA's private metadata registry from the newest available inventory.
+# Build KOVA's private metadata registry from an explicit inventory or fresh scan.
 
 set -euo pipefail
 
@@ -7,8 +7,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_dir="$(dirname "$script_dir")"
 inventory_path="${1:-}"
 private_state_dir="${KOVA_PRIVATE_STATE_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/kova/private}"
-inventory_dir="$private_state_dir/inventory"
-legacy_inventory_dir="$project_dir/kova_file_inventory"
 registry_path="${2:-$private_state_dir/status_registry.json}"
 snapshot_mode="${3:-drive-snapshot}"
 snapshot_args=()
@@ -20,19 +18,15 @@ case "$snapshot_mode" in
 esac
 
 if [[ -z "$inventory_path" ]]; then
-  if [[ ! -d "$inventory_dir" && -d "$legacy_inventory_dir" ]]; then
-    inventory_dir="$legacy_inventory_dir"
-  fi
-  if [[ ! -d "$inventory_dir" ]]; then
-    echo "No inventory found. Run the source scanner or provide an inventory JSON path." >&2
-    exit 1
-  fi
-  inventory_path="$(python3 - "$inventory_dir" <<'PY'
-from pathlib import Path
+  inventory_path="$(python3 - "$script_dir" <<'PY'
+from contextlib import redirect_stdout
 import sys
 
-files = sorted(Path(sys.argv[1]).glob("inventory_*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
-print(files[0] if files else "")
+sys.path.insert(0, sys.argv[1])
+with redirect_stdout(sys.stderr):
+    from gdrive_import import GoogleDriveImporter
+    inventory = GoogleDriveImporter().run()
+print(inventory)
 PY
 )"
 fi

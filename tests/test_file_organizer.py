@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,65 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_unverified_explicit_status_cannot_replace_verified_lifecycle(self):
+        initial = MODULE.build_registry([{
+            "source": "test", "id": "a", "name": "KOVA guide", "version": "1",
+            "status": "FINAL", "verified": True, "verification_evidence": "Owner approved",
+        }])
+        refresh = MODULE.build_registry([{
+            "source": "test", "id": "a", "name": "KOVA guide", "version": "1",
+            "status": "ACTIVE", "verified": False,
+        }])
+        merged = MODULE.merge_history(refresh, initial)[0]
+        self.assertEqual(merged["lifecycle"], "FINAL")
+        self.assertEqual(merged["verification"]["source_status"], "FINAL")
+
+    def test_supersession_overrides_a_stale_active_status(self):
+        lifecycle, _ = MODULE.lifecycle_for({"status": "ACTIVE", "superseded_by": "replacement"})
+        self.assertEqual(lifecycle, "ARCHIVE")
+
+    def test_authoritative_clear_inspection_removes_the_sensitive_flag(self):
+        item = {"source": "test", "id": "a", "name": "KOVA guide", "version": "1"}
+        initial = MODULE.build_registry([{**item, "sensitive": True}])
+        refresh = MODULE.build_registry([{**item, "sensitivity_checked": True}])
+        merged = MODULE.merge_history(refresh, initial)[0]
+        self.assertEqual(merged["sensitivity"], "CLEAR")
+        self.assertNotIn("SENSITIVE", merged["flags"])
+
+    def test_delimiters_cannot_collapse_distinct_exact_versions(self):
+        first = MODULE.version_key({"source": "test", "id": "a|b", "version": "c"})
+        second = MODULE.version_key({"source": "test", "id": "a", "version": "b|c"})
+        self.assertNotEqual(first, second)
+
+    def test_upgrade_preserves_earlier_keys_and_verified_decisions(self):
+        item = {"source": "test", "id": "a", "name": "KOVA guide", "version": "1"}
+        previous = MODULE.build_registry([{**item, "status": "FINAL", "verified": True}])
+        previous[0]["version_key"] = "earlier-delimited-key"
+        merged = MODULE.merge_history(MODULE.build_registry([item]), previous)
+        self.assertEqual(len(merged), 1)
+        self.assertEqual(merged[0]["lifecycle"], "FINAL")
+
+    def test_overlapping_refreshes_retain_both_connector_updates(self):
+        code = '''
+import sys, time
+from pathlib import Path
+from scripts import file_organizer as f
+original = f.build_registry_payload
+def delayed(*args, **kwargs):
+    time.sleep(0.3)
+    return original(*args, **kwargs)
+f.build_registry_payload = delayed
+rows = f.build_registry([{"source": "test", "id": sys.argv[2], "name": "KOVA guide", "version": "1"}])
+f.write_registry(rows, Path(sys.argv[1]))
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "private" / "registry.json"
+            processes = [subprocess.Popen([sys.executable, "-c", code, str(output), identity], cwd=SCRIPT.parents[1]) for identity in ("a", "b")]
+            for process in processes:
+                self.assertEqual(process.wait(timeout=10), 0)
+            rows = json.loads(output.read_text())["items"]
+            self.assertEqual({row["source_id"] for row in rows}, {"a", "b"})
+
     def test_generic_revision_cannot_stand_in_for_supported_evidence(self):
         with self.assertRaisesRegex(ValueError, "supported version evidence"):
             MODULE.version_key({"source": "test", "id": "a", "revision_id": "invented"})
