@@ -264,7 +264,7 @@ class InventorySnapshot(dict):
 
 def supported_revision(file_info: dict[str, Any]) -> str | None:
     evidence_fields = ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version")
-    revision = next((str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
+    revision = next((str(file_info[key]).lower() if key in {"sha256", "md5Checksum", "blob_sha"} else str(file_info[key]) for key in evidence_fields if file_info.get(key)), None)
     if str(file_info.get("source") or "").casefold() == "google_drive" and file_info.get("version"):
         return json.dumps(["drive-version", str(file_info["version"]), revision], separators=(",", ":"))
     return revision
@@ -289,7 +289,8 @@ def populate_version_metadata(file_info: dict[str, Any]) -> None:
         file_info["content_hash"] = file_info.get("sha256") or file_info.get("md5Checksum")
     revision = supported_revision(file_info)
     supplied = file_info.get("revision_id")
-    if supplied and (revision is None or str(supplied) != revision):
+    digest_revision = next((field for field in ("sha256", "headRevisionId", "blob_sha", "md5Checksum", "content_hash", "version") if file_info.get(field)), None) in {"sha256", "blob_sha", "md5Checksum"}
+    if supplied and (revision is None or (str(supplied) != revision and not (digest_revision and str(supplied).casefold() == revision.casefold()))):
         raise ValueError("supplied revision must match supported version evidence")
     if revision is not None:
         file_info["revision_id"] = revision
@@ -321,7 +322,8 @@ def exact_duplicate_key(file_info: dict[str, Any]) -> str | None:
 def digest_evidence(evidence: dict[str, Any]) -> tuple[str, str] | None:
     for field, algorithm in (("sha256", "sha256"), ("md5Checksum", "md5"), ("blob_sha", "git-blob-sha1"), ("content_hash", "opaque-content-hash")):
         if evidence.get(field):
-            return algorithm, str(evidence[field])
+            value = str(evidence[field])
+            return algorithm, value.lower() if field != "content_hash" else value
     return None
 
 
@@ -333,6 +335,18 @@ def needs_hash_review(evidences: Iterable[dict[str, Any]]) -> bool:
 def likely_duplicate_key(file_info: dict[str, Any], title: str) -> str:
     normalized = re.sub(r"\W+", "", title).lower()
     return f"title-size:{normalized}:{file_info.get('size', '')}"
+
+
+def comparable_digest_conflict(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    """A shared digest algorithm with different values proves two files differ."""
+    for field in ("sha256", "md5Checksum", "blob_sha", "content_hash"):
+        if field == "content_hash" and (any(left.get(k) for k in ("sha256", "md5Checksum", "blob_sha")) or any(right.get(k) for k in ("sha256", "md5Checksum", "blob_sha"))):
+            continue
+        if left.get(field) and right.get(field):
+            lhs, rhs = str(left[field]), str(right[field])
+            if (lhs != rhs) if field == "content_hash" else (lhs.casefold() != rhs.casefold()):
+                return True
+    return False
 
 
 def modified_instant(value: Any) -> float:
@@ -409,7 +423,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
         exact = exact_duplicate_key(item)
         if exact:
             exact_groups.setdefault(exact, []).append(index)
-        likely_groups.setdefault(likely_duplicate_key(item, title), []).append(index)
+        likely_groups.setdefault(likely_duplicate_key(item, short_title(item, limit=10_000)), []).append(index)
 
     canonical_indexes = {
         key: max(indexes, key=lambda idx: canonical_rank(items[idx]))
@@ -431,13 +445,14 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     for index, file_info in enumerate(items):
         title = titles[index]
         lifecycle, reason = lifecycle_for(file_info)
+        source_lifecycle, source_reason = lifecycle, reason
         sensitivity, sensitivity_basis = sensitivity_for(file_info)
         flags = ["SENSITIVE"] if sensitivity == "SENSITIVE" else []
         exact = exact_duplicate_key(file_info)
         exact_canonical = canonical_indexes.get(exact) if exact else None
         if exact_canonical is not None and exact_canonical != index:
             flags.append("DUPLICATE")
-        likely = likely_duplicate_key(file_info, title)
+        likely = likely_duplicate_key(file_info, short_title(file_info, limit=10_000))
         likely_canonical = likely_canonical_indexes.get(likely)
         possible_duplicate_of = None
         if likely in likely_groups_with_missing_hash and likely_canonical is not None and likely_canonical != index:
@@ -450,6 +465,7 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
                 "version_key": version_keys[index],
                 "source_name": file_info.get("name"),
                 "source_size": file_info.get("size", ""),
+                "duplicate_title": short_title(file_info, limit=10_000),
                 "display_title": title,
                 "area": area_for(file_info),
                 "topic": topic_for(file_info),
@@ -464,6 +480,8 @@ def build_registry(inventory: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
                 "sensitivity": sensitivity,
                 "sensitivity_basis": sensitivity_basis,
                 "decision_reason": reason,
+                "source_lifecycle": source_lifecycle,
+                "source_decision_reason": source_reason,
                 "verification": verification_for(file_info),
                 "canonical": file_info.get("canonical") if isinstance(file_info.get("canonical"), bool) else None,
                 "unresolved_review": file_info.get("unresolved_review") is True,
@@ -671,19 +689,33 @@ def reclassify_likely_duplicates(rows: list[dict[str, Any]]) -> list[dict[str, A
     for index, row in enumerate(rows):
         if row.get("observed_current"):
             row["possible_duplicate_of"] = None
-            key = likely_duplicate_key({"size": row.get("source_size", "")}, row.get("display_title", ""))
+            if row.get("decision_reason") in {"Possible duplicate; content hash unavailable", "Possible duplicate; comparable content hash unavailable"}:
+                source_status = str(row.get("verification", {}).get("source_status") or "").upper()
+                baseline = row.get("source_lifecycle") or (source_status if source_status in LIFECYCLE_COLORS and (source_status != "FINAL" or row.get("verification", {}).get("verified")) else "REVIEW")
+                row["lifecycle"] = baseline
+                row["lifecycle_color"] = LIFECYCLE_COLORS[row["lifecycle"]]
+                row["decision_reason"] = row.get("source_decision_reason") or ("Explicit source status" if baseline != "REVIEW" else "Needs current verification")
+            full_title = row.get("duplicate_title") or short_title({"name": row.get("source_name") or row.get("display_title", "")}, limit=10_000)
+            key = likely_duplicate_key({"size": row.get("source_size", "")}, full_title)
             groups.setdefault(key, []).append(index)
     for indexes in groups.values():
         if len(indexes) < 2 or not needs_hash_review(rows[i].get("version_evidence", {}) for i in indexes):
             continue
-        canonical = max(indexes, key=lambda i: selection_rank(
-            rows[i].get("canonical"), rows[i].get("verification", {}).get("verified"),
-            rows[i].get("lifecycle"), rows[i].get("version_evidence", {}).get("modified"), rows[i]["version_key"],
-        ))
+        conflicting = {i for offset, a in enumerate(indexes) for b in indexes[offset + 1:] if comparable_digest_conflict(rows[a].get("version_evidence", {}), rows[b].get("version_evidence", {})) for i in (a, b)}
         for index in indexes:
             row = rows[index]
-            row["possible_duplicate_of"] = None if index == canonical else rows[canonical]["version_key"]
-            if index != canonical and row.get("lifecycle") not in {"FINAL", "ARCHIVE"}:
+            if index in conflicting:
+                continue
+            candidates = [i for i in indexes if i != index and not comparable_digest_conflict(row.get("version_evidence", {}), rows[i].get("version_evidence", {}))]
+            if not candidates:
+                continue
+            canonical = max(candidates if conflicting else [index, *candidates], key=lambda i: selection_rank(
+                rows[i].get("canonical"), rows[i].get("verification", {}).get("verified"),
+                rows[i].get("lifecycle"), rows[i].get("version_evidence", {}).get("modified"), rows[i]["version_key"],
+            ))
+            if canonical != index:
+                row["possible_duplicate_of"] = rows[canonical]["version_key"]
+            if canonical != index and row.get("lifecycle") not in {"FINAL", "ARCHIVE"}:
                 row["lifecycle"] = "REVIEW"
                 row["lifecycle_color"] = LIFECYCLE_COLORS["REVIEW"]
                 row["decision_reason"] = "Possible duplicate; comparable content hash unavailable"
@@ -735,8 +767,7 @@ def atomic_write_private(output: Path, payload: dict[str, Any]) -> None:
 
 def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: bool = False, snapshot_sources: set[str] | None = None) -> int:
     output = validate_unlinked_path(output)
-    exception_output = output.with_name(f"{output.stem}.exceptions.json")
-    validate_unlinked_path(exception_output)
+    legacy_exception_name = f"{output.stem}.exceptions.json"
     lock_path = validate_unlinked_path(output.with_name(f".{output.name}.lock"))
     with private_directory(output.parent, create=True) as directory:
         descriptor = os.open(lock_path.name, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW | os.O_NONBLOCK, 0o600, dir_fd=directory)
@@ -754,8 +785,16 @@ def write_registry(rows: list[dict[str, Any]], output: Path, *, full_snapshot: b
                 previous_payload = json.loads(existing)
                 previous = previous_payload.get("items", []) if isinstance(previous_payload, dict) else []
             payload = build_registry_payload(rows, previous, full_snapshot=full_snapshot, snapshot_sources=snapshot_sources)
+            # Retire the derived cache before publishing the single authoritative payload.
+            try:
+                metadata = os.stat(legacy_exception_name, dir_fd=directory, follow_symlinks=False)
+            except FileNotFoundError:
+                pass
+            else:
+                if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+                    raise PermissionError("legacy exceptions cache must be a regular unlinked file")
+                os.unlink(legacy_exception_name, dir_fd=directory)
             write_text_at(directory, output.name, json.dumps(payload, indent=2) + "\n")
-            write_text_at(directory, exception_output.name, json.dumps(payload["exceptions"], indent=2) + "\n")
             return payload["exceptions"]["exception_count"]
 
 
@@ -819,7 +858,7 @@ def main() -> int:
     else:
         exception_count = write_registry(rows, registry_path, full_snapshot=args.full_snapshot, snapshot_sources=snapshot_sources)
         print(f"Wrote {len(rows)} current metadata records to {registry_path}")
-        print(f"Wrote {exception_count} review exceptions to {registry_path.with_name(registry_path.stem + '.exceptions.json')}")
+        print(f"Included {exception_count} review exceptions in the registry")
     if args.base_path or args.execute:
         print("Legacy move/folder arguments were ignored; governed files were not changed.")
     return 0

@@ -16,6 +16,75 @@ SPEC.loader.exec_module(MODULE)
 
 
 class FileOrganizerTests(unittest.TestCase):
+    def test_full_title_controls_probable_duplicate_matching(self):
+        prefix = "KOVA Reference " + "A" * 90
+        rows = MODULE.build_registry([
+            {"source": "test", "id": "a", "name": prefix + " Red.pdf", "version": "1", "size": 10},
+            {"source": "test", "id": "b", "name": prefix + " Blue.pdf", "version": "1", "size": 10},
+        ])
+        result = MODULE.build_registry_payload(rows)["items"]
+        self.assertTrue(all(row["possible_duplicate_of"] is None for row in result))
+
+    def test_mixed_digests_do_not_link_proven_different_files(self):
+        items = [
+            {"source": "test", "id": "a", "name": "Shared.pdf", "version": "1", "size": 10, "sha256": "a" * 64},
+            {"source": "test", "id": "b", "name": "Shared.pdf", "version": "1", "size": 10, "sha256": "b" * 64},
+            {"source": "test", "id": "c", "name": "Shared.pdf", "version": "1", "size": 10, "md5Checksum": "c" * 32},
+        ]
+        result = MODULE.build_registry_payload(MODULE.build_registry(items))["items"]
+        self.assertTrue(all(row["possible_duplicate_of"] is None for row in result if row["source_id"] in {"a", "b"}))
+        self.assertIsNotNone(next(row for row in result if row["source_id"] == "c")["possible_duplicate_of"])
+
+    def test_legacy_title_and_verified_review_recover_on_incremental_scan(self):
+        old = MODULE.build_registry_payload(MODULE.build_registry([
+            {"source": "test", "id": "a", "name": "KOVA Guide copy.pdf", "version": "1", "size": 10, "verified": True, "lifecycle": "ACTIVE"},
+            {"source": "test", "id": "b", "name": "KOVA Guide.pdf", "version": "1", "size": 10},
+        ]))["items"]
+        for row in old:
+            row.pop("duplicate_title", None)
+            row.pop("source_lifecycle", None)
+            row.pop("source_decision_reason", None)
+        refreshed = MODULE.build_registry_payload(MODULE.build_registry([]), old)["items"]
+        self.assertEqual(sum(bool(row["possible_duplicate_of"]) for row in refreshed), 1)
+        separated = MODULE.build_registry_payload(MODULE.build_registry([
+            {"source": "test", "id": "b", "name": "Different.pdf", "version": "1", "size": 10},
+        ]), refreshed)["items"]
+        verified = next(row for row in separated if row["source_id"] == "a")
+        self.assertEqual(verified["lifecycle"], "ACTIVE")
+        self.assertIsNone(verified["possible_duplicate_of"])
+
+    def test_probable_review_clears_when_group_dissolves(self):
+        items = [
+            {"source": "test", "id": "a", "name": "Shared.pdf", "version": "1", "size": 10},
+            {"source": "test", "id": "b", "name": "Shared.pdf", "version": "1", "size": 10},
+        ]
+        previous = MODULE.build_registry_payload(MODULE.build_registry(items))["items"]
+        current = MODULE.build_registry([{**items[0], "name": "Changed.pdf"}])
+        result = MODULE.build_registry_payload(current, previous)["items"]
+        remaining = next(row for row in result if row["source_id"] == "b")
+        self.assertIsNone(remaining["possible_duplicate_of"])
+        self.assertNotEqual(remaining["decision_reason"], "Possible duplicate; comparable content hash unavailable")
+
+    def test_digest_case_does_not_change_version_identity(self):
+        lower = {"source": "test", "id": "a", "name": "A.pdf", "sha256": "ab" * 32}
+        upper = {**lower, "sha256": ("ab" * 32).upper()}
+        self.assertEqual(MODULE.build_registry([lower])[0]["version_key"], MODULE.build_registry([upper])[0]["version_key"])
+        self.assertEqual(MODULE.build_registry([lower])[0]["version_key"], MODULE.build_registry([{**upper, "revision_id": ("ab" * 32).upper()}])[0]["version_key"])
+        opaque = {"source": "test", "id": "a", "name": "A.pdf", "content_hash": "ProviderRevA"}
+        self.assertNotEqual(MODULE.build_registry([opaque])[0]["version_key"], MODULE.build_registry([{**opaque, "content_hash": "ProviderReva"}])[0]["version_key"])
+
+    def test_failed_publication_keeps_previous_registry_and_no_stale_exception_cache(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "private" / "registry.json"
+            MODULE.write_registry([], output)
+            previous = output.read_bytes()
+            legacy = output.with_name("registry.exceptions.json")
+            legacy.write_text('{"stale": true}', encoding="utf-8")
+            with mock.patch.object(MODULE, "write_text_at", side_effect=OSError("interrupted")):
+                with self.assertRaises(OSError):
+                    MODULE.write_registry([], output)
+            self.assertEqual(output.read_bytes(), previous)
+            self.assertFalse(legacy.exists())
     def test_probable_duplicate_on_unmentioned_candidate_clears_after_target_changes(self):
         previous = MODULE.build_registry([
             {"source": "test", "id": "a", "name": "KOVA Guide", "size": 12, "version": "1", "canonical": True},
@@ -499,7 +568,7 @@ f.write_registry(rows, Path(sys.argv[1]))
             self.assertEqual(len(payload["exceptions"]["items"]), 1)
             self.assertEqual(output.stat().st_mode & 0o777, 0o600)
             self.assertEqual(output.parent.stat().st_mode & 0o777, 0o700)
-            self.assertTrue(output.with_name("registry.exceptions.json").exists())
+            self.assertFalse(output.with_name("registry.exceptions.json").exists())
 
     def test_registry_rejects_non_private_output_directory(self):
         with tempfile.TemporaryDirectory() as temp_dir:
