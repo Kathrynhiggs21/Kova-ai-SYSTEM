@@ -18,9 +18,11 @@ queue_rules:
     queue_conditions:
       - base = main
       - -draft
+      - -label = do-not-merge
     merge_conditions:
       - base = main
       - -draft
+      - -label = do-not-merge
 scopes:
   source:
     files: {}
