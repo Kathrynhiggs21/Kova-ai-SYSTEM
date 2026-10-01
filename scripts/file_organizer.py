@@ -195,6 +195,8 @@ def lifecycle_for(file_info: dict[str, Any]) -> tuple[str, str]:
     explicit = str(file_info.get("lifecycle") or file_info.get("status") or "").upper()
     if explicit == "UNREVIEWED":
         explicit = "REVIEW"
+    if explicit == "FINAL" and file_info.get("verified") is not True:
+        return "REVIEW", "Final status requires verification"
     if explicit in LIFECYCLE_COLORS and (explicit != "FINAL" or file_info.get("verified") is True):
         return explicit, "Explicit source status"
     if file_info.get("superseded_by"):

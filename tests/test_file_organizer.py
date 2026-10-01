@@ -134,6 +134,10 @@ class FileOrganizerTests(unittest.TestCase):
             "FINAL",
         )
         self.assertEqual(MODULE.lifecycle_for({"status": "UNREVIEWED"})[0], "REVIEW")
+        self.assertEqual(MODULE.lifecycle_for({
+            "name": "KOVA API Final Guide", "status": "FINAL",
+            "modified": MODULE.datetime.now(MODULE.timezone.utc).isoformat(),
+        })[0], "REVIEW")
 
     def test_boundary_matching_does_not_call_capital_an_api_topic(self):
         self.assertEqual(MODULE.topic_for({"name": "KOVA Capital Budget.txt"}), "KOVA Reference")
