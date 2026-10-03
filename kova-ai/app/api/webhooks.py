@@ -255,7 +255,9 @@ async def github_webhook(
 
         webhook_secret = get_github_webhook_secret()
         if not webhook_secret:
-            logger.error("Rejecting GitHub webhook because its secret is not configured")
+            logger.error(
+                "Rejecting GitHub webhook because its secret is not configured"
+            )
             raise HTTPException(
                 status_code=503,
                 detail="GitHub webhook verification is not configured",
