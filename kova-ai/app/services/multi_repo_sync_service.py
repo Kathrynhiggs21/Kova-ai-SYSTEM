@@ -128,9 +128,13 @@ class MultiRepoSyncService:
                     )
                 repository_owner, repository_name = parsed_repository
                 if repository_owner.casefold() != owner.casefold():
-                    raise ValueError("Registry repository owner does not match github_owner")
+                    raise ValueError(
+                        "Registry repository owner does not match github_owner"
+                    )
                 if not isinstance(name, str) or name != repository_name:
-                    raise ValueError("Registry repository name does not match full_name")
+                    raise ValueError(
+                        "Registry repository name does not match full_name"
+                    )
                 if not isinstance(enabled, bool):
                     raise ValueError(
                         "Each registry repository must have a boolean enabled flag"
@@ -175,7 +179,9 @@ class MultiRepoSyncService:
             if config["sync_settings"]["sync_interval_minutes"] <= 0:
                 raise ValueError("Registry sync interval must be positive")
             if not config["discovery_settings"]["repo_name_pattern"].strip():
-                raise ValueError("Registry repository discovery pattern cannot be empty")
+                raise ValueError(
+                    "Registry repository discovery pattern cannot be empty"
+                )
 
             return config
         except Exception as e:
