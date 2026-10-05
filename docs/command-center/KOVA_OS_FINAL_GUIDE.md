@@ -9,6 +9,7 @@ KOVA is one personal AI operating system with one control plane and one primary 
 - **Core:** `Kathrynhiggs21/Kova-ai-SYSTEM`
 - **Authenticated app:** `Kathrynhiggs21/kovaos-site`
 - **Primary domain:** `kovaos.com`
+- **Hosting target:** Cloudflare for public edge/static delivery and request routing; Railway for persistent Node services when required. Existing Vercel/Netlify/Manus surfaces remain rollback/migration-only until verified cutover.
 - **Files:** Google Drive is the canonical user-file store.
 - **Operational state:** a relational database will hold runs, jobs, connector health, and application state.
 - **Notion:** a human-readable view, not a competing technical source of truth.
@@ -71,7 +72,7 @@ The attached Zapier MCP starter pack is historical and sensitive. It contains a 
 
 ## Next build sequence
 
-1. Merge and verify deterministic CI for `kovaos-site`.
+1. Keep deterministic CI green for `kovaos-site` and prepare the Cloudflare edge + Railway backend migration without changing production DNS.
 2. Merge the MCP malformed-input hardening after all required security checks pass.
 3. Finish the safe metadata-registry implementation and resolve all review findings.
 4. Define and implement the versioned Core-to-app `/api/v1` contract.
