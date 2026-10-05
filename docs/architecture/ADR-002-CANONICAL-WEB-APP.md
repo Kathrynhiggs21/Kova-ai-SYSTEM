@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-15
+- Amended: 2026-10-05
 - Domain: `https://kovaos.com`
 
 ## Decision
@@ -33,4 +34,6 @@ The general personal Drive folder is not a KOVA source of truth. The mixed KOVA 
 - Feature donors, experiments, and archives cannot be deployed by registry automation.
 - GitHub owns executable truth; Drive owns user files and archival evidence.
 - New KOVA repositories require a distinct deployable boundary and an update to this ADR and the runtime registry.
-- Vercel cleanup retains clean project names only long enough to verify domains and environment variables; retaining a Vercel project does not promote its source repository to canonical status.
+- Production hosting is Cloudflare-first: Cloudflare owns the public edge, TLS, static web delivery, and request routing for `kovaos.com`; Node services that require a persistent server runtime may run on Railway behind the edge.
+- Hosting topology does not change repository ownership: `Kova-ai-SYSTEM` remains Core/control-plane authority and `kovaos-site` remains the canonical authenticated application.
+- Vercel, Netlify, and Manus-hosted KOVA surfaces are migration/rollback surfaces only until the Cloudflare-first cutover passes authentication, route, API, and rollback smoke tests; retaining a provider deployment does not promote its source repository to canonical status.
