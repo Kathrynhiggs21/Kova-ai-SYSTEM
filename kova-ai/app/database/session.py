@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -10,14 +11,15 @@ load_dotenv(BASE_DIR / ".env")
 
 
 def build_default_database_url() -> str:
-    return (
-        "postgresql+asyncpg://"
-        f"{os.getenv('POSTGRES_USER', 'kova')}:"
-        f"{os.getenv('POSTGRES_PASSWORD', 'kova_pass')}@"
-        f"{os.getenv('POSTGRES_HOST', 'db')}:"
-        f"{os.getenv('POSTGRES_PORT', '5432')}/"
-        f"{os.getenv('POSTGRES_DB', 'kova')}"
-    )
+    """Build a correctly escaped async PostgreSQL URL from component settings."""
+    return URL.create(
+        drivername="postgresql+asyncpg",
+        username=os.getenv("POSTGRES_USER", "kova"),
+        password=os.getenv("POSTGRES_PASSWORD", "kova_pass"),
+        host=os.getenv("POSTGRES_HOST", "db"),
+        port=int(os.getenv("POSTGRES_PORT", "5432")),
+        database=os.getenv("POSTGRES_DB", "kova"),
+    ).render_as_string(hide_password=False)
 
 
 def resolve_database_url() -> str:
