@@ -27,7 +27,7 @@ Other KOVA repositories are migration sources, experiments, provider adapters, o
 - **GitHub** stores source code and review history.
 - **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
 - **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
-- **Vercel** hosts the canonical web and core deployments.
+- **Hosting is provider-separated.** Cloudflare is the target public edge/static delivery layer for `kovaos.com`; Railway is the target persistent Node runtime for the web application backend when connected and verified. The Python/FastAPI KOVA Core remains a separate control-plane runtime and must stay on a proven existing deployment until a dedicated target, environment configuration, and authenticated Core-to-web contract are verified.
 - **The frontend** never becomes an orchestration or document source of truth.
 
 One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
@@ -100,6 +100,19 @@ As re-audited on October 6, 2026:
 - duplicate/legacy Vercel projects and Manus-derived frontend runtime paths still require controlled review before retirement or replacement.
 
 This is a dated baseline, not a permanent health guarantee. Re-run checks before reporting current status.
+
+## Hosting migration gate
+
+The Cloudflare-first web migration does not authorize an automatic production cutover. Before changing public DNS or retiring an existing provider, all of the following must pass against the exact candidate deployment:
+
+1. Static routes load from the Cloudflare preview.
+2. A real web application API request (including `/api/health`) reaches the intended persistent web backend.
+3. The selected FastAPI Core target returns `/health = 200` with its required production environment names/scopes present.
+4. OAuth start/callback, session cookies, owner/admin access, and logout work on the candidate domain.
+5. At least one authenticated Core-to-web API call succeeds through the documented contract; the web Node backend and Python Core must not be conflated.
+6. The previous public route remains a tested rollback target until the new path is independently verified.
+
+Railway is installed as a ChatGPT integration but is not currently linked to an account in this audit, so no Railway service is claimed as deployed. Current Vercel/legacy surfaces remain migration evidence and rollback candidates, not proof of production ownership.
 
 ## Key references
 

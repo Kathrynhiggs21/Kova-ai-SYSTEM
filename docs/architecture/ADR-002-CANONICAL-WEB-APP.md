@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-09-15
+- Amended: 2026-10-06
 - Domain: `https://kovaos.com`
 
 ## Decision
@@ -33,4 +34,8 @@ The general personal Drive folder is not a KOVA source of truth. The mixed KOVA 
 - Feature donors, experiments, and archives cannot be deployed by registry automation.
 - GitHub owns executable truth; Drive owns user files and archival evidence.
 - New KOVA repositories require a distinct deployable boundary and an update to this ADR and the runtime registry.
-- Vercel cleanup retains clean project names only long enough to verify domains and environment variables; retaining a Vercel project does not promote its source repository to canonical status.
+- Cloudflare is the target public edge, TLS termination, static web delivery, and request-routing layer for `kovaos.com`.
+- The web application's persistent Node/Express/tRPC backend may run on Railway behind Cloudflare after the Railway account/service is connected and the preview smoke-test gate passes.
+- KOVA Core is a separate Python/FastAPI control-plane service. It must not be silently routed to the web Node backend. The October 6 audit found `/health = 200` only on the FastAPI-configured `kova-ai-system-okaz` Vercel project, but that project had no Vercel environment-variable inventory, so it is evidence of a viable runtime shape rather than authorization to promote it.
+- Until a dedicated Core destination is connected, configured, and proven with an authenticated Core-to-web contract, existing Core deployments remain in place and none may be retired solely because the Cloudflare web migration is ready.
+- Vercel, GitHub Pages, Netlify, and Manus-hosted KOVA surfaces are migration/rollback surfaces only until the replacement path is independently verified; retaining a provider deployment does not promote its source repository to canonical status.
