@@ -87,8 +87,8 @@ class CanonicalRepositoryMutationTests(unittest.IsolatedAsyncioTestCase):
             response = await add_repository(request)
 
         self.assertEqual(response.status, "success")
-        self.assertEqual(response.data["repo"], "kathrynhiggs21/KOVAOS-SITE")
-        add_repo.assert_awaited_once_with("kathrynhiggs21/KOVAOS-SITE", "frontend")
+        self.assertEqual(response.data["repo"], "Kathrynhiggs21/kovaos-site")
+        add_repo.assert_awaited_once_with("Kathrynhiggs21/kovaos-site", "frontend")
 
 
 class CanonicalWebhookScopeTests(unittest.IsolatedAsyncioTestCase):
