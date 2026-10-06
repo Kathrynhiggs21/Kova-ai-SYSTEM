@@ -180,6 +180,10 @@
     "description": "See config/core_modules.v1.json for the canonical split policy",
     "split_policy_file": "config/core_modules.v1.json"
   },
+  "deployment_inventory": {
+    "vercel_project_inventory_file": "config/vercel_projects.v1.json",
+    "destructive_actions_require_owner_approval": true
+  },
   "vault_live_enablement_policy": {
     "description": "Fail-closed gates and evidence required before any Vault live-data cutover",
     "policy_file": "config/vault_live_enablement.v1.json"
