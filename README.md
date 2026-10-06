@@ -90,10 +90,12 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 As re-audited on October 6, 2026:
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
-- the canonical frontend repository is `kovaos-site`, and its Vercel `kovaos-site` project owns the verified `kovaos.com` and `www.kovaos.com` domains;
+- the canonical frontend repository is `kovaos-site`; Vercel currently has both `kova-app` and `kovaos-site` projects deploying the same current `main` commit (`593452d`), while root/www Vercel aliases are attached to `kovaos-site`;
+- public routing is not cut over to that Vercel build: October 6 probes resolved `kovaos.com` through Cloudflare to GitHub Pages headers and the legacy `kova-ai-site` redirect to `kova.manus.space`, so Vercel alias metadata is not runtime proof;
 - backend Vercel ownership is still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
-- current runtime probes found `/health` returning HTTP 200 only on the FastAPI-configured `kova-ai-system-okaz` project; the other two checked Core projects returned Vercel 404 responses on both `/health` and `/api/health`;
-- the observed environment-variable inventory is attached to `kova-ai-system`, not the FastAPI-configured `kova-ai-system-okaz`, so no backend project should be retired or promoted solely from build status until runtime configuration and the authenticated Core-to-web contract are reconciled;
+- repeatable October 6 probes of deployments `dpl_AeGoU5MNzDoUkcQ8b3DBySXbYdJB` (`kova-ai-system`), `dpl_7pR5HEXnmMMaSuK1nHEHd7cCTDyP` (`kova-ai-system-sl9b`), and `dpl_6gQwD7nW54BJ9zdHHr6EBGQn6BJF` (`kova-ai-system-okaz`) found `/health` returning HTTP 200 only on the FastAPI-configured `okaz` project; the other two returned 404 on both `/health` and `/api/health`;
+- the redacted env-name audit found `kova-ai-system` carrying development/preview-scoped configuration including `APP_NAME`, `DEBUG`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `SECRET_KEY`, `JWT_ALGORITHM`, and `ACCESS_TOKEN_EXPIRE_MINUTES`, while `kova-ai-system-okaz` returned no Vercel environment variables; no secret values were read into documentation;
+- no backend project should be retired or promoted solely from build status until runtime configuration and the authenticated Core-to-web contract are reconciled;
 - anonymous Google Drive editing has been removed from the KOVA and AI World roots; and
 - duplicate/legacy Vercel projects and Manus-derived frontend runtime paths still require controlled review before retirement or replacement.
 
