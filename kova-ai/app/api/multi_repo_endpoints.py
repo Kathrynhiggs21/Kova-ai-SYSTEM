@@ -18,7 +18,9 @@ from app.core.repository_registry import CANONICAL_REPOSITORIES, parse_github_re
 from services.multi_repo_sync_service import MultiRepoSyncService  # noqa: E402
 
 router = APIRouter(prefix="/multi-repo", tags=["multi-repo"])
-CANONICAL_REPOSITORY_KEYS = {repo.casefold() for repo in CANONICAL_REPOSITORIES}
+CANONICAL_REPOSITORY_BY_KEY = {
+    repo.casefold(): repo for repo in CANONICAL_REPOSITORIES
+}
 
 
 class RepoAddRequest(BaseModel):
@@ -107,13 +109,15 @@ async def add_repository(request: RepoAddRequest):
     """Add a new repository to the Kova AI system"""
     try:
         coordinate = parse_github_repository(request.repo_full_name)
-        canonical_full_name = (
+        requested_full_name = (
             f"{coordinate[0]}/{coordinate[1]}" if coordinate is not None else None
         )
-        if (
-            canonical_full_name is None
-            or canonical_full_name.casefold() not in CANONICAL_REPOSITORY_KEYS
-        ):
+        canonical_full_name = (
+            CANONICAL_REPOSITORY_BY_KEY.get(requested_full_name.casefold())
+            if requested_full_name is not None
+            else None
+        )
+        if canonical_full_name is None:
             raise HTTPException(
                 status_code=422,
                 detail=(
