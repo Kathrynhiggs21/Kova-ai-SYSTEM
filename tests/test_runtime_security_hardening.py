@@ -34,6 +34,23 @@ class DatabaseRuntimeHardeningTests(unittest.TestCase):
                 "postgresql+asyncpg://owner:pw@postgres.internal:6543/kova_core",
             )
 
+    def test_database_components_escape_reserved_characters(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "",
+                "POSTGRES_USER": "owner",
+                "POSTGRES_PASSWORD": "p/ss@word",
+                "POSTGRES_HOST": "db.internal",
+                "POSTGRES_PORT": "5432",
+                "POSTGRES_DB": "kova",
+            },
+            clear=False,
+        ):
+            url = database_session.build_default_database_url()
+
+        self.assertIn("owner:p%2Fss%40word@db.internal:5432/kova", url)
+
     def test_template_database_url_is_not_used_as_a_real_dsn(self):
         with patch.dict(
             os.environ,
