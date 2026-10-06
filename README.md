@@ -87,11 +87,13 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 
 ## Current production baseline
 
-As reconciled on September 29, 2026:
+As re-audited on October 6, 2026:
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
-- the canonical core Vercel deployment reports ready;
-- the canonical frontend repository is linked to its Vercel project and assigned `kovaos.com` and `www.kovaos.com`;
+- the canonical frontend repository is `kovaos-site`, and its Vercel `kovaos-site` project owns the verified `kovaos.com` and `www.kovaos.com` domains;
+- backend Vercel ownership is still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
+- current runtime probes found `/health` returning HTTP 200 only on the FastAPI-configured `kova-ai-system-okaz` project; the other two checked Core projects returned Vercel 404 responses on both `/health` and `/api/health`;
+- the observed environment-variable inventory is attached to `kova-ai-system`, not the FastAPI-configured `kova-ai-system-okaz`, so no backend project should be retired or promoted solely from build status until runtime configuration and the authenticated Core-to-web contract are reconciled;
 - anonymous Google Drive editing has been removed from the KOVA and AI World roots; and
 - duplicate/legacy Vercel projects and Manus-derived frontend runtime paths still require controlled review before retirement or replacement.
 
