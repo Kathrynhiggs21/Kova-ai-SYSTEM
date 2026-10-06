@@ -27,7 +27,7 @@ Other KOVA repositories are migration sources, experiments, provider adapters, o
 - **GitHub** stores source code and review history.
 - **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
 - **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
-- **Cloudflare** is the target public edge for `kovaos.com` (DNS, TLS, static web delivery, and routing); **Railway** is the target persistent Node runtime where required. Vercel/Netlify remain rollback surfaces until the migration is smoke-tested and explicitly cut over.
+- **Hosting is provider-separated.** Cloudflare is the target public edge/static delivery layer for `kovaos.com`; Railway is the target persistent Node runtime for the web application backend when connected and verified. The Python/FastAPI KOVA Core remains a separate control-plane runtime and must stay on a proven existing deployment until a dedicated target, environment configuration, and authenticated Core-to-web contract are verified.
 - **The frontend** never becomes an orchestration or document source of truth.
 
 One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
@@ -87,16 +87,32 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 
 ## Current production baseline
 
-As reconciled on September 29, 2026:
+As re-audited on October 6, 2026:
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
-- the previously verified Vercel Core/frontend deployments remain useful rollback evidence during the hosting migration;
-- Cloudflare-first hosting is the approved target, with Railway used for persistent Node services where required;
-- `kovaos.com` must not be cut over until the Cloudflare edge, backend health, authentication callback, protected routes, and rollback path pass smoke tests;
+- the canonical frontend repository is `kovaos-site`; Vercel currently has both `kova-app` and `kovaos-site` projects deploying the same current `main` commit (`593452d`), while root/www Vercel aliases are attached to `kovaos-site`;
+- public routing is not cut over to that Vercel build: October 6 probes resolved `kovaos.com` through Cloudflare to GitHub Pages headers and the legacy `kova-ai-site` redirect to `kova.manus.space`, so Vercel alias metadata is not runtime proof;
+- backend Vercel ownership is still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
+- repeatable October 6 probes of deployments `dpl_AeGoU5MNzDoUkcQ8b3DBySXbYdJB` (`kova-ai-system`), `dpl_7pR5HEXnmMMaSuK1nHEHd7cCTDyP` (`kova-ai-system-sl9b`), and `dpl_6gQwD7nW54BJ9zdHHr6EBGQn6BJF` (`kova-ai-system-okaz`) found `/health` returning HTTP 200 only on the FastAPI-configured `okaz` project; the other two returned 404 on both `/health` and `/api/health`;
+- the redacted env-name audit found `kova-ai-system` carrying development/preview-scoped configuration including `APP_NAME`, `DEBUG`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `SECRET_KEY`, `JWT_ALGORITHM`, and `ACCESS_TOKEN_EXPIRE_MINUTES`, while `kova-ai-system-okaz` returned no Vercel environment variables; no secret values were read into documentation;
+- no backend project should be retired or promoted solely from build status until runtime configuration and the authenticated Core-to-web contract are reconciled;
 - anonymous Google Drive editing has been removed from the KOVA and AI World roots; and
-- duplicate/legacy Vercel, Netlify, and Manus-derived runtime paths still require controlled review before retirement or replacement.
+- duplicate/legacy Vercel projects and Manus-derived frontend runtime paths still require controlled review before retirement or replacement.
 
 This is a dated baseline, not a permanent health guarantee. Re-run checks before reporting current status.
+
+## Hosting migration gate
+
+The Cloudflare-first web migration does not authorize an automatic production cutover. Before changing public DNS or retiring an existing provider, all of the following must pass against the exact candidate deployment:
+
+1. Static routes load from the Cloudflare preview.
+2. A real web application API request (including `/api/health`) reaches the intended persistent web backend.
+3. The selected FastAPI Core target returns `/health = 200` with its required production environment names/scopes present.
+4. OAuth start/callback, session cookies, owner/admin access, and logout work on the candidate domain.
+5. At least one authenticated Core-to-web API call succeeds through the documented contract; the web Node backend and Python Core must not be conflated.
+6. The previous public route remains a tested rollback target until the new path is independently verified.
+
+Railway is installed as a ChatGPT integration but is not currently linked to an account in this audit, so no Railway service is claimed as deployed. Current Vercel/legacy surfaces remain migration evidence and rollback candidates, not proof of production ownership.
 
 ## Key references
 

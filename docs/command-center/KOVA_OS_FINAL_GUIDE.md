@@ -9,7 +9,7 @@ KOVA is one personal AI operating system with one control plane and one primary 
 - **Core:** `Kathrynhiggs21/Kova-ai-SYSTEM`
 - **Authenticated app:** `Kathrynhiggs21/kovaos-site`
 - **Primary domain:** `kovaos.com`
-- **Hosting target:** Cloudflare for public edge/static delivery and request routing; Railway for persistent Node services when required. Existing Vercel/Netlify/Manus surfaces remain rollback/migration-only until verified cutover.
+- **Hosting target:** Cloudflare for the public edge/static web; Railway for the persistent web Node backend after connection and preview verification. The Python/FastAPI Core remains a separate service until its target runtime and environment are proven.
 - **Files:** Google Drive is the canonical user-file store.
 - **Operational state:** a relational database will hold runs, jobs, connector health, and application state.
 - **Notion:** a human-readable view, not a competing technical source of truth.
@@ -42,7 +42,7 @@ Not yet proven production-complete:
 - durable run history, queueing, retries, and connector telemetry;
 - one authenticated end-to-end AI-provider path;
 - one authenticated end-to-end connector write/readback path;
-- reproducible protected deployment of both active repositories; and
+- reproducible protected deployment of the web application and a separately verified FastAPI Core runtime; and
 - completed migration of useful donor features into `kovaos-site`.
 
 ## File organization
@@ -72,10 +72,11 @@ The attached Zapier MCP starter pack is historical and sensitive. It contains a 
 
 ## Next build sequence
 
-1. Keep deterministic CI green for `kovaos-site` and prepare the Cloudflare edge + Railway backend migration without changing production DNS.
-2. Merge the MCP malformed-input hardening after all required security checks pass.
-3. Finish the safe metadata-registry implementation and resolve all review findings.
-4. Define and implement the versioned Core-to-app `/api/v1` contract.
-5. Prove one AI-provider route and one connector route end to end.
+1. Land and verify the current `kovaos-site` Cloudflare Worker/Railway migration foundation without changing production DNS.
+2. Land the current Core runtime-security hardening and keep canonical repository/webhook boundaries fail-closed.
+3. Connect Railway and create a non-production web backend service from `kovaos-site`; do not claim production until deployment status is terminal-success and preview smoke tests pass.
+4. Define and prove the versioned Core-to-app `/api/v1` contract. Keep the FastAPI Core runtime separate from the web Node backend.
+5. Select a dedicated FastAPI Core destination only after its environment names/scopes are reconciled; preserve the current verified Core surface as rollback until then.
+6. Prove one AI-provider route and one connector route end to end, then perform the public edge cutover with a tested rollback path.
 
 Normal KOVA use should be no-code. Agents maintain code and integrations; the dashboard exposes understandable controls and asks for approval only for high-impact actions.
