@@ -26,5 +26,14 @@
 - Documentation/state-only batch. No runtime test claimed.
 - GitHub CI must pass before merge.
 
+### Provider staging completed
+- Created private Railway project `kovaos-runtime`.
+- Staged `kovaos-app-backend` from `Kathrynhiggs21/kovaos-site/main`.
+- Staged Railpack build, `corepack pnpm build`, `corepack pnpm start`, `/api/health`, and restart policy.
+- Verified the Railway environment has zero live services and one pending staged patch; nothing was deployed.
+
+### Web hardening started
+- Opened `kovaos-site` PR #28 to bind the exact Railway `PORT` in production, retain local development fallback, and add focused tests.
+
 ### Next step
-Stage a canonical Railway web-runtime project/service without deploying, then prepare Cloudflare preview verification.
+Wait for exact-head CI on PR #28. Railway deploy remains explicitly owner-gated; after approval, deploy the staged service, verify `/api/health`, obtain its HTTPS origin, then build the Cloudflare preview.
