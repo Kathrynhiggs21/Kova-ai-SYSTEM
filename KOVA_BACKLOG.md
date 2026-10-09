@@ -4,13 +4,14 @@ Updated: 2026-10-09
 
 ## P0 — Migration path
 
-### Stage canonical Railway web runtime
+### Stage canonical Railway web runtime — staged 2026-10-09
 Acceptance criteria:
-- Create one private Railway project for the `kovaos-site` web runtime.
-- Create one application-backend service from `Kathrynhiggs21/kovaos-site`.
-- Configure build `corepack pnpm build`, start `corepack pnpm start`, and healthcheck `/api/health`.
-- Keep all changes staged until explicit deployment approval.
-- Do not copy secret values into GitHub, chat, or docs.
+- [x] Create one private Railway project for the `kovaos-site` web runtime (`kovaos-runtime`).
+- [x] Create one staged application-backend service from `Kathrynhiggs21/kovaos-site` (`kovaos-app-backend`).
+- [x] Configure build `corepack pnpm build`, start `corepack pnpm start`, and healthcheck `/api/health`.
+- [x] Keep all changes staged until explicit deployment approval. Live environment currently has zero services and one pending patch.
+- [x] Do not copy secret values into GitHub, chat, or docs.
+- [ ] After explicit deployment approval, commit the staged patch, verify deployment health, and obtain the HTTPS origin for Cloudflare preview.
 
 ### Make Cloudflare preview real
 Acceptance criteria:
