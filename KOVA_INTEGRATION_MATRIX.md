@@ -7,7 +7,7 @@ Verified: 2026-10-09
 | GitHub Core | Canonical control-plane source | `Kova-ai-SYSTEM/main` accessible; latest baseline merged | Connected | CI on this continuity PR |
 | GitHub Web | Canonical authenticated web source | `kovaos-site/main` includes Cloudflare + Railway migration foundation | Connected | Cloudflare preview built from current main |
 | Cloudflare | Public edge/static target | Account connected; `kovaos-web` Worker exists but is placeholder 503 with no assets/bindings/routes | Configured, not runtime verified | Deploy non-production Worker/static preview from canonical web repo |
-| Railway | Web application-backend target | Account connected; no canonical KOVA web-runtime project/service found | Needs setup | Stage project/service/source/config; deploy only after explicit approval |
+| Railway | Web application-backend target | Private `kovaos-runtime` project created; `kovaos-app-backend` source/config staged; environment reports zero live services and one pending patch | Staged, not deployed | Explicit deployment approval, then health verification and HTTPS origin |
 | KOVA Core runtime | FastAPI control plane | Source is canonical; long-term host still under reconciliation | Needs runtime decision | Verified health + authenticated Core-to-web contract |
 | Vercel | Migration/rollback surface | Historical/current deployments exist | Rollback/review | Retain until replacement path passes smoke tests |
 | Netlify / GitHub Pages / Manus | Legacy public surfaces | Historical routing evidence exists | Migration debt | Retire only after verified replacement and rollback |
