@@ -93,6 +93,7 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 - `kovaos-site/main` now contains the reviewed Cloudflare Worker/static + Railway Node backend migration foundation; this is the approved target topology, not proof of production cutover;
 - the Cloudflare account contains a `kovaos-web` Worker created on October 9, but live metadata shows it is only a 503 placeholder with no assets binding, backend binding, preview subdomain, or production route;
 - Railway now contains a private `kovaos-runtime` project with a `kovaos-app-backend` service staged from `kovaos-site/main`; no service is live yet, and deployment remains explicitly owner-gated. The existing `kova-apps-script-manager` project is separate and was not repurposed;
+
 ### Retained runtime evidence from October 6, 2026
 
 The following bullets preserve the dates of the probes that produced them. They are historical runtime evidence, not a claim that those provider states were reverified on October 9.
