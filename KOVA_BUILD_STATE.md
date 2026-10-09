@@ -1,7 +1,7 @@
 # KOVA Build State
 
 Last verified: 2026-10-09
-Active branch: `chore/continuous-builder-oct9`
+Last session branch: `chore/continuous-builder-oct9` (historical session metadata; derive the current branch from Git before new work)
 Current phase: Cloudflare edge + Railway application-backend migration
 
 ## Canonical code
