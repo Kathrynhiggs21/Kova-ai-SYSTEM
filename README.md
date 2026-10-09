@@ -27,7 +27,7 @@ Other KOVA repositories are migration sources, experiments, provider adapters, o
 - **GitHub** stores source code and review history.
 - **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
 - **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
-- **Vercel** hosts the canonical web and core deployments.
+- **Cloudflare + Railway** is the approved web migration target: Cloudflare serves the public edge/static application and proxies `/api/*` to the persistent Railway Node/Express service from `kovaos-site`. Existing Vercel, Netlify, GitHub Pages, and Manus deployments remain rollback/migration evidence until cutover is independently verified. KOVA Core/FastAPI remains a separate control-plane runtime whose long-term host must be chosen from runtime evidence.
 - **The frontend** never becomes an orchestration or document source of truth.
 
 One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
@@ -87,9 +87,12 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 
 ## Current production baseline
 
-As re-audited on October 6, 2026:
+As re-audited on October 9, 2026:
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
+- `kovaos-site/main` now contains the reviewed Cloudflare Worker/static + Railway Node backend migration foundation; this is the approved target topology, not proof of production cutover;
+- the Cloudflare account contains a `kovaos-web` Worker created on October 9, but live metadata shows it is only a 503 placeholder with no assets binding, backend binding, preview subdomain, or production route;
+- Railway is connected, but no canonical KOVA web-runtime project/service is present yet; the existing `kova-apps-script-manager` project is separate and must not be repurposed;
 - the canonical frontend repository is `kovaos-site`; Vercel currently has both `kova-app` and `kovaos-site` projects deploying the same current `main` commit (`593452d`), while root/www Vercel aliases are attached to `kovaos-site`;
 - public routing is not cut over to that Vercel build: October 6 probes resolved `kovaos.com` through Cloudflare to GitHub Pages headers and the legacy `kova-ai-site` redirect to `kova.manus.space`, so Vercel alias metadata is not runtime proof;
 - backend Vercel ownership is still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
