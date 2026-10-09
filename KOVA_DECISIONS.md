@@ -2,12 +2,10 @@
 
 Updated: 2026-10-09
 
-## D-001 — Canonical repositories
-KOVA uses exactly two active runtime source repositories:
-- `Kathrynhiggs21/Kova-ai-SYSTEM`: Core/control plane.
-- `Kathrynhiggs21/kovaos-site`: authenticated web application.
+## D-001 — Canonical repository authority
+The active repository set is derived only from `kova_repos_config.json` entries where `enabled` is `true`, as required by ADR-003. Do not maintain a second manual active-repository list in continuity files.
 
-Old repositories remain donors, experiments, or history until explicitly promoted.
+Repository roles, donors, experiments, and history must follow that machine-readable registry until an accepted architecture change updates it.
 
 ## D-002 — Web hosting target
 Approved migration target:
