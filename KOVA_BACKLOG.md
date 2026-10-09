@@ -11,7 +11,9 @@ Acceptance criteria:
 - [x] Configure build `corepack pnpm build`, start `corepack pnpm start`, and healthcheck `/api/health`.
 - [x] Keep all changes staged until explicit deployment approval. Live environment currently has zero services and one pending patch.
 - [x] Do not copy secret values into GitHub, chat, or docs.
-- [ ] After explicit deployment approval, commit the staged patch, verify deployment health, and obtain the HTTPS origin for Cloudflare preview.
+- [ ] Merge web PR #28 into the canonical default branch.
+- [ ] Re-read the resulting default-branch commit and confirm/re-stage the Railway source to that exact revision.
+- [ ] Only after those source gates pass, obtain explicit deployment approval, commit the staged patch, verify deployment health, and obtain the HTTPS origin for Cloudflare preview.
 
 ### Make Cloudflare preview real
 Acceptance criteria:
