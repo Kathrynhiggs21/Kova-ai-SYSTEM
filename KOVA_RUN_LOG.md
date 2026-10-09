@@ -35,5 +35,15 @@
 ### Web hardening started
 - Opened `kovaos-site` PR #28 to bind the exact Railway `PORT` in production, retain local development fallback, and add focused tests.
 
+### Deployment precondition from review
+
+The staged Railway service follows `kovaos-site/main`, but the required exact-PORT hardening is still in web PR #28. Green PR-head CI does not put that fix on `main`.
+
+Do **not** accept the Railway staged deployment until:
+1. PR #28 is merged into the canonical web default branch;
+2. the new default-branch commit is read back;
+3. the staged Railway source is confirmed to resolve to that commit, or is re-staged/pinned to the verified commit.
+
 ### Next step
-Wait for exact-head CI on PR #28. Railway deploy remains explicitly owner-gated; after approval, deploy the staged service, verify `/api/health`, obtain its HTTPS origin, then build the Cloudflare preview.
+
+Keep Railway staged and undeployed. Web PR #28 is green and review-clean but still requires explicit merge approval. After it is merged and the staged source revision is verified, Railway deployment remains a separate explicit owner approval.
