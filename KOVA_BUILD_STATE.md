@@ -25,7 +25,7 @@ Current phase: Cloudflare edge + Railway application-backend migration
 
 ## Current blockers
 
-1. The Railway `kovaos-app-backend` service is staged but not deployed; deployment requires explicit approval.
+1. Web PR #28 must be merged to the canonical default branch and the staged Railway source revision must be reverified before any deployment approval. The Railway `kovaos-app-backend` service remains staged and undeployed.
 2. The Cloudflare `kovaos-web` Worker is not a functional preview and has no Railway origin yet.
 3. OAuth callback, secure session cookie, protected routes, logout, and `/api/health` have not passed the Cloudflare -> Railway path.
 4. Production DNS/provider retirement requires explicit owner approval after preview verification.
@@ -33,7 +33,7 @@ Current phase: Cloudflare edge + Railway application-backend migration
 
 ## Next action
 
-The private Railway runtime project/service is staged and ready for review. The next provider action is an explicit deployment approval to commit the staged Railway patch. After a healthy Railway HTTPS origin exists, configure a non-production Cloudflare preview from the repository Worker/static bundle and run the migration smoke-test gate.
+The private Railway runtime project/service is staged, but it is not deploy-ready until web PR #28 is merged and the staged source is confirmed against the resulting default-branch commit. Only after that source gate passes may a separate explicit deployment approval be considered. A healthy Railway HTTPS origin is then required before building the non-production Cloudflare preview.
 
 ## Completion rule
 
