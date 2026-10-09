@@ -87,13 +87,17 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 
 ## Current production baseline
 
-As re-audited on October 9, 2026:
+### Migration preparation verified October 9, 2026
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
 - `kovaos-site/main` now contains the reviewed Cloudflare Worker/static + Railway Node backend migration foundation; this is the approved target topology, not proof of production cutover;
 - the Cloudflare account contains a `kovaos-web` Worker created on October 9, but live metadata shows it is only a 503 placeholder with no assets binding, backend binding, preview subdomain, or production route;
 - Railway now contains a private `kovaos-runtime` project with a `kovaos-app-backend` service staged from `kovaos-site/main`; no service is live yet, and deployment remains explicitly owner-gated. The existing `kova-apps-script-manager` project is separate and was not repurposed;
-- the canonical frontend repository is `kovaos-site`; Vercel currently has both `kova-app` and `kovaos-site` projects deploying the same current `main` commit (`593452d`), while root/www Vercel aliases are attached to `kovaos-site`;
+### Retained runtime evidence from October 6, 2026
+
+The following bullets preserve the dates of the probes that produced them. They are historical runtime evidence, not a claim that those provider states were reverified on October 9.
+
+- on October 6, Vercel had both `kova-app` and `kovaos-site` deploying then-current web commit `593452d`, while root/www Vercel aliases were attached to `kovaos-site`;
 - public routing is not cut over to that Vercel build: October 6 probes resolved `kovaos.com` through Cloudflare to GitHub Pages headers and the legacy `kova-ai-site` redirect to `kova.manus.space`, so Vercel alias metadata is not runtime proof;
 - backend Vercel ownership is still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
 - repeatable October 6 probes of deployments `dpl_AeGoU5MNzDoUkcQ8b3DBySXbYdJB` (`kova-ai-system`), `dpl_7pR5HEXnmMMaSuK1nHEHd7cCTDyP` (`kova-ai-system-sl9b`), and `dpl_6gQwD7nW54BJ9zdHHr6EBGQn6BJF` (`kova-ai-system-okaz`) found `/health` returning HTTP 200 only on the FastAPI-configured `okaz` project; the other two returned 404 on both `/health` and `/api/health`;
