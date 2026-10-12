@@ -108,6 +108,36 @@ class CanonicalRepositoryMutationTests(unittest.IsolatedAsyncioTestCase):
         add_repo.assert_awaited_once_with("Kathrynhiggs21/kovaos-site", "frontend")
 
 
+
+    async def test_readding_case_variant_preserves_saved_registry(self):
+        import json
+        import tempfile
+        from services.multi_repo_sync_service import MultiRepoSyncService
+
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "registry.json"
+            with patch.dict(os.environ, {"KOVA_REPOS_CONFIG": str(config_path)}):
+                service = MultiRepoSyncService()
+                config = service._get_default_config()
+                config["repositories"][0]["name"] = "kova-ai-system"
+                config["repositories"][0]["full_name"] = "kathrynhiggs21/kova-ai-system"
+                config["integration_settings"]["github_webhooks_enabled"] = True
+                config_path.write_text(json.dumps(config))
+                original = config_path.read_bytes()
+                with patch("services.multi_repo_sync_service.httpx.AsyncClient") as client:
+                    response = client.return_value.__aenter__.return_value.get
+                    response.return_value.status_code = 200
+                    response.return_value.json = lambda: {"name": "Kova-ai-SYSTEM"}
+                    result = await service.add_repo_to_config(
+                        "Kathrynhiggs21/Kova-ai-SYSTEM", "core"
+                    )
+                self.assertTrue(result)
+                self.assertEqual(config_path.read_bytes(), original)
+                reloaded = MultiRepoSyncService()
+                self.assertEqual(len(reloaded.config["repositories"]), 2)
+                self.assertTrue(reloaded.is_integration_enabled("github_webhooks_enabled"))
+
+
 class CanonicalWebhookScopeTests(unittest.IsolatedAsyncioTestCase):
     async def test_noncanonical_push_is_ignored_before_ai_forwarding(self):
         payload = {
