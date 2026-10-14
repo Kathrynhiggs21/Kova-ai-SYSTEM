@@ -12,10 +12,13 @@ load_dotenv(BASE_DIR / ".env")
 
 def build_default_database_url() -> str:
     """Build a correctly escaped async PostgreSQL URL from component settings."""
+    password = os.getenv("POSTGRES_PASSWORD", "kova_pass")
+    if not password.strip():
+        raise ValueError("POSTGRES_PASSWORD must not be blank")
     return URL.create(
         drivername="postgresql+asyncpg",
         username=os.getenv("POSTGRES_USER", "kova"),
-        password=os.getenv("POSTGRES_PASSWORD", "kova_pass"),
+        password=password,
         host=os.getenv("POSTGRES_HOST", "db"),
         port=int(os.getenv("POSTGRES_PORT", "5432")),
         database=os.getenv("POSTGRES_DB", "kova"),
