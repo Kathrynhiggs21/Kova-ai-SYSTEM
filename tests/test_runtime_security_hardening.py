@@ -72,6 +72,29 @@ class DatabaseRuntimeHardeningTests(unittest.TestCase):
                 "postgresql+asyncpg://owner:pw@db:5432/kova",
             )
 
+    def test_blank_component_password_fails_closed(self):
+        for password in ("", "   "):
+            with self.subTest(password=repr(password)):
+                with patch.dict(
+                    os.environ,
+                    {"DATABASE_URL": "", "POSTGRES_PASSWORD": password},
+                    clear=False,
+                ):
+                    with self.assertRaisesRegex(ValueError, "POSTGRES_PASSWORD"):
+                        database_session.resolve_database_url()
+
+    def test_blank_password_rejects_template_dsn_fallback(self):
+        with patch.dict(
+            os.environ,
+            {
+                "DATABASE_URL": "postgresql+asyncpg://<user>:<password>@db:5432/kova",
+                "POSTGRES_PASSWORD": "",
+            },
+            clear=False,
+        ):
+            with self.assertRaisesRegex(ValueError, "POSTGRES_PASSWORD"):
+                database_session.resolve_database_url()
+
     def test_sqlalchemy_echo_is_off_unless_explicitly_enabled(self):
         with patch.dict(os.environ, {"SQLALCHEMY_ECHO": ""}, clear=False):
             self.assertFalse(database_session.is_sqlalchemy_echo_enabled())
