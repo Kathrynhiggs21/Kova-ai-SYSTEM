@@ -13,6 +13,8 @@ This document supersedes:
 
 Contributors should use this map, `kova_repos_config.json`, and `config/core_modules.v1.json` as the authoritative repository, active-set, and module-split sources respectively.
 
+Deployment/infrastructure alignment for Vercel projects is tracked in `docs/architecture/INFRASTRUCTURE-VERCEL-ALIGNMENT.md`.
+
 ## Active repositories
 
 | Repository | Responsibility | Status |
