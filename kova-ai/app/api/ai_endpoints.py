@@ -47,12 +47,12 @@ async def ai_command(command: ClaudeCommand):
 async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
     """Sync repository data with Claude"""
     anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    github_token = os.getenv("GITHUB_TOKEN")
 
     if not anthropic_key:
         raise HTTPException(status_code=400, detail="Anthropic API key not configured")
 
     repository = await require_allowed_repository(command.repository)
+    github_token = require_github_token()
 
     # Fetch repository data
     repo_data = await fetch_repository_data(repository, github_token)
@@ -70,11 +70,11 @@ async def sync_with_claude(command: ClaudeCommand) -> ClaudeResponse:
 
 async def analyze_repository(command: ClaudeCommand) -> ClaudeResponse:
     """Analyze repository structure and content"""
-    github_token = os.getenv("GITHUB_TOKEN")
     repository = await require_allowed_repository(command.repository)
     file_path = (
         validate_repository_path(command.file_path) if command.file_path else None
     )
+    github_token = require_github_token()
 
     repo_data = await fetch_repository_data(repository, github_token)
 
@@ -93,7 +93,7 @@ async def analyze_repository(command: ClaudeCommand) -> ClaudeResponse:
 
 async def process_github_data(command: ClaudeCommand) -> ClaudeResponse:
     """Process GitHub data for Claude consumption"""
-    github_token = os.getenv("GITHUB_TOKEN")
+    github_token = require_github_token()
 
     processed_data = {
         "kova_repos": await get_kova_repositories(github_token),
@@ -121,6 +121,14 @@ async def require_allowed_repository(repository: Optional[str]) -> str:
             detail="Repository is not enabled in KOVA configuration",
         )
     return resolved_repository
+
+
+def require_github_token() -> str:
+    """Return a configured GitHub token after normalizing surrounding whitespace."""
+    github_token = (os.getenv("GITHUB_TOKEN") or "").strip()
+    if not github_token:
+        raise HTTPException(status_code=400, detail="GitHub token not configured")
+    return github_token
 
 
 def validate_repository_path(file_path: str) -> str:
