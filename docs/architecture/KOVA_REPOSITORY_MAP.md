@@ -60,6 +60,12 @@ A category name, future idea, temporary experiment or visual neatness is not eno
 
 The existing Zoo/card renderer and `scripts/batch_renderer.py` are not KOVA Core automation. Its former GitHub Actions workflow is disabled under `archive/legacy-renderer/` and cannot be dispatched from this repository. Do not migrate renderer code into Assistant, MCP, connectors, memory, automation, infrastructure or the canonical site.
 
+## Vercel alignment tracking
+
+`config/vercel_projects.v1.json` is the canonical Vercel project inventory for this repository. It tracks the canonical backend project, required canonical frontend project linkage to `Kathrynhiggs21/kovaos-site`, duplicate legacy projects pending review, production-domain expectations, and post-cutover route checks.
+
+Destructive actions stay owner-only: unlinking Git integration, deleting projects, reassigning production aliases, and overwriting environment variables require final review in the Vercel console after env/domain/traffic verification.
+
 ## Rules
 
 1. Keep one canonical owner per production responsibility.
