@@ -402,7 +402,8 @@ class MultiRepoSyncService:
 
             # Check if already exists
             existing = [
-                r for r in config["repositories"] if r["full_name"] == repo_full_name
+                r for r in config["repositories"]
+                if repository_key(r["full_name"]) == repository_key(repo_full_name)
             ]
             if existing:
                 logger.info(f"Repository {repo_full_name} already in config")

@@ -140,6 +140,8 @@ installed or started.
 - [Pinned API routes](https://github.com/RedPlanetHQ/core/tree/4a5b18d8db55d66e5dfda41b18461f359b340c42/apps/webapp/app/routes)
 - [Pinned recurrence behavior](https://github.com/RedPlanetHQ/core/blob/4a5b18d8db55d66e5dfda41b18461f359b340c42/apps/webapp/app/services/tasks/recurrence.server.ts)
 - [Web runtime configuration PR](https://github.com/Kathrynhiggs21/kovaos-site/pull/32)
+- The separate web authentication-readiness PR #33 remains draft and unmerged;
+  its configuration checker is not proof of a working login or a deployed gate.
 
 This record supersedes the October 10 readiness observations above where a
 fresh read is explicitly recorded; historical WorkOS/log claims were not retested.
@@ -147,7 +149,9 @@ fresh read is explicitly recorded; historical WorkOS/log claims were not reteste
 
 ### Local validation on October 15
 
-- Python unit suite: 179 passed, including 12 new CORE adapter tests. All CORE
+- Reconciled with control-plane main `66752ad41d5e0681ea534ead0d2bf389b3be70dc`,
+  preserving the newer database and runtime-security fixes.
+- Python unit suite: 190 passed, including 12 new CORE adapter tests. All CORE
   memory/task tests use an HTTP mock, not the live Railway service.
 - Repository configuration validation: passed, zero errors or warnings.
 - New adapter and test formatting: Black passed.
