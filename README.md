@@ -27,7 +27,7 @@ Other KOVA repositories are migration sources, experiments, provider adapters, o
 - **GitHub** stores source code and review history.
 - **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
 - **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
-- **Vercel** hosts the canonical web and core deployments.
+- **Hosting target:** Cloudflare edge/static delivery plus Railway persistent services. Vercel is legacy migration/rollback infrastructure; current production routing must be verified separately.
 - **The frontend** never becomes an orchestration or document source of truth.
 
 One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
@@ -85,7 +85,7 @@ Do not put real secrets in command history or test fixtures. If a credentialed i
 
 The owner should not need to write or debug code for ordinary maintenance. User-facing KOVA workflows should remain no-code, dyslexia-first, and plain-language.
 
-## Current production baseline
+## Historical production baseline — October 6, 2026
 
 As re-audited on October 6, 2026:
 
@@ -116,3 +116,16 @@ When documents disagree, current code plus the repository map, machine-readable 
 `scripts/file_organizer.py` indexes source identities, versions, readable titles, lifecycle labels, sensitivity, and duplicate evidence without moving, renaming, deleting, or copying originals. Private registry and exception reports are stored outside this repository with user-only filesystem permissions.
 
 Use `config/automation_policy.v1.json` and [KOVA_FILE_ORGANIZATION.md](KOVA_FILE_ORGANIZATION.md) for the current policy and commands. The implementation can process an explicit metadata inventory; it does not itself connect every provider or scan inaccessible accounts. Live provider scheduling and private-data cutover still require separately verified authorization.
+
+## Hosting migration priority — October 19, 2026
+
+The owner has directed urgent replacement of Vercel across KOVA. The target already recorded by the canonical web repository is **Cloudflare edge/static delivery plus Railway persistent services**. Keep the existing FastAPI control plane and Node/Express web backend behind their current contracts; do not rewrite either into a Worker merely to change hosts.
+
+- Vercel is legacy migration/rollback infrastructure, not the target for new KOVA deployment or service configuration.
+- `kovaos.com` and `www.kovaos.com` currently belong to private ChatGPT Sites according to the October 19 registry decision and web PR #38. Keep that entry intact until the replacement is verified. A target architecture is not evidence of cutover.
+- Follow the [canonical web deployment guide](https://github.com/Kathrynhiggs21/kovaos-site/blob/main/docs/deployment/cloudflare-railway.md) and reconcile [domain isolation PR #38](https://github.com/Kathrynhiggs21/kovaos-site/pull/38). Never attach wildcard KOVA routes or mix Scribbles identity/routing into KOVA.
+- Inventory Vercel project/domain links, Git integrations, checks, environment **names**, callbacks, scheduled jobs, storage and analytics dependencies. Preserve source history and a tested rollback; never publish secret values.
+- Stage Cloudflare-to-Railway routing and require real application health JSON, intended-account login, anonymous denial, secure callback/cookies, protected routes, logout and persistence. An Access login page returning HTTP 200 is not backend health.
+- After replacement acceptance, disable Vercel automatic Git deployments and mandatory legacy checks, remove active setup instructions and retire projects/billing dependencies through the verified provider workflow. Historical references remain explicitly historical; package-lock mentions alone do not establish a hosting dependency.
+
+Current Core integration and frontend-auth work remain staged: [Core PR #147](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/147) and [web PR #33](https://github.com/Kathrynhiggs21/kovaos-site/pull/33) are draft/unmerged as read October 19. No production cutover, project deletion, credential transfer or billing change is performed by this documentation update.
