@@ -5,10 +5,11 @@ RUN addgroup --system --gid 1001 appuser \
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY kova-ai/requirements.txt .
 RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --no-cache-dir -r requirements.txt
 
-COPY --chown=appuser:appuser . .
+COPY --chown=appuser:appuser kova-ai/app ./app
+COPY --chown=appuser:appuser kova_repos_config.json ./kova_repos_config.json
 
 USER appuser
 

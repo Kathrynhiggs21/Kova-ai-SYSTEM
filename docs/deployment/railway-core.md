@@ -8,10 +8,37 @@ of an existing provider deployment.
 
 - Repository: `Kathrynhiggs21/Kova-ai-SYSTEM`
 - Branch: a reviewed production branch, normally `main` after merge
+- Root directory / Docker build context: repository root (`/`), not `kova-ai/`
 - Build: repository `railway.toml`
 - Container: `kova-ai/Dockerfile`
 - Health check: `GET /health`
 - Runtime port: Railway-provided `PORT`, passed to the container by the start command
+
+## Reproducible container verification
+
+From the repository root:
+
+```bash
+docker build --file kova-ai/Dockerfile --tag kova-core:local .
+docker run --detach --name kova-core-smoke \
+  --env PORT=8765 \
+  --env POSTGRES_PASSWORD=ci-only-database-password \
+  --env KOVA_OWNER_API_KEY=ci-only-owner-key \
+  kova-core:local
+docker exec -i kova-core-smoke python - < scripts/smoke_core_container.py
+docker rm --force kova-core-smoke
+```
+
+These are synthetic test values, never production credentials. The smoke check
+requires real health JSON on the configured port, a non-root process, anonymous
+denial, and owner-authenticated access to the bundled canonical registry. It does
+not prove database connectivity or a production deployment. CI runs the same
+image build and smoke check in its `container-smoke` job.
+
+Docker Compose uses the same repository-root context via
+`docker compose -f kova-ai/docker-compose.yml build api`. The Dockerfile copies
+only the API, requirements, and canonical root registry; `.dockerignore` keeps
+local environment files, archives, and unrelated source out of the build context.
 
 ## Required configuration
 

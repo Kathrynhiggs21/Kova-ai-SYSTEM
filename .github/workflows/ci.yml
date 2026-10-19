@@ -51,3 +51,33 @@ jobs:
         run: |
           node --check site/app.js
           node --test tests/test_site_exports.js
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Core image from Railway repository-root context
+        run: docker build --file kova-ai/Dockerfile --tag kova-core:ci .
+
+      - name: Start isolated Core container
+        run: |
+          docker run --detach --name kova-core-smoke \
+            --env PORT=8765 \
+            --env POSTGRES_PASSWORD=ci-only-database-password \
+            --env KOVA_OWNER_API_KEY=ci-only-owner-key \
+            kova-core:ci
+
+      - name: Verify health and owner boundary on configured port
+        run: docker exec -i kova-core-smoke python - < scripts/smoke_core_container.py
+
+      - name: Container logs
+        if: always()
+        run: docker logs kova-core-smoke || true
+
+      - name: Stop test container
+        if: always()
+        run: docker rm --force kova-core-smoke || true
