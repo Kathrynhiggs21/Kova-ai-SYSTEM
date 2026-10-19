@@ -9,6 +9,7 @@ KOVA is one personal AI operating system with one control plane and one primary 
 - **Core:** `Kathrynhiggs21/Kova-ai-SYSTEM`
 - **Authenticated app:** `Kathrynhiggs21/kovaos-site`
 - **Primary domain:** `kovaos.com`
+- **Hosting target:** Cloudflare edge/static delivery plus Railway persistent services; urgent Vercel exit, with verified rollback and current private Sites entry preserved until cutover.
 - **Files:** Google Drive is the canonical user-file store.
 - **Operational state:** a relational database will hold runs, jobs, connector health, and application state.
 - **Notion:** a human-readable view, not a competing technical source of truth.
@@ -78,3 +79,16 @@ The attached Zapier MCP starter pack is historical and sensitive. It contains a 
 5. Prove one AI-provider route and one connector route end to end.
 
 Normal KOVA use should be no-code. Agents maintain code and integrations; the dashboard exposes understandable controls and asks for approval only for high-impact actions.
+
+## Hosting migration priority — October 19, 2026
+
+The owner has directed urgent replacement of Vercel across KOVA. The target already recorded by the canonical web repository is **Cloudflare edge/static delivery plus Railway persistent services**. Keep the existing FastAPI control plane and Node/Express web backend behind their current contracts; do not rewrite either into a Worker merely to change hosts.
+
+- Vercel is legacy migration/rollback infrastructure, not the target for new KOVA deployment or service configuration.
+- `kovaos.com` and `www.kovaos.com` currently belong to private ChatGPT Sites according to the October 19 registry decision and web PR #38. Keep that entry intact until the replacement is verified. A target architecture is not evidence of cutover.
+- Follow the [canonical web deployment guide](https://github.com/Kathrynhiggs21/kovaos-site/blob/main/docs/deployment/cloudflare-railway.md) and reconcile [domain isolation PR #38](https://github.com/Kathrynhiggs21/kovaos-site/pull/38). Never attach wildcard KOVA routes or mix Scribbles identity/routing into KOVA.
+- Inventory Vercel project/domain links, Git integrations, checks, environment **names**, callbacks, scheduled jobs, storage and analytics dependencies. Preserve source history and a tested rollback; never publish secret values.
+- Stage Cloudflare-to-Railway routing and require real application health JSON, intended-account login, anonymous denial, secure callback/cookies, protected routes, logout and persistence. An Access login page returning HTTP 200 is not backend health.
+- After replacement acceptance, disable Vercel automatic Git deployments and mandatory legacy checks, remove active setup instructions and retire projects/billing dependencies through the verified provider workflow. Historical references remain explicitly historical; package-lock mentions alone do not establish a hosting dependency.
+
+Current Core integration and frontend-auth work remain staged: [Core PR #147](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/147) and [web PR #33](https://github.com/Kathrynhiggs21/kovaos-site/pull/33) are draft/unmerged as read October 19. No production cutover, project deletion, credential transfer or billing change is performed by this documentation update.
