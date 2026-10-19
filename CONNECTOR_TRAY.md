@@ -63,12 +63,12 @@ Consequential writes require confirmation unless the owner has explicitly approv
 ### Development / data
 - GitHub
 - Supabase
-- Vercel
+- Cloudflare
+- Railway
 - Netlify
 - Replit
 - Lovable
 - Figma
-- Cloudflare when connected
 - Neon/Postgres when connected
 
 ### Knowledge / files / productivity

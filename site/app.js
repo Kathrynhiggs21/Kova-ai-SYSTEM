@@ -60,7 +60,7 @@ const fallbackDashboardData = {
     "No verified production Core-to-site API contract.",
     "No proof-backed end-to-end connector path.",
     "Durable run history, queueing, retries, and connector telemetry remain incomplete.",
-    "The duplicate legacy Core Vercel project still creates configuration-drift risk."
+    "Vercel runtime dependency is retired; provider cleanup remains because project deletion and Pro-plan cancellation require signed-in Vercel confirmation."
   ],
   "next_actions": [
     "Merge architecture changes only after exact-head CI and review pass.",

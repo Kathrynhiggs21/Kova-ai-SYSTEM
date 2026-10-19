@@ -45,7 +45,7 @@ local environment files, archives, and unrelated source out of the build context
 Store real values only in Railway's service variables. At minimum, configure:
 
 - `KOVA_OWNER_API_KEY`
-- `KOVA_ALLOWED_ORIGINS=https://kovaos.com,https://www.kovaos.com`
+- `KOVA_ALLOWED_ORIGINS` as an exact, environment-specific browser-origin list (see below)
 - `DATABASE_URL` when database-backed routes are enabled
 - provider credentials only for the integrations intentionally enabled
 
@@ -53,6 +53,14 @@ Do not copy unused Vercel variables. Rotate a credential if its prior storage or
 exposure is uncertain.
 
 ## Preview gate
+
+On the isolated staging Railway service, set `KOVA_ALLOWED_ORIGINS` to the
+actual Cloudflare preview origin, for example
+`https://kovaos-preview.example.workers.dev`. This is an example only: replace it
+with the exact approved preview origin, including scheme and any non-default
+port, with no path or trailing slash. Do not use `*` or wildcard subdomains.
+Restart/redeploy that staging service after changing its variables. Do not add
+preview origins to the production service or put the owner API key in browser code.
 
 Before production routing, verify all of the following against the Railway preview URL:
 
@@ -65,7 +73,14 @@ Before production routing, verify all of the following against the Railway previ
 
 ## Cutover and rollback
 
+At approved production cutover, use the production-only value
+`KOVA_ALLOWED_ORIGINS=https://kovaos.com,https://www.kovaos.com` on the production
+service. Re-run the browser-origin checks: both production origins must pass,
+and the former preview origin and another unapproved origin must be denied.
+CORS is a browser policy, not a substitute for owner authentication.
+
 Point the Cloudflare Worker preview at the verified Railway preview first. Production
 cutover requires an explicit owner approval and a recorded rollback target. Keep the
 last known working route available until the public domain, authentication flow, API
 contract, and logout behavior pass end-to-end checks.
+
