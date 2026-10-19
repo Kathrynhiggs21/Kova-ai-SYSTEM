@@ -83,4 +83,3 @@ Point the Cloudflare Worker preview at the verified Railway preview first. Produ
 cutover requires an explicit owner approval and a recorded rollback target. Keep the
 last known working route available until the public domain, authentication flow, API
 contract, and logout behavior pass end-to-end checks.
-
