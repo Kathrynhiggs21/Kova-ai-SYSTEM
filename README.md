@@ -27,7 +27,7 @@ Other KOVA repositories are migration sources, experiments, provider adapters, o
 - **GitHub** stores source code and review history.
 - **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
 - **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
-- **Vercel** hosts the canonical web and core deployments.
+- **Cloudflare + Railway** is the canonical hosting path: Cloudflare owns the public edge/domain layer and Railway runs persistent application services. Vercel is retired from the active KOVA runtime.
 - **The frontend** never becomes an orchestration or document source of truth.
 
 One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
@@ -87,7 +87,14 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 
 ## Current production baseline
 
-As re-audited on October 6, 2026:
+### Current hosting direction — October 19, 2026
+
+- Cloudflare is authoritative for `kovaos.com`.
+- Railway hosts the current `kovaos-app-backend` service; the latest observed deployment is healthy and may sleep when idle.
+- Clearly KOVA-specific Vercel projects were paused on October 19, 2026. Vercel must not be used as a deployment target, runtime fallback, credential requirement, or source of truth.
+- The Vercel team subscription and project deletion are billing/account cleanup tasks, not runtime dependencies.
+
+### Historical deployment evidence — October 6, 2026
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
 - the canonical frontend repository is `kovaos-site`; Vercel currently has both `kova-app` and `kovaos-site` projects deploying the same current `main` commit (`593452d`), while root/www Vercel aliases are attached to `kovaos-site`;
@@ -95,9 +102,9 @@ As re-audited on October 6, 2026:
 - backend Vercel ownership is still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
 - repeatable October 6 probes of deployments `dpl_AeGoU5MNzDoUkcQ8b3DBySXbYdJB` (`kova-ai-system`), `dpl_7pR5HEXnmMMaSuK1nHEHd7cCTDyP` (`kova-ai-system-sl9b`), and `dpl_6gQwD7nW54BJ9zdHHr6EBGQn6BJF` (`kova-ai-system-okaz`) found `/health` returning HTTP 200 only on the FastAPI-configured `okaz` project; the other two returned 404 on both `/health` and `/api/health`;
 - the redacted env-name audit found `kova-ai-system` carrying development/preview-scoped configuration including `APP_NAME`, `DEBUG`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `SECRET_KEY`, `JWT_ALGORITHM`, and `ACCESS_TOKEN_EXPIRE_MINUTES`, while `kova-ai-system-okaz` returned no Vercel environment variables; no secret values were read into documentation;
-- no backend project should be retired or promoted solely from build status until runtime configuration and the authenticated Core-to-web contract are reconciled;
+- historical Vercel backend probes are retained only as dated migration evidence; no Vercel project may be promoted back into the active architecture;
 - anonymous Google Drive editing has been removed from the KOVA and AI World roots; and
-- duplicate/legacy Vercel projects and Manus-derived frontend runtime paths still require controlled review before retirement or replacement.
+- legacy Vercel projects are retired/paused and scheduled for provider-side deletion after account cleanup; Manus-derived frontend runtime paths remain a separate migration concern.
 
 This is a dated baseline, not a permanent health guarantee. Re-run checks before reporting current status.
 
