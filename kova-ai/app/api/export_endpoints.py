@@ -19,6 +19,7 @@ from app.security.api_key import require_owner_api_key
 sys.path.append(str(Path(__file__).parent.parent))
 
 router = APIRouter(prefix="/api/export", tags=["export"])
+upload_router = APIRouter(prefix="/api/export", tags=["export"])
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 SITE_ZIP = PROJECT_ROOT / "site_final.zip"
@@ -85,7 +86,7 @@ def download_images_zip():
         media_type="application/zip"
     )
 
-@router.post(
+@upload_router.post(
     "/gdrive-upload",
     response_model=GDriveUploadResponse,
     dependencies=[Depends(require_owner_api_key)],
