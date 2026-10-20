@@ -75,6 +75,28 @@ jobs:
       - name: Verify health and owner boundary on configured port
         run: docker exec -i kova-core-smoke python - < scripts/smoke_core_container.py
 
+      - name: Build and start the documented Compose source mount
+        run: |
+          cp kova-ai/.env.example kova-ai/.env
+          chmod 644 kova-ai/.env
+          docker compose -f kova-ai/docker-compose.yml build api
+          docker compose -f kova-ai/docker-compose.yml run --detach --no-deps \
+            --name kova-compose-smoke \
+            --env PORT=8765 \
+            --env DATABASE_URL=postgresql://ci:ci@db.internal/kova \
+            --env KOVA_OWNER_API_KEY=ci-only-owner-key api
+
+      - name: Verify Compose health with the source bind mount
+        run: docker exec -i kova-compose-smoke python - < scripts/smoke_core_compose.py
+
+      - name: Compose logs
+        if: always()
+        run: docker logs kova-compose-smoke || true
+
+      - name: Stop Compose test container
+        if: always()
+        run: docker rm --force kova-compose-smoke || true
+
       - name: Container logs
         if: always()
         run: docker logs kova-core-smoke || true
