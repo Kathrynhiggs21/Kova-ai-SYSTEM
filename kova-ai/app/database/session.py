@@ -30,6 +30,10 @@ def resolve_database_url() -> str:
     database_url = os.getenv("DATABASE_URL", "").strip()
     if not database_url or "<" in database_url or ">" in database_url:
         return build_default_database_url()
+    # Railway supplies ordinary PostgreSQL URLs; this service requires asyncpg.
+    for scheme in ("postgresql://", "postgres://"):
+        if database_url.startswith(scheme):
+            return "postgresql+asyncpg://" + database_url[len(scheme):]
     return database_url
 
 

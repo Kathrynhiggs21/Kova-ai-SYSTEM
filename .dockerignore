@@ -6,6 +6,8 @@
 !kova-ai/app/
 !kova-ai/app/**
 !kova_repos_config.json
+!site_final.zip
+!images.zip
 **/__pycache__/
 **/*.pyc
 **/.env

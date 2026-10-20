@@ -9,10 +9,39 @@ of an existing provider deployment.
 - Repository: `Kathrynhiggs21/Kova-ai-SYSTEM`
 - Branch: a reviewed production branch, normally `main` after merge
 - Root directory / Docker build context: repository root (`/`), not `kova-ai/`
-- Build: repository `railway.toml`
+- Build: explicit Railway service settings below; no legacy Config as Code file
 - Container: `kova-ai/Dockerfile`
 - Health check: `GET /health`
 - Runtime port: Railway-provided `PORT`, passed to the container by the start command
+
+## Current Railway configuration (verified October 20, 2026)
+
+[Config as Code](https://docs.railway.com/config-as-code.md) is deprecated:
+new services cannot use `railway.toml` or `railway.json`, and existing services
+stop reading them on **December 1, 2026**. This repository no longer supplies a
+legacy TOML file. Configure the existing intended service in the dashboard:
+
+| Setting | Value |
+| --- | --- |
+| Root directory / build context | Repository root `/` |
+| Builder | Dockerfile |
+| Dockerfile path | `kova-ai/Dockerfile` (`RAILWAY_DOCKERFILE_PATH` if needed) |
+| Start command override | Leave unset; use the image's PORT-aware command |
+| Health check path / timeout | `/health` / 120 seconds |
+| Restart policy / maximum retries | On failure / 5 |
+
+Verify these effective settings on the deployment details before starting a
+preview; the guide itself does not configure the service. If an existing service
+still points to a legacy Config as Code file, reconcile and detach it so that it
+cannot override the dashboard settings.
+
+Railway's supported [Infrastructure as Code](https://docs.railway.com/infrastructure-as-code.md)
+alternative is `.railway/railway.ts`. For a later owner-approved migration, link
+the exact existing project/environment, use `railway config pull` without
+`--include-variables` (preserving secrets), inspect `railway config plan`, and
+review before any apply. Do not generate a second project or manage one service
+with both configuration systems. No IaC apply or provider setting change is part
+of this PR.
 
 ## Reproducible container verification
 
@@ -37,8 +66,16 @@ image build and smoke check in its `container-smoke` job.
 
 Docker Compose uses the same repository-root context via
 `docker compose -f kova-ai/docker-compose.yml build api`. The Dockerfile copies
-only the API, requirements, and canonical root registry; `.dockerignore` keeps
-local environment files, archives, and unrelated source out of the build context.
+the API, requirements, canonical root registry, and published ZIP archives; `.dockerignore` keeps
+local environment files, unpublished archives, and unrelated source out of the build context.
+
+Published `/api/export/site` and `/api/export/images` downloads, plus MCP export
+status, use the bundled archives at `/app`. The image works from `/app/kova-ai`
+so the existing repository-root resolution remains valid. Local rebuild/Drive
+upload is not mounted (`KOVA_EXPORT_UPLOAD_ENABLED=false`): its script, build
+inputs, Google SDK and owner-authorized credential workflow are not bundled. Do
+not enable it on the minimal image. Non-container/local installations retain
+the existing owner-authenticated upload route by default.
 
 ## Required configuration
 
@@ -46,7 +83,9 @@ Store real values only in Railway's service variables. At minimum, configure:
 
 - `KOVA_OWNER_API_KEY`
 - `KOVA_ALLOWED_ORIGINS` as an exact, environment-specific browser-origin list (see below)
-- `DATABASE_URL` when database-backed routes are enabled
+- `DATABASE_URL` when database-backed routes are enabled. Railway's `postgresql://`
+  (or `postgres://`) URL is normalized to `postgresql+asyncpg://` before async
+  engine creation; existing explicit async URLs and encoded credentials are preserved.
 - provider credentials only for the integrations intentionally enabled
 
 Do not copy unused Vercel variables. Rotate a credential if its prior storage or

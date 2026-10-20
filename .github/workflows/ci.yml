@@ -68,6 +68,7 @@ jobs:
           docker run --detach --name kova-core-smoke \
             --env PORT=8765 \
             --env POSTGRES_PASSWORD=ci-only-database-password \
+            --env DATABASE_URL=postgresql://ci:ci@db.internal/kova \
             --env KOVA_OWNER_API_KEY=ci-only-owner-key \
             kova-core:ci
 

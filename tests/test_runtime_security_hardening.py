@@ -95,6 +95,22 @@ class DatabaseRuntimeHardeningTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "POSTGRES_PASSWORD"):
                 database_session.resolve_database_url()
 
+    def test_railway_postgres_urls_use_async_driver_without_changing_credentials(self):
+        for scheme in ("postgresql", "postgres"):
+            with self.subTest(scheme=scheme):
+                dsn = f"{scheme}://owner:p%2Fss%40word@postgres.internal:5432/kova?application_name=kova"
+                with patch.dict(os.environ, {"DATABASE_URL": dsn}):
+                    resolved = database_session.resolve_database_url()
+                    self.assertEqual(resolved, "postgresql+asyncpg" + dsn[len(scheme):])
+                    engine = database_session.create_database_engine()
+                    self.assertTrue(engine.dialect.is_async)
+                    self.assertEqual(engine.url.password, "p/ss@word")
+
+    def test_explicit_async_database_url_is_preserved(self):
+        dsn = "postgresql+asyncpg://owner:pw@db.internal/kova"
+        with patch.dict(os.environ, {"DATABASE_URL": dsn}):
+            self.assertEqual(database_session.resolve_database_url(), dsn)
+
     def test_sqlalchemy_echo_is_off_unless_explicitly_enabled(self):
         with patch.dict(os.environ, {"SQLALCHEMY_ECHO": ""}, clear=False):
             self.assertFalse(database_session.is_sqlalchemy_echo_enabled())
