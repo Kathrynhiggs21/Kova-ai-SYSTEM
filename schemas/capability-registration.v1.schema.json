@@ -29,7 +29,10 @@
       "type": [
         "string",
         "null"
-      ]
+      ],
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Opaque reference to one account-scoped connector connection in the canonical registry. A provider name alone does not identify an authorized account. The consumer must resolve and authorize the binding."
     },
     "operation": {
       "type": "string",
@@ -181,6 +184,30 @@
           },
           "evidence_ref": {
             "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "CONNECTED",
+              "RUNTIME_VERIFIED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "connector_ref"
+        ],
+        "properties": {
+          "connector_ref": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
           }
         }
       }

@@ -21,6 +21,8 @@ Reviewed: 2026-10-21. Repository and local-development evidence only; this sessi
 - `docs/HANDOFF.md` was absent from main and all six audited PR heads. It is now a short navigation entry, not a second backlog.
 - The local configuration validator previously accepted an empty ancestor `.git` directory as a repository root. Eleven of 26 existing tests failed under the cloud `/tmp/.git` marker. The fix requires checkout metadata and adds a deterministic regression.
 
+- Follow-up #153 repair moves the three contracts into the existing `schemas/` root without changing their `$id` values, requires explicit timeline sensitivity and account-scoped bindings for actionable capabilities, and reconciles the one `/mcp` registry UI with the unimplemented `/agents/capabilities` compatibility name. Web source evidence is pinned in ADR-005; no alias/runtime feature is added.
+
 ## Evidence limits
 
 - Git read works. GitHub REST and GraphQL requests return `Forbidden`; public PR/checks pages supply the read-only audit. See [handoff](docs/HANDOFF.md) for exact heads and checks.

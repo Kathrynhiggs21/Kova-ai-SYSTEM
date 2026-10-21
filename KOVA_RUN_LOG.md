@@ -95,3 +95,23 @@ Keep Railway staged and undeployed. Web PR #28 is green and review-clean but sti
 - Python app compilation and site JavaScript syntax passed; browser-export tests: 9 passed.
 - Changed Markdown local links/anchors/table widths, ADR path/heading uniqueness, workflow YAML and `git diff --check` passed. No stale second-brain ADR-004 paths/headings remain. Dependency consistency passed.
 - Hosted checks must be re-read on the pushed head. Provider/runtime evidence validity, freshness and external consumer compatibility are not established by these static tests.
+
+
+## 2026-10-21 — #153 unresolved contract and route findings
+
+- Re-read #153 reviews and remote main/head. Continued only the existing #153 branch from `85de3c3`; main remained `83bb724`.
+- `PRRT_kwDOPrB4Yc6u_Q00`: moved capability, memory and timeline contracts to the existing canonical `schemas/` root, preserved all three `$id` values/basenames, removed the duplicate root and updated active docs/tests. The Agent Ledger schema stays unchanged and joins the same discovery/meta-validation tests.
+- `PRRT_kwDOPrB4Yc6u_Q02`: required timeline `sensitivity` and removed its misleading default annotation. Regression rejects missing/null/invalid classification and verifies validation does not insert a value.
+- `PRRT_kwDOPrB4Yc6u_Q07`: pinned canonical web main `28debe0edaaa7fc818a617bf4ec11dc55ad8d97b`; App.tsx registers `/mcp` -> ConnectionCenter and `/agents` -> AgentHub, with no `/agents/capabilities` alias. Reconciled ADR-005 and shared-agent-history guidance around one Core-owned registry and web UI, marking the old path as an unimplemented compatibility alias. The current ConnectionCenter route is a snapshot without AccessGate wrapping; no live owner-auth claim is made.
+- Older HIGH confirmation and TIMELINE-memory timestamp guards already existed and pass focused regression checks. The older connector-account finding was **not** fixed at the starting head: optional nullable `connector_ref` still passed for CONNECTED/RUNTIME_VERIFIED. Added the missing required/nonblank account-scoped binding clause and regression instead of claiming the thread was already satisfied.
+- Focused tests reproduced 11 failing subcases before the two missing schema constraints were corrected; all 15 tests then passed. Schema shape checks cannot resolve an account reference or prove its authorization; ADR-005 explicitly requires consumer-side resolution and permission checks.
+- Updated the pre-merge v1 migration note for filesystem consumers, timeline classification and account-binding requirements. No version/identity change, runtime feature, task store, provider/settings change, PR merge/closure, thread resolution or cross-task message.
+
+### Validation and older-thread proof
+
+- Canonical discovery validates all four Draft 2020-12 schemas and their unique, preserved `$id` values. All 15 schema/ADR regressions pass; full Core suite: 196 passed with no skips. Platform verification/config validation, Python app compile and site syntax passed; browser-export tests: 9 passed.
+- HIGH risk: capability `allOf[1]` requires `requires_confirmation` to be true; the root required list also requires that field. `test_existing_confirmation_and_required_field_guards_remain` proves false/missing rejection and true acceptance.
+- TIMELINE memory: memory `allOf[1]` requires non-null string `valid_from` with date-time format. `test_timeline_memory_requires_valid_timestamp` proves missing/null/invalid rejection and valid timestamp acceptance.
+- Connector-account binding: capability `allOf[4]` now requires nonblank string `connector_ref` for CONNECTED/RUNTIME_VERIFIED. `test_actionable_capabilities_require_account_scoped_connector_reference` proves missing/null/blank rejection and scoped-reference acceptance. Consumers must still resolve/authorize the referenced account; no runtime resolution is implemented by a schema.
+- Timeline classification: `required` includes `sensitivity` and there is no default annotation. `test_timeline_events_require_explicit_sensitivity` proves missing/null/invalid rejection, explicit enum acceptance and no default injection.
+- All changed Markdown links/anchors/table widths and `git diff --check` pass. Agent Ledger and moved memory bytes remain unchanged. Source-route evidence pins web main `28debe0`; no web checkout source changes. Hosted checks must be read on the new pushed head; coordinator owns remaining thread verification.

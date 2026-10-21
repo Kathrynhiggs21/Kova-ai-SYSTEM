@@ -17,10 +17,10 @@ class SecondBrainSchemaTests(unittest.TestCase):
     def setUpClass(cls):
         cls.schemas = {}
         cls.validators = {}
-        for path in sorted((ROOT / "config/schemas").glob("*.schema.json")):
+        for path in sorted((ROOT / "schemas").glob("*.schema.json")):
             schema = json.loads(path.read_text())
             Draft202012Validator.check_schema(schema)
-            name = path.name.split(".v1.")[0]
+            name = path.name.removesuffix(".schema.json").removesuffix(".v1")
             cls.schemas[name] = schema
             cls.validators[name] = Draft202012Validator(
                 schema, format_checker=FormatChecker()
@@ -46,13 +46,24 @@ class SecondBrainSchemaTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             self.validators[name].validate(record)
 
-    def test_all_three_schema_documents_have_distinct_ids(self):
+    def test_all_four_shared_schema_documents_have_distinct_ids(self):
         self.assertEqual(
             set(self.schemas),
-            {"capability-registration", "memory-record", "timeline-event"},
+            {"agent-ledger-entry", "capability-registration", "memory-record", "timeline-event"},
         )
         ids = [schema["$id"] for schema in self.schemas.values()]
         self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(
+            set(ids),
+            {
+                "https://kovaos.com/schemas/agent-ledger-entry.schema.json",
+                "https://kovaos.com/schemas/capability-registration.v1.json",
+                "https://kovaos.com/schemas/memory-record.v1.json",
+                "https://kovaos.com/schemas/timeline-event.v1.json",
+            },
+            "Moving repository paths must not rename contract identities",
+        )
+        self.assertFalse((ROOT / "config" / "schemas").exists(), "Shared contracts have one root")
 
     def test_capability_states_match_canonical_readme_labels(self):
         labels = re.findall(r"^\| `([^`]+)`", (ROOT / "README.md").read_text(), re.M)
@@ -77,6 +88,8 @@ class SecondBrainSchemaTests(unittest.TestCase):
                 record["last_verified_at"] = "2026-10-21T20:00:00Z"
                 self.assert_invalid("capability-registration", record)
                 record["evidence_ref"] = "audit:synthetic-check-1"
+                if state in ["CONNECTED", "RUNTIME_VERIFIED"]:
+                    record["connector_ref"] = "connection:synthetic:account-a"
                 self.validators["capability-registration"].validate(record)
                 record["last_verified_at"] = None
                 self.assert_invalid("capability-registration", record)
@@ -185,14 +198,63 @@ class SecondBrainSchemaTests(unittest.TestCase):
             self.memory(memory_type="TIMELINE", valid_from="2026-10-21T20:00:00Z")
         )
 
-    def test_correction_event_contract_review_guard_remains(self):
+    def test_actionable_capabilities_require_account_scoped_connector_reference(self):
+        for state in ["CONNECTED", "RUNTIME_VERIFIED"]:
+            record = self.capability(
+                state=state,
+                last_verified_at="2026-10-21T20:00:00Z",
+                evidence_ref="audit:synthetic-check-1",
+            )
+            with self.subTest(state=state, missing=True):
+                self.assert_invalid("capability-registration", record)
+            for reference in [None, "", " ", "\t\n"]:
+                with self.subTest(state=state, reference=reference):
+                    self.assert_invalid(
+                        "capability-registration", {**record, "connector_ref": reference}
+                    )
+            self.validators["capability-registration"].validate(
+                {**record, "connector_ref": "connection:synthetic:account-a"}
+            )
+
+    def test_timeline_memory_requires_valid_timestamp(self):
+        for timestamp in [None, "", "yesterday", "2026-10-21"]:
+            with self.subTest(timestamp=timestamp):
+                self.assert_invalid(
+                    "memory-record", self.memory(memory_type="TIMELINE", valid_from=timestamp)
+                )
+        self.assert_invalid("memory-record", self.memory(memory_type="TIMELINE"))
+        self.validators["memory-record"].validate(
+            self.memory(memory_type="TIMELINE", valid_from="2026-10-21T20:00:00Z")
+        )
+
+    def timeline_event(self, **changes):
         event = {
             "timestamp": "2026-10-21T20:00:00Z",
             "event_id": "synthetic-event-2",
-            "event_type": "CORRECTION",
-            "description": "Synthetic correction.",
+            "event_type": "ACTION",
+            "description": "Synthetic event.",
+            "sensitivity": "PRIVATE",
             "provenance": {"source": "synthetic", "confidence_score": 1},
         }
+        event.update(changes)
+        return event
+
+    def test_timeline_events_require_explicit_sensitivity(self):
+        event = self.timeline_event()
+        del event["sensitivity"]
+        self.assert_invalid("timeline-event", event)
+        self.assertNotIn("sensitivity", event, "Validation must not inject a default")
+        for sensitivity in [None, "", "UNCLASSIFIED"]:
+            with self.subTest(sensitivity=sensitivity):
+                self.assert_invalid("timeline-event", self.timeline_event(sensitivity=sensitivity))
+        for sensitivity in ["PUBLIC", "PRIVATE", "SENSITIVE", "RESTRICTED"]:
+            with self.subTest(sensitivity=sensitivity):
+                self.validators["timeline-event"].validate(
+                    self.timeline_event(sensitivity=sensitivity)
+                )
+
+    def test_correction_event_contract_review_guard_remains(self):
+        event = self.timeline_event(event_type="CORRECTION")
         self.assert_invalid("timeline-event", event)
         event["supersedes_event_id"] = "synthetic-event-1"
         self.validators["timeline-event"].validate(event)

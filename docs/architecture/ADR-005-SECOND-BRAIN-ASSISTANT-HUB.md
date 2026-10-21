@@ -48,7 +48,7 @@ Every tool/connector declares explicit capabilities, risk class, access mode, cu
 
 ### Capability state contract and compatibility
 
-The [capability registration v1 schema](../../config/schemas/capability-registration.v1.schema.json) uses uppercase machine spellings of the canonical labels:
+The [capability registration v1 schema](../../schemas/capability-registration.v1.schema.json) uses uppercase machine spellings of the canonical labels:
 
 | State | Evidence meaning |
 |---|---|
@@ -58,6 +58,8 @@ The [capability registration v1 schema](../../config/schemas/capability-registra
 | `NEEDS_CONNECTION` | Required authorization or configuration is missing; do not invent grants. |
 | `BROKEN` | A current check failed with recorded evidence. `last_verified_at` is the check time, not a claim of success. |
 | `UNKNOWN` | No current evidence exists. Both current evidence fields must be null; keep any historical audit records in their canonical store. |
+
+CONNECTED and RUNTIME_VERIFIED also require a nonblank `connector_ref` resolving to exactly one account-scoped connection. The registry binding must identify the provider and intended account; a provider brand, default account or display label alone is insufficient. Consumers must resolve the opaque reference, verify that its provider/account matches the intended action and evidence, and apply current authorization before routing. Schema validation checks presence, not the referenced account or its granted permissions.
 
 `last_verified_at` and `evidence_ref` are both null or both populated. CONNECTED, RUNTIME_VERIFIED and BROKEN require a date-time plus a nonblank, nonsecret audit reference. For CONFIGURED or NEEDS_CONNECTION, an optional pair supports only the configuration/absence claim; it does not promote the state. UNKNOWN cannot carry a current-verification pair. Validators must enable RFC 3339 `date-time` format checking; a JSON Schema implementation that ignores formats is insufficient for these contracts.
 
@@ -71,7 +73,14 @@ Compared with PR head `289380ea44675c2088a50e86cadcc21a93e5e1c4`, the corrected 
 
 Any consumer or saved fixture pinned to an earlier PR candidate must be explicitly revalidated and migrated before adopting this head. If an external/deployed consumer is found, treat that as a compatibility blocker: retain its pinned contract and agree a versioned migration (a new schema ID/version where required) before release. Do not silently tighten a published v1 in place. No runtime migration, task store or new provider feature is implemented here.
 
-The [memory record v1](../../config/schemas/memory-record.v1.schema.json) and [timeline event v1](../../config/schemas/timeline-event.v1.schema.json) contracts retain the prior review fixes for relationships, sensitivity, dated events and correction/supersession targets. Their schema IDs and contents are unchanged in this consolidation.
+#### Canonical schema location and privacy classification
+
+The three contracts live only in the existing shared [schemas directory](../../schemas), beside [agent-ledger-entry.schema.json](../../schemas/agent-ledger-entry.schema.json). The old configuration subdirectory is removed rather than mirrored. File basenames and all three `$id` URIs are preserved, so identity-based consumers keep the same schema identities; relative filesystem consumers must update their paths. Git commit-pinned historical paths remain source history, not a second discovery root or a promise of deployed URL hosting.
+
+The [memory record v1](../../schemas/memory-record.v1.schema.json) retains its prior relationship, sensitivity, dated-TIMELINE and supersession clauses. The [timeline event v1](../../schemas/timeline-event.v1.schema.json) now **requires** explicit `sensitivity` on every event, including corrections. A JSON Schema `default` is only an annotation and does not populate a record; the misleading default annotation is removed. Missing, null or invalid classification is rejected, never silently promoted to PUBLIC or assumed PRIVATE.
+
+These are further incompatible corrections to the same unmerged v1 candidate: old filesystem paths, events missing sensitivity, and CONNECTED/RUNTIME_VERIFIED registrations lacking an account-scoped connector reference require explicit migration/revalidation. No `$id` or contract version changes here; the earlier pre-release compatibility and external-consumer blocker still apply. No runtime alias, data backfill, identity provisioning or provider change is implemented.
+
 
 ### 6. Agent router
 
@@ -120,13 +129,21 @@ Recommended canonical routes:
 
 - `/assistant` primary conversational interface;
 - `/hub` second-brain and capability overview;
-- `/mcp` owner connection/capability registry;
+- `/mcp` single canonical owner connection/capability registry UI (currently a dated source snapshot, not a live owner-protected registry claim);
 - `/widgets` mobile/web widget catalog;
 - `/automations` scheduled and event-driven workflows;
 - `/world` AI World provenance surface;
 - domain modules such as calendar, files, vault, finance, and travel;
 - `/settings` private preferences and permissions;
 - `/admin` owner-only governance.
+
+### Registry ownership and route compatibility
+
+Core owns capability/connection contracts, registry data and authorization; the canonical web app owns the one registry UI at `/mcp`. `/agents` is the agent-routing overview and may link to that registry; it must not own duplicate provider/account records. Core's HTTP `/mcp` JSON-RPC transport is a separate protocol endpoint, not a second web registry.
+
+Source evidence: canonical web main [`28debe0`](https://github.com/Kathrynhiggs21/kovaos-site/commit/28debe0edaaa7fc818a617bf4ec11dc55ad8d97b), inspected in this session, maps [`/mcp` to ConnectionCenter and `/agents` to AgentHub](https://github.com/Kathrynhiggs21/kovaos-site/blob/28debe0edaaa7fc818a617bf4ec11dc55ad8d97b/client/src/App.tsx#L82). [ConnectionCenter](https://github.com/Kathrynhiggs21/kovaos-site/blob/28debe0edaaa7fc818a617bf4ec11dc55ad8d97b/client/src/pages/ConnectionCenter.tsx) explicitly describes a dated evidence snapshot; its current route does not wrap that component in AccessGate. This is source-route evidence, not proof of deployed behavior, live connection checks or owner authorization.
+
+The older `/agents/capabilities` name in shared-agent-history guidance is a **compatibility alias name for `/mcp`**, not a second registry. No such route/redirect exists in the inspected web source; do not advertise that alias as working. Any future authorized compatibility implementation must redirect or reuse the same `/mcp` view and authorization, never fork its records or create a second registry page. This documentation repair adds no route or redirect. The [shared-agent-history surface contract](KOVA_SHARED_AGENT_HISTORY.md#canonical-surfaces) uses this same owner/alias rule. Other recommended routes above are product targets unless current source evidence establishes implementation.
 
 The orb is the persistent assistant identity, not merely decoration. Its visual state may communicate idle, listening, thinking, tool use, waiting, alert, or offline state, subject to accessibility and reduced-motion settings.
 
