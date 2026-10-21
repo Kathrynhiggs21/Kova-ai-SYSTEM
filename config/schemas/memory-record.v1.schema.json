@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kovaos.com/schemas/memory-record.v1.json",
+  "title": "KOVA Memory Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["memory_id", "memory_type", "statement", "status", "provenance"],
+  "properties": {
+    "memory_id": { "type": "string", "minLength": 1 },
+    "memory_type": { "type": "string", "enum": ["FACT", "RELATIONSHIP", "PROCEDURE", "TIMELINE"] },
+    "statement": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["ACTIVE", "SUPERSEDED", "REVIEW", "ARCHIVED"] },
+    "subject_refs": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "canonical_ref": { "type": ["string", "null"] },
+    "valid_from": { "type": ["string", "null"], "format": "date-time" },
+    "valid_to": { "type": ["string", "null"], "format": "date-time" },
+    "sensitivity": { "type": "string", "enum": ["PRIVATE", "SENSITIVE", "RESTRICTED"] },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "confidence_score"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": ["string", "null"] },
+        "confidence_score": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}
