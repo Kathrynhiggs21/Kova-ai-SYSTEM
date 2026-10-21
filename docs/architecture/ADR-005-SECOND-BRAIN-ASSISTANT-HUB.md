@@ -1,4 +1,4 @@
-# ADR-004: KOVA Second Brain and Assistant Hub
+# ADR-005: KOVA Second Brain and Assistant Hub
 
 - Status: Accepted
 - Date: 2026-10-21
@@ -44,7 +44,34 @@ Search fans out only to authorized sources. Results normalize to stable IDs, can
 
 ### 5. Capability graph
 
-Every tool/connector declares explicit capabilities, risk class, access mode, current lifecycle state, evidence time, and canonical destination. Lifecycle vocabulary includes configured, needs connection, connected, runtime verified, degraded, broken, unknown, and disabled. Tool availability is not proof of authentication.
+Every tool/connector declares explicit capabilities, risk class, access mode, current evidence state, evidence time, and canonical destination. Use the six evidence labels in the [canonical README](../../README.md#evidence-based-status): configured, connected, runtime verified, needs connection, broken, and unknown. Operational disablement or degradation does not replace the evidence label. Tool availability is not proof of authentication.
+
+### Capability state contract and compatibility
+
+The [capability registration v1 schema](../../config/schemas/capability-registration.v1.schema.json) uses uppercase machine spellings of the canonical labels:
+
+| State | Evidence meaning |
+|---|---|
+| `CONFIGURED` | A setting or adapter exists; runtime has not been proven. Evidence may describe configuration only. |
+| `CONNECTED` | Authentication and a current end-to-end read through the intended source succeeded. A provider name, open port, installed tool or staged mutation is insufficient. |
+| `RUNTIME_VERIFIED` | A current check passed on the intended production path. A local test, mock, CI build or CONNECTED source read alone is insufficient. |
+| `NEEDS_CONNECTION` | Required authorization or configuration is missing; do not invent grants. |
+| `BROKEN` | A current check failed with recorded evidence. `last_verified_at` is the check time, not a claim of success. |
+| `UNKNOWN` | No current evidence exists. Both current evidence fields must be null; keep any historical audit records in their canonical store. |
+
+`last_verified_at` and `evidence_ref` are both null or both populated. CONNECTED, RUNTIME_VERIFIED and BROKEN require a date-time plus a nonblank, nonsecret audit reference. For CONFIGURED or NEEDS_CONNECTION, an optional pair supports only the configuration/absence claim; it does not promote the state. UNKNOWN cannot carry a current-verification pair. Validators must enable RFC 3339 `date-time` format checking; a JSON Schema implementation that ignores formats is insufficient for these contracts.
+
+Schema validity does not authenticate an actor, enumerate granted OAuth/API scopes, resolve an audit reference, prove an outcome, or establish freshness. Before displaying a current state or routing an action, the consuming system must verify the audit record's actual outcome, timestamp/freshness, intended source and exact environment/path. CONNECTED requires an authenticated end-to-end read; RUNTIME_VERIFIED requires the intended production check; BROKEN requires the failed check. Stale, future-dated or unavailable evidence cannot sustain a current verified claim. No freshness duration or runtime implementation is introduced by this ADR correction. Permission-scope evidence remains separate, as required by the [integration matrix](../command-center/KOVA_OS_INTEGRATION_MATRIX.md#provider-identity-and-granted-permissions). A valid registration never authorizes an action by itself.
+
+#### Pre-merge v1 compatibility
+
+These schemas are new in PR #153 and absent from main `83bb724092344b0eed3a5f1b0182049a246847e6`. The inspected Core and canonical web source contained no consumers of these schema IDs or registration records; deployed/external use was not verified. This corrects the **unmerged v1 candidate**, retaining its filename and `$id`; it does not claim a backward-compatible change to an already released contract.
+
+Compared with PR head `289380ea44675c2088a50e86cadcc21a93e5e1c4`, the corrected v1 rejects `DEGRADED` and `DISABLED`, evidence-free CONNECTED/BROKEN claims, partial evidence pairs, whitespace-only evidence references, and current-verification metadata on UNKNOWN. Existing high-risk confirmation and required-field constraints remain. Do not automatically translate operational labels into a live state or manufacture evidence. Re-derive a canonical label from current authorized evidence; preserve any existing disable control in its owning policy rather than adding a new switch to this schema.
+
+Any consumer or saved fixture pinned to an earlier PR candidate must be explicitly revalidated and migrated before adopting this head. If an external/deployed consumer is found, treat that as a compatibility blocker: retain its pinned contract and agree a versioned migration (a new schema ID/version where required) before release. Do not silently tighten a published v1 in place. No runtime migration, task store or new provider feature is implemented here.
+
+The [memory record v1](../../config/schemas/memory-record.v1.schema.json) and [timeline event v1](../../config/schemas/timeline-event.v1.schema.json) contracts retain the prior review fixes for relationships, sensitivity, dated events and correction/supersession targets. Their schema IDs and contents are unchanged in this consolidation.
 
 ### 6. Agent router
 

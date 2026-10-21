@@ -78,3 +78,20 @@ Keep Railway staged and undeployed. Web PR #28 is green and review-clean but sti
 - Coordinator verified hosted container-smoke, verify-platform, CodeQL and CircleCI success on `bbc5f4fd83692dd111fd583e1000204e69546986`. This does not establish checks on the follow-up commit.
 - Documentation-only correction. No PR description/thread-state, merge/closure or provider changes; coordinator owns thread resolution.
 - Follow-up validation: all changed Markdown local links/anchors and table widths passed; `git diff --check` passed; `python scripts/validate_config.py` passed with zero errors/warnings. Runtime suites were not rerun for this documentation-only correction.
+
+
+## 2026-10-21 — Existing second-brain PR #153 consolidation
+
+- Re-read current main `83bb724092344b0eed3a5f1b0182049a246847e6` and the open #153 page/branch at `289380ea44675c2088a50e86cadcc21a93e5e1c4`, including published reviews and earlier safety fixes. Continued only `architecture/second-brain-v1-2026-10-21` and merged main locally without conflicts or reverting its changes.
+- Renamed the existing accepted second-brain ADR from the conflicting ADR-004 to next-free ADR-005, updating its heading and current decision/handoff/backlog references. The hosting ADR-004 is preserved.
+- Aligned the capability schema with the README's six canonical evidence labels; required evidence for CONNECTED/BROKEN as well as RUNTIME_VERIFIED, enforced complete metadata pairs/nonblank references, and kept UNKNOWN free of current-verification claims. Existing high-risk confirmation guards remain. Documented static-schema limits and pre-merge v1 incompatibilities; no automatic promotions, deployed migration or version-compatibility claim.
+- Added Draft 2020-12 schema validation and synthetic accepted/rejected-record checks, with RFC 3339 format assertions and prior memory/timeline review guards. The tests first reproduced 17 failing subcases across 12 tests before correction, then all 12 passed. Schema-validation dependencies are test-only and wired into existing CI/README instructions, not runtime images.
+- Preserved the fetched memory/timeline schema contents and all current main deployment/provider configuration. No new architecture, task store, PR, runtime/provider feature, production mutation, review-thread resolution or cross-task message.
+
+### Validation on the #153 consolidation tree
+
+- All three contract schemas pass Draft 2020-12 meta-schema validation with format-aware instance validation in the new tests. All 12 schema/ADR tests pass; the memory/timeline files are byte-identical to the fetched #153 head.
+- Core unit suite: 193 passed, no skips, under scoped `umask 022`; platform verification and canonical config validation passed.
+- Python app compilation and site JavaScript syntax passed; browser-export tests: 9 passed.
+- Changed Markdown local links/anchors/table widths, ADR path/heading uniqueness, workflow YAML and `git diff --check` passed. No stale second-brain ADR-004 paths/headings remain. Dependency consistency passed.
+- Hosted checks must be re-read on the pushed head. Provider/runtime evidence validity, freshness and external consumer compatibility are not established by these static tests.

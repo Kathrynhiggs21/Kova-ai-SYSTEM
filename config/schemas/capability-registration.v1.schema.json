@@ -17,48 +17,174 @@
     "evidence_ref"
   ],
   "properties": {
-    "capability_id": { "type": "string", "minLength": 1 },
-    "provider": { "type": "string", "minLength": 1 },
-    "connector_ref": { "type": ["string", "null"] },
-    "operation": { "type": "string", "minLength": 1 },
-    "resource_types": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "access_mode": { "type": "string", "enum": ["READ", "WRITE", "READ_WRITE", "EXECUTE"] },
-    "risk_class": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+    "capability_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider": {
+      "type": "string",
+      "minLength": 1
+    },
+    "connector_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "operation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "resource_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "access_mode": {
+      "type": "string",
+      "enum": [
+        "READ",
+        "WRITE",
+        "READ_WRITE",
+        "EXECUTE"
+      ]
+    },
+    "risk_class": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
     "state": {
       "type": "string",
       "enum": [
         "CONFIGURED",
-        "NEEDS_CONNECTION",
         "CONNECTED",
         "RUNTIME_VERIFIED",
-        "DEGRADED",
+        "NEEDS_CONNECTION",
         "BROKEN",
-        "UNKNOWN",
-        "DISABLED"
+        "UNKNOWN"
+      ],
+      "description": "Machine spelling of the six canonical README labels. Operational disablement or degradation is not an additional evidence state."
+    },
+    "requires_confirmation": {
+      "type": "boolean"
+    },
+    "canonical_destination": {
+      "type": [
+        "string",
+        "null"
       ]
     },
-    "requires_confirmation": { "type": "boolean" },
-    "canonical_destination": { "type": ["string", "null"] },
-    "last_verified_at": { "type": ["string", "null"], "format": "date-time" },
-    "evidence_ref": { "type": ["string", "null"] }
+    "last_verified_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "Time of the check supporting this state, including a failed check for BROKEN; not necessarily a successful verification. Null when no supporting check is recorded. Validators must enable date-time format assertions."
+    },
+    "evidence_ref": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "\\S",
+      "description": "Nonsecret reference to the audit record supporting this state and exact source/path; never a credential or a grant of authority. Keep in private canonical storage when sensitive."
+    }
   },
   "allOf": [
     {
-      "if": { "properties": { "state": { "const": "RUNTIME_VERIFIED" } } },
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "CONNECTED",
+              "RUNTIME_VERIFIED",
+              "BROKEN"
+            ]
+          }
+        }
+      },
       "then": {
         "properties": {
-          "last_verified_at": { "type": "string", "format": "date-time" },
-          "evidence_ref": { "type": "string", "minLength": 1 }
+          "last_verified_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "evidence_ref": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     },
     {
-      "if": { "properties": { "risk_class": { "const": "HIGH" } } },
+      "if": {
+        "properties": {
+          "risk_class": {
+            "const": "HIGH"
+          }
+        }
+      },
       "then": {
         "properties": {
-          "requires_confirmation": { "const": true }
+          "requires_confirmation": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "last_verified_at": {
+              "type": "null"
+            },
+            "evidence_ref": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "properties": {
+            "last_verified_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "evidence_ref": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "UNKNOWN"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "last_verified_at": {
+            "type": "null"
+          },
+          "evidence_ref": {
+            "type": "null"
+          }
         }
       }
     }
-  ]
+  ],
+  "description": "Pre-merge v1 contract aligned with README evidence-based status. Validation checks record shape, not live authorization, evidence authenticity or freshness. See ADR-005 for semantics and compatibility."
 }

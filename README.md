@@ -65,7 +65,7 @@ Python 3.11 and Node.js 22 match CI. Install dependencies in an isolated environ
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python3 -m pip install -r kova-ai/requirements.txt
+python3 -m pip install -r kova-ai/requirements.txt -r tests/requirements.txt
 
 ./verify_platform.sh
 python3 scripts/validate_config.py
