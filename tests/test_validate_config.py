@@ -5,6 +5,7 @@ import io
 import json
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from scripts.validate_config import ConfigValidator
@@ -120,6 +121,14 @@ def valid_vault_live_enablement_policy():
 
 
 class ConfigValidatorTests(unittest.TestCase):
+    def test_empty_ancestor_git_marker_does_not_override_config_root(self):
+        with tempfile.TemporaryDirectory() as parent:
+            (Path(parent) / ".git").mkdir()
+            with mock.patch.object(tempfile, "tempdir", parent):
+                passed, results, _ = self.validate(valid_config())
+
+        self.assertTrue(passed, results["errors"])
+
     def validate(self, config, extra_files=None):
         with tempfile.TemporaryDirectory() as temp_dir:
             config_path = Path(temp_dir) / "kova_repos_config.json"

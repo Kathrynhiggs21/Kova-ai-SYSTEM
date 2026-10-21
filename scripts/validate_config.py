@@ -62,7 +62,10 @@ class ConfigValidator:
         """Resolve the repository root for the current config path."""
         config_root = self.config_path.parent.resolve()
         for candidate in (config_root, *config_root.parents):
-            if (candidate / ".git").exists():
+            git_marker = candidate / ".git"
+            # Cloud sandboxes can mount empty .git directories above fixtures.
+            # A checkout has HEAD metadata, or a file pointing to a worktree.
+            if git_marker.is_file() or (git_marker / "HEAD").is_file():
                 return candidate
         if self.config_path.resolve().is_relative_to(PROJECT_ROOT):
             return PROJECT_ROOT
