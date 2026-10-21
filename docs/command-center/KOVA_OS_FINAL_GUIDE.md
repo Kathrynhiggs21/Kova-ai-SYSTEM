@@ -9,6 +9,7 @@ KOVA is one personal AI operating system with one control plane and one primary 
 - **Core:** `Kathrynhiggs21/Kova-ai-SYSTEM`
 - **Authenticated app:** `Kathrynhiggs21/kovaos-site`
 - **Primary domain:** `kovaos.com`
+- **Hosting target:** Cloudflare edge/static delivery + Railway persistent services. Vercel is retired; it must not be restored as a deployment or rollback target.
 - **Files:** Google Drive is the canonical user-file store.
 - **Operational state:** a relational database will hold runs, jobs, connector health, and application state.
 - **Notion:** a human-readable view, not a competing technical source of truth.
@@ -78,3 +79,7 @@ The attached Zapier MCP starter pack is historical and sensitive. It contains a 
 5. Prove one AI-provider route and one connector route end to end.
 
 Normal KOVA use should be no-code. Agents maintain code and integrations; the dashboard exposes understandable controls and asks for approval only for high-impact actions.
+
+## Build continuity
+
+Use the [Core handoff](../HANDOFF.md), [build state](../../KOVA_BUILD_STATE.md), and [backlog](../../KOVA_BACKLOG.md) for unfinished work and dated source evidence. The [canonical web deployment guide](https://github.com/Kathrynhiggs21/kovaos-site/blob/main/docs/deployment/cloudflare-railway.md) owns the web runtime contract. Domain-isolation [web #38](https://github.com/Kathrynhiggs21/kovaos-site/pull/38) remains a review reference; its old private-Sites ownership claim is not a current DNS observation.

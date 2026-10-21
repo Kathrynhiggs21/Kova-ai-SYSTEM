@@ -11,6 +11,8 @@ This repository coordinates one KOVA system. It is not a second document library
 3. Use [`kova_repos_config.json`](kova_repos_config.json) for machine-readable repository status and boundaries.
 4. Use [`docs/command-center/KOVA_OS_FINAL_GUIDE.md`](docs/command-center/KOVA_OS_FINAL_GUIDE.md) for the product vision and phased roadmap.
 
+Continue unfinished work through [docs/HANDOFF.md](docs/HANDOFF.md), [KOVA_BUILD_STATE.md](KOVA_BUILD_STATE.md), and [KOVA_BACKLOG.md](KOVA_BACKLOG.md).
+
 Historical guides and generated exports may still exist in the repository. Verify current code, configuration, and runtime evidence before treating an older document as authoritative.
 
 ## Canonical runtime repositories
@@ -67,7 +69,8 @@ python3 -m pip install -r kova-ai/requirements.txt
 
 ./verify_platform.sh
 python3 scripts/validate_config.py
-PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v
+# Scope CI file-creation permissions to the permission-fixture test run.
+(umask 022; PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v)
 python3 -m compileall -q kova-ai/app
 node --check site/app.js
 node --test tests/test_site_exports.js
