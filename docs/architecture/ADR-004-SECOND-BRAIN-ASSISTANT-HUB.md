@@ -1,6 +1,6 @@
 # ADR-004: KOVA Second Brain and Assistant Hub
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-21
 - Scope: KOVA Core + canonical authenticated application
 
@@ -28,7 +28,7 @@ Personally identifying account details belong only in private runtime storage. D
 KOVA memory has four semantic classes:
 
 - fact: a verified or qualified statement about current or historical state;
-- relationship: a directed connection between entities;
+- relationship: a directed connection between stable source and target entity identifiers with an explicit relationship type;
 - procedure: an approved or learned way the owner prefers recurring work to be done;
 - timeline: a dated material event, decision, action, or correction.
 
@@ -44,7 +44,7 @@ Search fans out only to authorized sources. Results normalize to stable IDs, can
 
 ### 5. Capability graph
 
-Every tool/connector declares explicit capabilities, risk class, access mode, current lifecycle state, evidence time, and canonical destination. Tool availability is not proof of authentication.
+Every tool/connector declares explicit capabilities, risk class, access mode, current lifecycle state, evidence time, and canonical destination. Lifecycle vocabulary includes configured, needs connection, connected, runtime verified, degraded, broken, unknown, and disabled. Tool availability is not proof of authentication.
 
 ### 6. Agent router
 
@@ -74,7 +74,7 @@ Mutations are classified by risk:
 - medium: external writes or changes with material user impact;
 - high: destructive deletion, money movement, DNS/domain changes, publishing, credential/security changes, or sensitive external communication.
 
-High-risk actions require explicit confirmation unless a narrowly bounded rule exists and the action type is eligible for delegation. Audit records must never contain secrets.
+High-risk actions require explicit confirmation in the v1 capability contract. A future contract may represent narrowly bounded delegation only with an explicit validated policy reference. Audit records must never contain secrets.
 
 ## Canonical source rules
 
