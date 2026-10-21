@@ -23,15 +23,17 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: kova-ai/requirements.txt
+          cache-dependency-path: |
+            kova-ai/requirements.txt
+            tests/requirements.txt
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Install Python Dependencies
-        run: python3 -m pip install -r kova-ai/requirements.txt
+      - name: Install Python Runtime and Test Dependencies
+        run: python3 -m pip install -r kova-ai/requirements.txt -r tests/requirements.txt
 
       - name: Run Platform Verification
         run: |

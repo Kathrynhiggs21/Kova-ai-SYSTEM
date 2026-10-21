@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kovaos.com/schemas/memory-record.v1.json",
+  "title": "KOVA Memory Record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "memory_id",
+    "memory_type",
+    "statement",
+    "status",
+    "sensitivity",
+    "provenance"
+  ],
+  "properties": {
+    "memory_id": { "type": "string", "minLength": 1 },
+    "memory_type": { "type": "string", "enum": ["FACT", "RELATIONSHIP", "PROCEDURE", "TIMELINE"] },
+    "statement": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["ACTIVE", "SUPERSEDED", "REVIEW", "ARCHIVED"] },
+    "subject_refs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "relationship": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["source_ref", "relationship_type", "target_ref"],
+      "properties": {
+        "source_ref": { "type": "string", "minLength": 1 },
+        "relationship_type": { "type": "string", "minLength": 1 },
+        "target_ref": { "type": "string", "minLength": 1 }
+      }
+    },
+    "canonical_ref": { "type": ["string", "null"] },
+    "supersedes_memory_id": { "type": ["string", "null"], "minLength": 1 },
+    "superseded_by_memory_id": { "type": ["string", "null"], "minLength": 1 },
+    "valid_from": { "type": ["string", "null"], "format": "date-time" },
+    "valid_to": { "type": ["string", "null"], "format": "date-time" },
+    "sensitivity": { "type": "string", "enum": ["PRIVATE", "SENSITIVE", "RESTRICTED"] },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "confidence_score"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": ["string", "null"] },
+        "confidence_score": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "memory_type": { "const": "RELATIONSHIP" } } },
+      "then": {
+        "required": ["relationship"],
+        "properties": { "relationship": { "type": "object" } }
+      }
+    },
+    {
+      "if": { "properties": { "memory_type": { "const": "TIMELINE" } } },
+      "then": {
+        "required": ["valid_from"],
+        "properties": { "valid_from": { "type": "string", "format": "date-time" } }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "SUPERSEDED" } } },
+      "then": {
+        "required": ["superseded_by_memory_id"],
+        "properties": { "superseded_by_memory_id": { "type": "string", "minLength": 1 } }
+      }
+    }
+  ]
+}

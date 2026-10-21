@@ -1,0 +1,2 @@
+# Development/CI schema validation only; not installed in runtime images.
+jsonschema[format]==4.25.1

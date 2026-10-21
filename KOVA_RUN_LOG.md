@@ -78,3 +78,40 @@ Keep Railway staged and undeployed. Web PR #28 is green and review-clean but sti
 - Coordinator verified hosted container-smoke, verify-platform, CodeQL and CircleCI success on `bbc5f4fd83692dd111fd583e1000204e69546986`. This does not establish checks on the follow-up commit.
 - Documentation-only correction. No PR description/thread-state, merge/closure or provider changes; coordinator owns thread resolution.
 - Follow-up validation: all changed Markdown local links/anchors and table widths passed; `git diff --check` passed; `python scripts/validate_config.py` passed with zero errors/warnings. Runtime suites were not rerun for this documentation-only correction.
+
+
+## 2026-10-21 — Existing second-brain PR #153 consolidation
+
+- Re-read current main `83bb724092344b0eed3a5f1b0182049a246847e6` and the open #153 page/branch at `289380ea44675c2088a50e86cadcc21a93e5e1c4`, including published reviews and earlier safety fixes. Continued only `architecture/second-brain-v1-2026-10-21` and merged main locally without conflicts or reverting its changes.
+- Renamed the existing accepted second-brain ADR from the conflicting ADR-004 to next-free ADR-005, updating its heading and current decision/handoff/backlog references. The hosting ADR-004 is preserved.
+- Aligned the capability schema with the README's six canonical evidence labels; required evidence for CONNECTED/BROKEN as well as RUNTIME_VERIFIED, enforced complete metadata pairs/nonblank references, and kept UNKNOWN free of current-verification claims. Existing high-risk confirmation guards remain. Documented static-schema limits and pre-merge v1 incompatibilities; no automatic promotions, deployed migration or version-compatibility claim.
+- Added Draft 2020-12 schema validation and synthetic accepted/rejected-record checks, with RFC 3339 format assertions and prior memory/timeline review guards. The tests first reproduced 17 failing subcases across 12 tests before correction, then all 12 passed. Schema-validation dependencies are test-only and wired into existing CI/README instructions, not runtime images.
+- Preserved the fetched memory/timeline schema contents and all current main deployment/provider configuration. No new architecture, task store, PR, runtime/provider feature, production mutation, review-thread resolution or cross-task message.
+
+### Validation on the #153 consolidation tree
+
+- All three contract schemas pass Draft 2020-12 meta-schema validation with format-aware instance validation in the new tests. All 12 schema/ADR tests pass; the memory/timeline files are byte-identical to the fetched #153 head.
+- Core unit suite: 193 passed, no skips, under scoped `umask 022`; platform verification and canonical config validation passed.
+- Python app compilation and site JavaScript syntax passed; browser-export tests: 9 passed.
+- Changed Markdown local links/anchors/table widths, ADR path/heading uniqueness, workflow YAML and `git diff --check` passed. No stale second-brain ADR-004 paths/headings remain. Dependency consistency passed.
+- Hosted checks must be re-read on the pushed head. Provider/runtime evidence validity, freshness and external consumer compatibility are not established by these static tests.
+
+
+## 2026-10-21 — #153 unresolved contract and route findings
+
+- Re-read #153 reviews and remote main/head. Continued only the existing #153 branch from `85de3c3`; main remained `83bb724`.
+- `PRRT_kwDOPrB4Yc6u_Q00`: moved capability, memory and timeline contracts to the existing canonical `schemas/` root, preserved all three `$id` values/basenames, removed the duplicate root and updated active docs/tests. The Agent Ledger schema stays unchanged and joins the same discovery/meta-validation tests.
+- `PRRT_kwDOPrB4Yc6u_Q02`: required timeline `sensitivity` and removed its misleading default annotation. Regression rejects missing/null/invalid classification and verifies validation does not insert a value.
+- `PRRT_kwDOPrB4Yc6u_Q07`: pinned canonical web main `28debe0edaaa7fc818a617bf4ec11dc55ad8d97b`; App.tsx registers `/mcp` -> ConnectionCenter and `/agents` -> AgentHub, with no `/agents/capabilities` alias. Reconciled ADR-005 and shared-agent-history guidance around one Core-owned registry and web UI, marking the old path as an unimplemented compatibility alias. The current ConnectionCenter route is a snapshot without AccessGate wrapping; no live owner-auth claim is made.
+- Older HIGH confirmation and TIMELINE-memory timestamp guards already existed and pass focused regression checks. The older connector-account finding was **not** fixed at the starting head: optional nullable `connector_ref` still passed for CONNECTED/RUNTIME_VERIFIED. Added the missing required/nonblank account-scoped binding clause and regression instead of claiming the thread was already satisfied.
+- Focused tests reproduced 11 failing subcases before the two missing schema constraints were corrected; all 15 tests then passed. Schema shape checks cannot resolve an account reference or prove its authorization; ADR-005 explicitly requires consumer-side resolution and permission checks.
+- Updated the pre-merge v1 migration note for filesystem consumers, timeline classification and account-binding requirements. No version/identity change, runtime feature, task store, provider/settings change, PR merge/closure, thread resolution or cross-task message.
+
+### Validation and older-thread proof
+
+- Canonical discovery validates all four Draft 2020-12 schemas and their unique, preserved `$id` values. All 15 schema/ADR regressions pass; full Core suite: 196 passed with no skips. Platform verification/config validation, Python app compile and site syntax passed; browser-export tests: 9 passed.
+- HIGH risk: capability `allOf[1]` requires `requires_confirmation` to be true; the root required list also requires that field. `test_existing_confirmation_and_required_field_guards_remain` proves false/missing rejection and true acceptance.
+- TIMELINE memory: memory `allOf[1]` requires non-null string `valid_from` with date-time format. `test_timeline_memory_requires_valid_timestamp` proves missing/null/invalid rejection and valid timestamp acceptance.
+- Connector-account binding: capability `allOf[4]` now requires nonblank string `connector_ref` for CONNECTED/RUNTIME_VERIFIED. `test_actionable_capabilities_require_account_scoped_connector_reference` proves missing/null/blank rejection and scoped-reference acceptance. Consumers must still resolve/authorize the referenced account; no runtime resolution is implemented by a schema.
+- Timeline classification: `required` includes `sensitivity` and there is no default annotation. `test_timeline_events_require_explicit_sensitivity` proves missing/null/invalid rejection, explicit enum acceptance and no default injection.
+- All changed Markdown links/anchors/table widths and `git diff --check` pass. Agent Ledger and moved memory bytes remain unchanged. Source-route evidence pins web main `28debe0`; no web checkout source changes. Hosted checks must be read on the new pushed head; coordinator owns remaining thread verification.
