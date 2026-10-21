@@ -1,47 +1,30 @@
 # KOVA Build State
 
-Last verified: 2026-10-09
-Last session branch: `chore/continuous-builder-oct9` (historical session metadata; derive the current branch from Git before new work)
-Current phase: Cloudflare edge + Railway application-backend migration
+Reviewed: 2026-10-21. Repository and local-development evidence only; this session did not inspect or change production providers.
 
-## Canonical code
+## Canonical ownership
 
-- Core/control plane: `Kathrynhiggs21/Kova-ai-SYSTEM`
-- Authenticated web app: `Kathrynhiggs21/kovaos-site`
-- AI World remains a separate Drive/provider provenance system and is not copied into Core.
+- Core/control plane: `Kathrynhiggs21/Kova-ai-SYSTEM`.
+- Authenticated web app: `Kathrynhiggs21/kovaos-site` (React/Vite, Express/tRPC, Drizzle/MySQL).
+- Google Drive owns user documents. AI World remains separate; link by stable reference.
+- Cloudflare edge/static delivery + Railway persistent services is the current hosting target. Core/FastAPI and the web Node backend retain separate contracts.
+- Vercel is retired. Do not restore it as a deployment, fallback, credential requirement, or source of truth.
 
-## Verified state
+## Verified source state
 
-- Core `main` latest verified baseline includes production-evidence commit `a878811`.
-- Web `main` includes merged Cloudflare + Railway migration foundation commit `9d43977`.
-- Cloudflare account contains a Worker named `kovaos-web`, but it is only a placeholder that returns HTTP 503. It has no assets binding, backend binding, production route, or workers.dev preview enabled.
-- Railway now contains a private `kovaos-runtime` project with a staged-only `kovaos-app-backend` service sourced from `Kathrynhiggs21/kovaos-site/main`. Build, start, Railpack, restart, and `/api/health` settings are staged. Environment status confirms zero live services and one pending staged patch. The existing `kova-apps-script-manager` project remains separate and was not repurposed.
-- The approved web target is:
-  - Cloudflare Worker/static assets for the public edge.
-  - Railway persistent Node/Express service for the `kovaos-site` application backend.
-  - Same-origin browser API shape through `/api/*`.
-- KOVA Core/FastAPI remains a separate control-plane runtime concern and must not be conflated with the web app's Node backend.
-- Existing Vercel/Netlify/legacy surfaces are migration/rollback evidence only until the Cloudflare + Railway path is independently verified.
+- Core main inspected at `c7188318a6e2b17b28dfc5311d365f2d0ed6e0de` (#150), including the October 19 Vercel retirement decision and Railway Core configuration.
+- [README hosting baseline](README.md#current-production-baseline) records the October 19 Railway backend observation. That supersedes this branch's October 9 staged-only status; it is not a fresh production probe.
+- Existing continuity PR [#145](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/145) is the consolidation home. Main is incorporated without reverting its hosting or security fixes.
+- `docs/HANDOFF.md` was absent from main and all six audited PR heads. It is now a short navigation entry, not a second backlog.
+- The local configuration validator previously accepted an empty ancestor `.git` directory as a repository root. Eleven of 26 existing tests failed under the cloud `/tmp/.git` marker. The fix requires checkout metadata and adds a deterministic regression.
 
-## Current blockers
+## Evidence limits
 
-1. Web PR #28 must be merged to the canonical default branch and the staged Railway source revision must be reverified before any deployment approval. The Railway `kovaos-app-backend` service remains staged and undeployed.
-2. The Cloudflare `kovaos-web` Worker is not a functional preview and has no Railway origin yet.
-3. OAuth callback, secure session cookie, protected routes, logout, and `/api/health` have not passed the Cloudflare -> Railway path.
-4. Production DNS/provider retirement requires explicit owner approval after preview verification.
-5. The shared ChatGPT handoff URL supplied on 2026-10-09 was not fetchable from the connected web reader, so no decisions were imported from it without evidence.
+- Git read works. GitHub REST and GraphQL requests return `Forbidden`; public PR/checks pages supply the read-only audit. See [handoff](docs/HANDOFF.md) for exact heads and checks.
+- October 9 Worker-placeholder/Railway-staging observations are historical; they must not be reported as current blockers without a new provider read.
+- OAuth/callback/session/logout, database-backed application behavior, CORE provider connectivity and private-data ingestion were not verified in this session.
+- Provider account, billing, DNS, secrets, access and production data were not changed. No PR was closed or merged.
 
 ## Next action
 
-The private Railway runtime project/service is staged, but it is not deploy-ready until web PR #28 is merged and the staged source is confirmed against the resulting default-branch commit. Only after that source gate passes may a separate explicit deployment approval be considered. A healthy Railway HTTPS origin is then required before building the non-production Cloudflare preview.
-
-## Completion rule
-
-Do not call the migration live until:
-- Cloudflare serves the current Vite app;
-- `/api/health` reaches Railway successfully;
-- protected API calls fail closed anonymously;
-- sign-in/callback/session-cookie/logout pass;
-- owner routes enforce access;
-- rollback is tested;
-- only then is production domain cutover approved.
+Review #145 and its new-head CI, then resolve the distinct provider-adapter, Temporal and architecture review work in [KOVA_BACKLOG.md](KOVA_BACKLOG.md). A proposed design, green source check or configured service does not establish live integration readiness.

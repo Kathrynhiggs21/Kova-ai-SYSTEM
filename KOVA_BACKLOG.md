@@ -1,53 +1,20 @@
 # KOVA Backlog
 
-Updated: 2026-10-09
+Reviewed: 2026-10-21. One task list; TODO is not evidence of a broken live service. Read [build state](KOVA_BUILD_STATE.md) and [handoff](docs/HANDOFF.md) first.
 
-## P0 — Migration path
+| Priority | Work | Acceptance / current status |
+|---|---|---|
+| P0 | Consolidate continuity in Core #145 | Incorporate current main, preserve #146's unique auth/memory/connector tasks and #151's source links, correct stale staging/hosting claims. Await review and checks on the updated PR head; do not merge or close other PRs in this pass. |
+| P0 | Keep Core validation portable in cloud tasks | Reject empty ancestor `.git` markers as checkout roots; exercise existing config tests plus a deterministic regression without moving fixtures out of `/tmp`. Scope `umask 022` to tests whose permission fixtures require CI defaults. |
+| P0 | Establish current authenticated runtime evidence | Independently verify Cloudflare-to-Railway health JSON, intended-account login/callback, secure cookies, anonymous denial, protected routes, logout and persistence with timestamps and exact source revision. Provider settings and dated observations do not prove acceptance. |
+| P0 | Review authentication and retired dependencies | Map Core/web owner gates and remaining legacy Manus coupling. Do not point a Manus-specific OAuth variable at a different provider without an approved adapter design. No secret values in reports. |
+| P1 | Review isolated CORE adapter (#147) | Preserve its versioned source and runtime-audit evidence. Incorporate current main; retain security/license review and prove synthetic authenticated provider operations before activation or private ingestion. |
+| P1 | Review Temporal pilot (#148) | Keep separate from continuity. Its current root CI does not install/type-check/test the new integration; add repeatable dependency resolution and approval/retry/cancellation/restart evidence before adoption. Compare existing CORE BullMQ/Redis capabilities first. |
+| P1 | Review second-brain contracts (#153) | Keep separate architecture review. Reconcile the duplicate ADR-004 identifier with the hosting ADR and align capability evidence states with canonical README semantics. Validate temporal/provenance/privacy/deletion contracts and schemas before implementation. |
+| P1 | Connector and permission inventory | Record owner, read/write scopes, source, refresh/evidence dates, approvals and failure modes. Distinguish configured, connected and runtime verified. |
+| P2 | Adaptive memory/event pipeline | Plan deduplication, contradictions, valid_from/valid_to, observed_at, explicit/inferred classification, confidence decay and private fixtures after the #153 contract review. |
+| P2 | Maintain continuity | Update build state, this backlog, decision index and run log after substantial work. Preserve source links, commits and actual test results. |
 
-### Stage canonical Railway web runtime — staged 2026-10-09
-Acceptance criteria:
-- [x] Create one private Railway project for the `kovaos-site` web runtime (`kovaos-runtime`).
-- [x] Create one staged application-backend service from `Kathrynhiggs21/kovaos-site` (`kovaos-app-backend`).
-- [x] Configure build `corepack pnpm build`, start `corepack pnpm start`, and healthcheck `/api/health`.
-- [x] Keep all changes staged until explicit deployment approval. Live environment currently has zero services and one pending patch.
-- [x] Do not copy secret values into GitHub, chat, or docs.
-- [ ] Merge web PR #28 into the canonical default branch.
-- [ ] Re-read the resulting default-branch commit and confirm/re-stage the Railway source to that exact revision.
-- [ ] Only after those source gates pass, obtain explicit deployment approval, commit the staged patch, verify deployment health, and obtain the HTTPS origin for Cloudflare preview.
+## Hosting boundary
 
-### Make Cloudflare preview real
-Acceptance criteria:
-- Replace the placeholder `kovaos-web` Worker with the repository Worker and static assets in a non-production preview.
-- Configure `BACKEND_ORIGIN` only after Railway provides a verified HTTPS origin.
-- Keep production domain routes unchanged until preview smoke tests pass.
-
-### Pass the web migration smoke gate
-Acceptance criteria:
-- `/` and client routes serve the SPA.
-- `/api/health` returns 2xx through Cloudflare to Railway.
-- anonymous protected API calls fail closed.
-- OAuth start and callback work.
-- callback preserves secure session cookie.
-- protected pages enforce access.
-- logout clears the session.
-- rollback target is tested.
-
-## P1 — Control-plane/runtime cleanup
-
-### Reconcile KOVA Core runtime ownership
-- Treat `Kova-ai-SYSTEM` FastAPI as a separate control-plane service.
-- Choose its long-term host from runtime evidence, not provider build status.
-- Verify health and authenticated Core-to-web contract before retiring legacy Core deployments.
-
-### Retire legacy hosting only after cutover
-- Keep Vercel, Netlify, GitHub Pages, and Manus surfaces as rollback/migration evidence until replacement is proven.
-- Domain reassignment, provider deletion, and destructive unlinking require explicit owner approval.
-
-### Keep current issues/docs aligned
-- Update stale Vercel-centric issue text after the Cloudflare + Railway preview is verifiable.
-- Keep the KOVA System Registry aligned with live runtime evidence.
-
-## P2 — Continuity
-
-- Maintain `KOVA_BUILD_STATE.md`, `KOVA_BACKLOG.md`, `KOVA_DECISIONS.md`, `KOVA_RUN_LOG.md`, and `KOVA_INTEGRATION_MATRIX.md` in every substantial build session.
-- Record only verified state; do not promote plans or URLs to “live”.
+Use Cloudflare + Railway. Vercel retirement is already recorded on current main; its legacy check errors do not authorize restoring it. Any remaining provider-side cleanup is a separate owner/provider task, outside this pass. Preserve unique historical source evidence, not obsolete deployment instructions.

@@ -22,7 +22,7 @@ Configuration alone is never proof of health.
 | OpenAI/model providers | Designed | AI Assistant behind provider-neutral interface | Prove one authenticated provider route with logging |
 | MCP | Implemented in Core; production call unverified | Standard owner-authenticated tool interface | Merge hardening and test initialize/tool call in production |
 | Zapier/Make/n8n | Optional fallback | Cross-app bridge only where direct routes are insufficient | Enable only a named workflow with evidence and bounded scope |
-| Vercel | Retired from active KOVA runtime; clearly KOVA-specific projects paused 2026-10-19 | Historical rollback evidence only | Delete legacy projects / cancel Pro plan after confirming no unrelated workload depends on the Kova OS team |
+| Vercel | Retired from active KOVA runtime; clearly KOVA-specific projects paused 2026-10-19 | Historical provider evidence only; not a fallback | Delete legacy projects / cancel Pro plan after confirming no unrelated workload depends on the Kova OS team |
 | Cloudflare | Connected account/zone evidence; authoritative DNS for kovaos.com | Public edge, DNS, Access, static delivery | Verify canonical Cloudflare frontend release and authenticated production acceptance |
 | Railway | Current kovaos-app-backend deployment observed healthy/sleeping with no recent failures | Persistent application backend/services | Keep exact-source deployments healthy and connect Cloudflare edge to the verified Railway origin |
 | Google Cloud backend | Optional | Optional backend/container deployment | Use only if a named workload needs it; do not duplicate Railway by default |
