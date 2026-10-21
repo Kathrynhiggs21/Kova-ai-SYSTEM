@@ -50,10 +50,13 @@ You do not need to run a server to view your dashboard!
 2. The dashboard runs as a premium Single Page App (SPA) with a built-in high-fidelity fallback database to bypass CORS and load all system state instantly.
 
 ### Option B: Hosting on `kovaos.com`
-To deploy the dashboard publicly:
-1. Unzip `site_final.zip` into your static hosting provider root (e.g., Netlify, Vercel, GitHub Pages, or any standard web server).
-2. Point your domain `kovaos.com` to the hosting provider.
-3. Access your secure, beautiful command center from any device!
+For the canonical hosted system, use the approved KOVA deployment path:
+1. Use `Kathrynhiggs21/kovaos-site` as the canonical web source.
+2. Use Cloudflare for the public edge/static application and domain layer.
+3. Use Railway for persistent application/backend services.
+4. Follow the canonical Cloudflare + Railway deployment guide and its authentication, health, privacy, and rollback gates.
+
+Do not deploy KOVA through Vercel, Netlify, GitHub Pages, or Manus as a runtime fallback. `site_final.zip` remains a local/reference distribution artifact, not the production hosting source.
 
 ---
 

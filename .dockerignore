@@ -1,0 +1,14 @@
+# Build from the repository root without sending documents, archives or secrets.
+**
+!kova-ai/
+!kova-ai/Dockerfile
+!kova-ai/requirements.txt
+!kova-ai/app/
+!kova-ai/app/**
+!kova_repos_config.json
+!site_final.zip
+!images.zip
+**/__pycache__/
+**/*.pyc
+**/.env
+**/.env.*

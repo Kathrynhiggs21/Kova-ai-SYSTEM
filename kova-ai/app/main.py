@@ -55,6 +55,8 @@ app.include_router(webhooks.router)
 app.include_router(multi_repo_endpoints.router, dependencies=owner_only)
 app.include_router(artifacts_endpoints.router, dependencies=owner_only)
 app.include_router(export_endpoints.router)
+if os.getenv("KOVA_EXPORT_UPLOAD_ENABLED", "true").strip().lower() == "true":
+    app.include_router(export_endpoints.upload_router)
 app.include_router(mcp_endpoints.router)
 
 # Metrics

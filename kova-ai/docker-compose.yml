@@ -1,12 +1,14 @@
 services:
   api:
-    build: .
+    build:
+      context: ..
+      dockerfile: kova-ai/Dockerfile
     ports:
       - "8000:8000"
     env_file:
       - .env
     volumes:
-      - .:/app
+      - .:/app/kova-ai
       - ../kova_repos_config.json:/app/kova_repos_config.json:ro
     depends_on:
       - db
