@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kovaos.com/schemas/capability-registration.v1.json",
+  "title": "KOVA Capability Registration v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["capability_id", "provider", "operation", "access_mode", "risk_class", "state"],
+  "properties": {
+    "capability_id": { "type": "string", "minLength": 1 },
+    "provider": { "type": "string", "minLength": 1 },
+    "connector_ref": { "type": ["string", "null"] },
+    "operation": { "type": "string", "minLength": 1 },
+    "resource_types": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "access_mode": { "type": "string", "enum": ["READ", "WRITE", "READ_WRITE", "EXECUTE"] },
+    "risk_class": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+    "state": { "type": "string", "enum": ["CONFIGURED", "CONNECTED", "RUNTIME_VERIFIED", "DEGRADED", "DISABLED"] },
+    "requires_confirmation": { "type": "boolean", "default": true },
+    "canonical_destination": { "type": ["string", "null"] },
+    "last_verified_at": { "type": ["string", "null"], "format": "date-time" },
+    "evidence_ref": { "type": ["string", "null"] }
+  }
+}
