@@ -4,36 +4,118 @@
   "title": "KOVA Timeline Event v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["timestamp", "event_id", "event_type", "description", "provenance"],
+  "required": [
+    "timestamp",
+    "event_id",
+    "event_type",
+    "description",
+    "provenance"
+  ],
   "properties": {
-    "timestamp": { "type": "string", "format": "date-time" },
-    "event_id": { "type": "string", "minLength": 1 },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "event_type": {
       "type": "string",
-      "enum": ["ARCHITECTURE", "IDENTITY", "LOGISTICS", "SYSTEM_SETTING", "DECISION", "PREFERENCE", "RELATIONSHIP", "ACTION", "CORRECTION"]
+      "enum": [
+        "ARCHITECTURE",
+        "IDENTITY",
+        "LOGISTICS",
+        "SYSTEM_SETTING",
+        "DECISION",
+        "PREFERENCE",
+        "RELATIONSHIP",
+        "ACTION",
+        "CORRECTION"
+      ]
     },
-    "description": { "type": "string", "minLength": 1 },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
     "subject_refs": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 },
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
       "uniqueItems": true
     },
-    "supersedes_event_id": { "type": ["string", "null"] },
+    "supersedes_event_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
     "sensitivity": {
       "type": "string",
-      "enum": ["PUBLIC", "PRIVATE", "SENSITIVE", "RESTRICTED"],
+      "enum": [
+        "PUBLIC",
+        "PRIVATE",
+        "SENSITIVE",
+        "RESTRICTED"
+      ],
       "default": "PRIVATE"
     },
     "provenance": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source", "confidence_score"],
+      "required": [
+        "source",
+        "confidence_score"
+      ],
       "properties": {
-        "source": { "type": "string", "minLength": 1 },
-        "source_ref": { "type": ["string", "null"] },
-        "observed_at": { "type": ["string", "null"], "format": "date-time" },
-        "confidence_score": { "type": "number", "minimum": 0, "maximum": 1 }
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "observed_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "confidence_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": {
+            "const": "CORRECTION"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "supersedes_event_id"
+        ],
+        "properties": {
+          "supersedes_event_id": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
 }
