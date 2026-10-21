@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kovaos.com/schemas/timeline-event.v1.json",
+  "title": "KOVA Timeline Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["timestamp", "event_id", "event_type", "description", "provenance"],
+  "properties": {
+    "timestamp": { "type": "string", "format": "date-time" },
+    "event_id": { "type": "string", "minLength": 1 },
+    "event_type": {
+      "type": "string",
+      "enum": ["ARCHITECTURE", "IDENTITY", "LOGISTICS", "SYSTEM_SETTING", "DECISION", "PREFERENCE", "RELATIONSHIP", "ACTION", "CORRECTION"]
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "subject_refs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "supersedes_event_id": { "type": ["string", "null"] },
+    "sensitivity": {
+      "type": "string",
+      "enum": ["PUBLIC", "PRIVATE", "SENSITIVE", "RESTRICTED"],
+      "default": "PRIVATE"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "confidence_score"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "source_ref": { "type": ["string", "null"] },
+        "observed_at": { "type": ["string", "null"], "format": "date-time" },
+        "confidence_score": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}
