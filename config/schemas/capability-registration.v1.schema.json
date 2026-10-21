@@ -4,7 +4,18 @@
   "title": "KOVA Capability Registration v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["capability_id", "provider", "operation", "access_mode", "risk_class", "state"],
+  "required": [
+    "capability_id",
+    "provider",
+    "operation",
+    "access_mode",
+    "risk_class",
+    "state",
+    "requires_confirmation",
+    "canonical_destination",
+    "last_verified_at",
+    "evidence_ref"
+  ],
   "properties": {
     "capability_id": { "type": "string", "minLength": 1 },
     "provider": { "type": "string", "minLength": 1 },
@@ -13,10 +24,41 @@
     "resource_types": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
     "access_mode": { "type": "string", "enum": ["READ", "WRITE", "READ_WRITE", "EXECUTE"] },
     "risk_class": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
-    "state": { "type": "string", "enum": ["CONFIGURED", "CONNECTED", "RUNTIME_VERIFIED", "DEGRADED", "DISABLED"] },
-    "requires_confirmation": { "type": "boolean", "default": true },
+    "state": {
+      "type": "string",
+      "enum": [
+        "CONFIGURED",
+        "NEEDS_CONNECTION",
+        "CONNECTED",
+        "RUNTIME_VERIFIED",
+        "DEGRADED",
+        "BROKEN",
+        "UNKNOWN",
+        "DISABLED"
+      ]
+    },
+    "requires_confirmation": { "type": "boolean" },
     "canonical_destination": { "type": ["string", "null"] },
     "last_verified_at": { "type": ["string", "null"], "format": "date-time" },
     "evidence_ref": { "type": ["string", "null"] }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "state": { "const": "RUNTIME_VERIFIED" } } },
+      "then": {
+        "properties": {
+          "last_verified_at": { "type": "string", "format": "date-time" },
+          "evidence_ref": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "risk_class": { "const": "HIGH" } } },
+      "then": {
+        "properties": {
+          "requires_confirmation": { "const": true }
+        }
+      }
+    }
+  ]
 }
