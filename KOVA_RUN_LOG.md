@@ -69,3 +69,12 @@ Keep Railway staged and undeployed. Web PR #28 is green and review-clean but sti
 - `python -m compileall -q kova-ai/app`, `node --check site/app.js`: passed.
 - `node --test tests/test_site_exports.js`: 9 passed.
 - `git diff --check`: passed. Container and live-provider checks were not rerun for this validator/documentation change.
+
+
+## 2026-10-21 — Follow-up on two #145 review threads
+
+- `PRRT_kwDOPrB4Yc6qrVNc`: added explicit stable provider identity, actual granted OAuth/API scopes and completeness fields to the canonical integration matrix. Unknown grants remain UNKNOWN; observed reads, pushes or staging do not establish scope lists. Recorded coordinator-supplied Railway workspace/project IDs, app SLEEPING and MySQL OFFLINE with source/date attribution, not a new provider probe.
+- `PRRT_kwDOPrB4Yc6u_G_n`: replaced permanent #145 branch instructions with a current default-branch/PR-state/head/checks selection gate. Retained #145 and its branch as dated provenance. Re-read remote default `main` at `c718831` and the open PR targeting main at `bbc5f4f` before editing.
+- Coordinator verified hosted container-smoke, verify-platform, CodeQL and CircleCI success on `bbc5f4fd83692dd111fd583e1000204e69546986`. This does not establish checks on the follow-up commit.
+- Documentation-only correction. No PR description/thread-state, merge/closure or provider changes; coordinator owns thread resolution.
+- Follow-up validation: all changed Markdown local links/anchors and table widths passed; `git diff --check` passed; `python scripts/validate_config.py` passed with zero errors/warnings. Runtime suites were not rerun for this documentation-only correction.

@@ -14,7 +14,7 @@ Reviewed: 2026-10-21. Repository and local-development evidence only; this sessi
 
 - Core main inspected at `c7188318a6e2b17b28dfc5311d365f2d0ed6e0de` (#150), including the October 19 Vercel retirement decision and Railway Core configuration.
 - [README hosting baseline](README.md#current-production-baseline) records the October 19 Railway backend observation. That supersedes this branch's October 9 staged-only status; it is not a fresh production probe.
-- Existing continuity PR [#145](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/145) is the consolidation home. Main is incorporated without reverting its hosting or security fixes.
+- On 2026-10-21, continuity PR [#145](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/145) was the consolidation home; check the current default branch and PR disposition before selecting any continuation branch. Main is incorporated without reverting its hosting or security fixes.
 - `docs/HANDOFF.md` was absent from main and all six audited PR heads. It is now a short navigation entry, not a second backlog.
 - The local configuration validator previously accepted an empty ancestor `.git` directory as a repository root. Eleven of 26 existing tests failed under the cloud `/tmp/.git` marker. The fix requires checkout metadata and adds a deterministic regression.
 
@@ -22,9 +22,10 @@ Reviewed: 2026-10-21. Repository and local-development evidence only; this sessi
 
 - Git read works. GitHub REST and GraphQL requests return `Forbidden`; public PR/checks pages supply the read-only audit. See [handoff](docs/HANDOFF.md) for exact heads and checks.
 - October 9 Worker-placeholder/Railway-staging observations are historical; they must not be reported as current blockers without a new provider read.
+- Coordinator-supplied authenticated Railway read on 2026-10-21 reported the web app SLEEPING and MySQL OFFLINE. Stable resource IDs and UNKNOWN granted scopes are recorded only in the [canonical integration matrix](docs/command-center/KOVA_OS_INTEGRATION_MATRIX.md#provider-identity-and-granted-permissions). This session did not independently query Railway; the older healthy/sleeping baseline is not current application/database-health proof.
 - OAuth/callback/session/logout, database-backed application behavior, CORE provider connectivity and private-data ingestion were not verified in this session.
 - Provider account, billing, DNS, secrets, access and production data were not changed. No PR was closed or merged.
 
 ## Next action
 
-Review #145 and its new-head CI, then resolve the distinct provider-adapter, Temporal and architecture review work in [KOVA_BACKLOG.md](KOVA_BACKLOG.md). A proposed design, green source check or configured service does not establish live integration readiness.
+Follow the [current-branch selection gate](docs/HANDOFF.md#before-selecting-a-continuation-branch), review the current authorized PR and exact-head CI, then resolve the distinct provider-adapter, Temporal and architecture review work in [KOVA_BACKLOG.md](KOVA_BACKLOG.md). A proposed design, green source check or configured service does not establish live integration readiness.

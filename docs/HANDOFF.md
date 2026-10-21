@@ -1,6 +1,15 @@
 # Core handoff
 
-Reviewed 2026-10-21. Continue in this environment and existing PR [#145](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/145), branch `chore/continuous-builder-oct9`. Read [AGENTS.md](../AGENTS.md), [build state](../KOVA_BUILD_STATE.md), [backlog](../KOVA_BACKLOG.md), [repository map](architecture/KOVA_REPOSITORY_MAP.md), [module boundaries](architecture/ADR-003-MODULAR-CORE-BOUNDARIES.md) and [run log](../KOVA_RUN_LOG.md). These own the details; this file is navigation and audit evidence.
+Reviewed 2026-10-21. The continuity work on that date used existing PR [#145](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/145), branch `chore/continuous-builder-oct9`. This is dated provenance, not a permanent continuation-branch instruction. Read [AGENTS.md](../AGENTS.md), [build state](../KOVA_BUILD_STATE.md), [backlog](../KOVA_BACKLOG.md), [repository map](architecture/KOVA_REPOSITORY_MAP.md), [module boundaries](architecture/ADR-003-MODULAR-CORE-BOUNDARIES.md) and [run log](../KOVA_RUN_LOG.md). These own the details; this file is navigation and audit evidence.
+
+## Before selecting a continuation branch
+
+1. Preserve local changes and inspect the current checkout (`git status --short`, `git branch --show-current`, `git log -1`). Stay in the existing environment; do not create a worktree or reset local work to replay this handoff.
+2. Read the remote's **current default branch** with `git ls-remote --symref origin HEAD`, then fetch that branch and record its current full commit SHA. Do not assume the default branch is still `main` or that an old SHA remains current.
+3. Read the candidate PR's **current open/closed/merged state, base branch, head repository/branch and full head SHA**, plus current checks. Use the GitHub API when available, or readable current PR/checks pages together with Git refs. A surviving branch/ref alone does not establish an open PR. If status cannot be read, report the missing evidence before selecting a continuation branch.
+4. Select an existing authorized PR branch only if the PR is still open, its current base matches the intended default branch, and its head still owns the unfinished scope. Check for intervening commits before updating it; preserve others' changes and never force-push to recover a historical head. If the PR was merged, start the next task from the current default-branch state and locate the current authorized work; if closed unmerged, inspect its disposition/superseding PR. Do not automatically reuse #145 or `chore/continuous-builder-oct9` in either case.
+
+For this dated follow-up only, remote discovery returned default `main` at `c7188318a6e2b17b28dfc5311d365f2d0ed6e0de`; the current PR page showed #145 **Open**, targeting `main`, with the same-repository head `chore/continuous-builder-oct9` at `bbc5f4fd83692dd111fd583e1000204e69546986` before this correction. The coordinator reported hosted container-smoke, verify-platform, CodeQL and CircleCI success on that exact head. Recheck all of this at the next continuation; it does not select a branch for future sessions.
 
 ## PR audit against main
 
