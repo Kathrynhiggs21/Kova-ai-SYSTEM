@@ -13,6 +13,7 @@ class PrivateStateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             xdg = Path(directory) / "share"
             xdg.mkdir(mode=0o755)
+            xdg.chmod(0o755)  # This existing shared parent is intentionally public.
             private_state.write_private_text(xdg / "kova" / "private" / "state.json", "{}")
             self.assertEqual(xdg.stat().st_mode & 0o777, 0o755)
             self.assertEqual((xdg / "kova" / "private").stat().st_mode & 0o777, 0o700)

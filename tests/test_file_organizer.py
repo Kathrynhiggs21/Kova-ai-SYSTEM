@@ -574,6 +574,7 @@ f.write_registry(rows, Path(sys.argv[1]))
         with tempfile.TemporaryDirectory() as temp_dir:
             parent = Path(temp_dir) / "shared"
             parent.mkdir(mode=0o755)
+            parent.chmod(0o755)  # Establish the fixture even under umask 0077.
             output = parent / "registry.json"
 
             with self.assertRaises(PermissionError):

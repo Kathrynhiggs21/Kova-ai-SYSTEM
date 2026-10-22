@@ -69,14 +69,19 @@ python3 -m pip install -r kova-ai/requirements.txt -r tests/requirements.txt
 
 ./verify_platform.sh
 python3 scripts/validate_config.py
-# Scope CI file-creation permissions to the permission-fixture test run.
-(umask 022; PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v)
+PYTHONPATH=kova-ai python3 -m unittest discover -s tests -p "test_*.py" -v
 python3 -m compileall -q kova-ai/app
 node --check site/app.js
 node --test tests/test_site_exports.js
 ```
 
 Do not put real secrets in command history or test fixtures. If a credentialed integration cannot be exercised safely, report it as unverified rather than substituting a mock success.
+
+GitHub's required `verify-platform` context succeeds only after both `verify-source`
+and `container-smoke` succeed. Failed, cancelled or skipped checks block that gate;
+Mergify continues to inherit the existing ruleset requirement. Permission fixtures
+set their intended modes explicitly, so the unit suite also supports umask `0077`
+without relaxing private-state permissions.
 
 ## Development workflow
 

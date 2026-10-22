@@ -33,4 +33,13 @@ Reviewed: 2026-10-21. Repository and local-development evidence only; this sessi
 
 ## Next action
 
+CI gate follow-up from main `b95c57b`: `verify-platform` now waits for both
+`verify-source` and `container-smoke`, preserving the existing required ruleset
+context and manual Mergify queue. Failures, cancellation and skipped prerequisites
+cannot yield a successful aggregate. Permission fixtures explicitly establish
+their intended modes; all 196 Python tests pass under umask `0077`. This source
+follow-up awaits current-head hosted Docker/aggregate checks and review. Docker
+is unavailable locally; no provider, DNS, secret, billing or deployment change
+is included.
+
 Follow the [current-branch selection gate](docs/HANDOFF.md#before-selecting-a-continuation-branch), review the current authorized PR and exact-head CI, then resolve the distinct provider-adapter, Temporal and architecture review work in [KOVA_BACKLOG.md](KOVA_BACKLOG.md). A proposed design, green source check or configured service does not establish live integration readiness.
