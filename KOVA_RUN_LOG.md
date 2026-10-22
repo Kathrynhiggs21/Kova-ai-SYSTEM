@@ -1,5 +1,23 @@
 # KOVA Run Log
 
+## Core merge gate and permission fixture follow-up
+
+- Started from current main `b95c57b37e58720b128f828041576524544b21fd` on
+  `chore/core-merge-gate-oct22`. Active Core protection still requires
+  `verify-platform`; Mergify inherits that requirement.
+- Preserved that context as an aggregate of source and existing container smoke
+  jobs. All 64 result combinations were checked; only two successes pass.
+- Reproduced two existing fixture failures under umask `0077`, then explicitly
+  established their intended 0755 modes. All 196 Python tests now pass under
+  `0077`; no production permission policy was changed.
+- Config/platform validation, compilation, workflow parsing, site syntax,
+  nine browser-export tests and whitespace checks pass. Docker is unavailable
+  locally; exact-head hosted Docker and aggregate checks remain required.
+- Re-audited 47 accessible repositories' root/.github Mergify locations and
+  ruleset collections. Only canonical Core/Web configs remain; old generic
+  copies are already removed. Issue #110 now follows merged Cloudflare/Railway
+  decisions. No provider/DNS/secrets/billing/deletion/unlink changes were made.
+
 ## 2026-10-09 — Continuous Builder resume (historical)
 
 This entry records that session only. Its staged-only Railway and pending web #28 claims are superseded where later source evidence disagrees; see the October 21 entry.
