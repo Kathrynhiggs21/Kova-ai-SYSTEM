@@ -1,6 +1,7 @@
 """Focused regression tests for KOVA runtime boundary hardening."""
 
 import os
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -16,6 +17,28 @@ from app.database import session as database_session
 
 
 class DatabaseRuntimeHardeningTests(unittest.TestCase):
+    def test_import_uses_explicit_database_url_without_component_password(self):
+        env = os.environ.copy()
+        env.update(
+            {
+                "DATABASE_URL": "postgresql+asyncpg://owner@db:5432/kova",
+                "POSTGRES_PASSWORD": "",
+            }
+        )
+        package_path = str(Path(__file__).resolve().parents[1] / "kova-ai")
+        env["PYTHONPATH"] = os.pathsep.join(
+            filter(None, (package_path, env.get("PYTHONPATH", "")))
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", "import app.database.session"],
+            cwd=Path(__file__).resolve().parents[1],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_empty_database_url_uses_component_settings(self):
         with patch.dict(
             os.environ,
