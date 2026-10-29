@@ -55,7 +55,6 @@ def create_database_engine() -> AsyncEngine:
     )
 
 
-DEFAULT_DATABASE_URL = build_default_database_url()
 engine = create_database_engine()
 DATABASE_URL = engine.url.render_as_string(hide_password=False)
 SessionLocal = sessionmaker(

@@ -63,7 +63,7 @@ Preferred connection order:
 4. Automation bridge (Zapier, Make, n8n, Pipedream, etc.)
 5. Webhook/export/import fallback
 
-Examples include OpenAI/ChatGPT/Codex, Google Drive/Gmail/Calendar/Contacts, NotebookLM/Gemini/Google Labs, GitHub, Notion, Dropbox, OneDrive, Box, Cloudflare, Vercel, Supabase, Canva, Adobe, Gamma, Manus, Zapier, Make, and Android companion services.
+Examples include OpenAI/ChatGPT/Codex, Google Drive/Gmail/Calendar/Contacts, NotebookLM/Gemini/Google Labs, GitHub, Notion, Dropbox, OneDrive, Box, Cloudflare, Supabase, Canva, Adobe, Gamma, Manus, Zapier, Make, and Android companion services.
 
 Manus is optional and must never be required for KOVA to operate.
 

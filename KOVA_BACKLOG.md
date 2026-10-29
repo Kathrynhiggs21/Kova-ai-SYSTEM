@@ -18,4 +18,4 @@ Reviewed: 2026-10-21. One task list; TODO is not evidence of a broken live servi
 
 ## Hosting boundary
 
-Use Cloudflare + Railway. Vercel retirement is already recorded on current main; its legacy check errors do not authorize restoring it. Any remaining provider-side cleanup is a separate owner/provider task, outside this pass. Preserve unique historical source evidence, not obsolete deployment instructions.
+Use Cloudflare + Railway. Legacy-host retirement is already recorded on current main; its legacy check errors do not authorize restoring that provider. Any remaining provider-side cleanup is a separate owner/provider task, outside this pass. Preserve unique historical source evidence, not obsolete deployment instructions.

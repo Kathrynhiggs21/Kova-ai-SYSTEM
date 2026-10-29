@@ -13,4 +13,4 @@ This file is a Continuous Builder index, not a second decision authority.
 
 Before adding or changing an architecture decision, update or supersede the appropriate ADR and then refresh this index.
 
-The October 19 Vercel retirement decision on current main takes precedence over the October 9 provider snapshot. In [#153](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/153), the accepted second-brain decision is numbered ADR-005 to preserve the hosting ADR-004. The pre-merge v1 schema compatibility boundary is documented in ADR-005. An accepted architecture decision is not evidence of a live capability.
+The October 19 legacy-host retirement decision on current main takes precedence over the October 9 provider snapshot. In [#153](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/153), the accepted second-brain decision is numbered ADR-005 to preserve the hosting ADR-004. The pre-merge v1 schema compatibility boundary is documented in ADR-005. An accepted architecture decision is not evidence of a live capability.

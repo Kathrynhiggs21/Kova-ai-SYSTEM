@@ -24,7 +24,7 @@ Reviewed 2026-10-21. Provider observations attributed to the coordinator below w
 | OpenAI/model providers | Designed | AI Assistant behind provider-neutral interface | Prove one authenticated provider route with logging |
 | MCP | Implemented in Core; production call unverified | Standard owner-authenticated tool interface | Merge hardening and test initialize/tool call in production |
 | Zapier/Make/n8n | Optional fallback | Cross-app bridge only where direct routes are insufficient | Enable only a named workflow with evidence and bounded scope |
-| Vercel | Retired from active KOVA runtime; clearly KOVA-specific projects paused 2026-10-19 | Historical provider evidence only; not a fallback | Delete legacy projects / cancel Pro plan after confirming no unrelated workload depends on the Kova OS team |
+| Legacy hosting provider | Retired from active KOVA runtime; clearly KOVA-specific projects paused 2026-10-19 | Historical provider evidence only; not a fallback | Delete legacy projects / cancel paid plan after confirming no unrelated workload depends on the Kova OS team |
 | Cloudflare | October 19 source baseline records authoritative DNS for kovaos.com; current account/zone access UNKNOWN | Public edge, DNS, Access, static delivery | Verify canonical Cloudflare frontend release and authenticated production acceptance |
 | Railway | Coordinator-authenticated read, 2026-10-21: kovaos-app-backend SLEEPING; MySQL OFFLINE. Application/database health is not established | Persistent application backend/services | Verify current app/database health and authenticated acceptance under separately authorized work; do not treat SLEEPING or OFFLINE as healthy |
 | Google Cloud backend | Optional | Optional backend/container deployment | Use only if a named workload needs it; do not duplicate Railway by default |
@@ -45,7 +45,7 @@ These are **actual-grant evidence fields**, not desired permissions. No provider
 | OpenAI/model providers | Selected provider account/project and principal IDs UNKNOWN | UNKNOWN | INCOMPLETE: designed interface does not establish provider grants. |
 | MCP | Core source owns transport; live server identity and authenticated principal ID UNKNOWN | UNKNOWN | INCOMPLETE: implemented owner-key checks do not enumerate live tool authorization. |
 | Zapier/Make/n8n | Selected provider/workspace, workflow and principal IDs UNKNOWN | UNKNOWN | INCOMPLETE: optional bridge; no current grant metadata read. |
-| Vercel | Legacy team/project IDs UNKNOWN; retired from active runtime | UNKNOWN | INCOMPLETE historical inventory; do not reconnect or restore as fallback. |
+| Legacy hosting provider | Legacy team/project IDs UNKNOWN; retired from active runtime | UNKNOWN | INCOMPLETE historical inventory; do not reconnect or restore as fallback. |
 | Cloudflare | Account ID, zone ID, Worker service identity and principal ID UNKNOWN; `kovaos.com` is a domain label, not an account ID | UNKNOWN | INCOMPLETE: DNS/source observations do not enumerate token permissions or resource scope. |
 | Railway | Workspace `1e645067-cebc-47ae-af2e-31b373a4806e`; project `kovaos-runtime` / `350381be-1681-49f2-b91e-a75dbfb8eb8d`; app/MySQL service IDs and authenticated principal ID UNKNOWN | UNKNOWN | INCOMPLETE: coordinator supplied authenticated resource/status read on 2026-10-21; granted scopes were not available. |
 | Google Cloud backend | Project, service account and deployed workload IDs UNKNOWN | UNKNOWN | INCOMPLETE: optional workload; no current IAM/grant metadata read. |

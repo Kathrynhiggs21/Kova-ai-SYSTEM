@@ -56,7 +56,7 @@ For the canonical hosted system, use the approved KOVA deployment path:
 3. Use Railway for persistent application/backend services.
 4. Follow the canonical Cloudflare + Railway deployment guide and its authentication, health, privacy, and rollback gates.
 
-Do not deploy KOVA through Vercel, Netlify, GitHub Pages, or Manus as a runtime fallback. `site_final.zip` remains a local/reference distribution artifact, not the production hosting source.
+Do not deploy KOVA through Netlify, GitHub Pages, or Manus as a runtime fallback. `site_final.zip` remains a local/reference distribution artifact, not the production hosting source.
 
 ---
 

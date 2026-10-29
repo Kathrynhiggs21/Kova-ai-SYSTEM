@@ -34,7 +34,7 @@ KOVA OS has moved from loose concept into a multi-repository personal operating-
 3. Dropbox and Notion need explicit connector setup and workspace/folder targets.
 4. Google integrations require OAuth consent/scopes and safe token storage.
 5. OpenAI Platform requires API key/project setup outside the public repo.
-6. The system needs one canonical deployment target: Vercel, Netlify, Fly, Cloud Run, or similar.
+6. The system needs one canonical deployment target: Cloudflare + Railway, Netlify, Fly, Cloud Run, or similar.
 
 ## Blunt Assessment
 

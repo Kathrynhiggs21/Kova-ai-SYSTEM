@@ -9,7 +9,7 @@ KOVA is one personal AI operating system with one control plane and one primary 
 - **Core:** `Kathrynhiggs21/Kova-ai-SYSTEM`
 - **Authenticated app:** `Kathrynhiggs21/kovaos-site`
 - **Primary domain:** `kovaos.com`
-- **Hosting target:** Cloudflare edge/static delivery + Railway persistent services. Vercel is retired; it must not be restored as a deployment or rollback target.
+- **Hosting target:** Cloudflare edge/static delivery + Railway persistent services. Legacy one-click hosting is retired; it must not be restored as a deployment or rollback target.
 - **Files:** Google Drive is the canonical user-file store.
 - **Operational state:** a relational database will hold runs, jobs, connector health, and application state.
 - **Notion:** a human-readable view, not a competing technical source of truth.

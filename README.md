@@ -29,7 +29,7 @@ Other KOVA repositories are migration sources, experiments, provider adapters, o
 - **GitHub** stores source code and review history.
 - **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
 - **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
-- **Cloudflare + Railway** is the canonical hosting path: Cloudflare owns the public edge/domain layer and Railway runs persistent application services. Vercel is retired from the active KOVA runtime.
+- **Cloudflare + Railway** is the canonical hosting path: Cloudflare owns the public edge/domain layer and Railway runs persistent application services. Legacy one-click hosting is retired from the active KOVA runtime.
 - **The frontend** never becomes an orchestration or document source of truth.
 
 One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
@@ -57,6 +57,10 @@ Never infer a live connection from a document, environment-variable name, mock r
 - Use least privilege and the minimum context needed for every agent, connector, and workflow.
 - Keep destructive or production-critical changes reversible. DNS, domain ownership, authentication ownership, deployment deletion, and live private-data cutover require explicit owner approval.
 - Static Git-tracked evidence cannot authorize live family data. The Vault remains in sample mode until independent server-side authorization and runtime gates exist.
+
+## MCP command center
+
+The existing owner-protected `/mcp` endpoint provides the v0.1 today view, Calendar, GitHub, digest and integration evidence. See [MCP setup and client limits](docs/mcp/README.md) and [SPEC.md](SPEC.md). Source implementation is not a claim of live provider authorization or ChatGPT connection.
 
 ## Local validation
 
@@ -99,20 +103,20 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 
 - Cloudflare is authoritative for `kovaos.com`.
 - Railway hosts the current `kovaos-app-backend` service; the latest observed deployment is healthy and may sleep when idle.
-- Clearly KOVA-specific Vercel projects were paused on October 19, 2026. Vercel must not be used as a deployment target, runtime fallback, credential requirement, or source of truth.
-- The Vercel team subscription and project deletion are billing/account cleanup tasks, not runtime dependencies.
+- Clearly KOVA-specific legacy hosting projects were paused on October 19, 2026. This retired provider must not be used as a deployment target, runtime fallback, credential requirement, or source of truth.
+- The legacy hosting team subscription and project deletion are billing/account cleanup tasks, not runtime dependencies.
 
 ### Historical deployment evidence — October 6, 2026
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
-- the canonical frontend repository is `kovaos-site`; Vercel currently has both `kova-app` and `kovaos-site` projects deploying the same current `main` commit (`593452d`), while root/www Vercel aliases are attached to `kovaos-site`;
-- public routing is not cut over to that Vercel build: October 6 probes resolved `kovaos.com` through Cloudflare to GitHub Pages headers and the legacy `kova-ai-site` redirect to `kova.manus.space`, so Vercel alias metadata is not runtime proof;
-- backend Vercel ownership is still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
+- the canonical frontend repository is `kovaos-site`; an older parallel hosting setup had both `kova-app` and `kovaos-site` projects deploying the same current `main` commit (`593452d`), while root/www aliases were attached to `kovaos-site`;
+- public routing was not cut over in that older setup: October 6 probes resolved `kovaos.com` through Cloudflare to GitHub Pages headers and the legacy `kova-ai-site` redirect to `kova.manus.space`, so alias metadata from that provider is not runtime proof;
+- backend ownership in that older setup was still under reconciliation: `kova-ai-system`, `kova-ai-system-sl9b`, and `kova-ai-system-okaz` all deploy the canonical Core repository;
 - repeatable October 6 probes of deployments `dpl_AeGoU5MNzDoUkcQ8b3DBySXbYdJB` (`kova-ai-system`), `dpl_7pR5HEXnmMMaSuK1nHEHd7cCTDyP` (`kova-ai-system-sl9b`), and `dpl_6gQwD7nW54BJ9zdHHr6EBGQn6BJF` (`kova-ai-system-okaz`) found `/health` returning HTTP 200 only on the FastAPI-configured `okaz` project; the other two returned 404 on both `/health` and `/api/health`;
-- the redacted env-name audit found `kova-ai-system` carrying development/preview-scoped configuration including `APP_NAME`, `DEBUG`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `SECRET_KEY`, `JWT_ALGORITHM`, and `ACCESS_TOKEN_EXPIRE_MINUTES`, while `kova-ai-system-okaz` returned no Vercel environment variables; no secret values were read into documentation;
-- historical Vercel backend probes are retained only as dated migration evidence; no Vercel project may be promoted back into the active architecture;
+- the redacted env-name audit found `kova-ai-system` carrying development/preview-scoped configuration including `APP_NAME`, `DEBUG`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `SECRET_KEY`, `JWT_ALGORITHM`, and `ACCESS_TOKEN_EXPIRE_MINUTES`, while `kova-ai-system-okaz` returned no legacy-host environment variables; no secret values were read into documentation;
+- historical backend probes from that older setup are retained only as dated migration evidence; no project from that retired provider may be promoted back into the active architecture;
 - anonymous Google Drive editing has been removed from the KOVA and AI World roots; and
-- legacy Vercel projects are retired/paused and scheduled for provider-side deletion after account cleanup; Manus-derived frontend runtime paths remain a separate migration concern.
+- legacy hosting projects are retired/paused and scheduled for provider-side deletion after account cleanup; Manus-derived frontend runtime paths remain a separate migration concern.
 
 This is a dated baseline, not a permanent health guarantee. Re-run checks before reporting current status.
 
