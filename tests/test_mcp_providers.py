@@ -300,6 +300,55 @@ class GithubAndCacheTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(cached["last_checked"], "new")
         self.assertTrue(cached["cached"])
 
+    async def test_concurrent_ordinary_reads_keep_newest_evidence(self):
+        for expired in (False, True):
+            with self.subTest(expired=expired):
+                service = WorkspaceService()
+                if expired:
+                    key = (service.fingerprint(), "github", None)
+                    service.cache[key] = (0, {"status": "connected"})
+                started = asyncio.Event()
+                release = asyncio.Event()
+                calls = 0
+
+                async def github():
+                    nonlocal calls
+                    calls += 1
+                    if calls == 1:
+                        started.set()
+                        await release.wait()
+                        return {"status": "connected", "last_checked": "old"}
+                    return {"status": "broken", "last_checked": "new"}
+
+                service.github = github
+                older = asyncio.create_task(service.cached("github"))
+                await started.wait()
+                newer = await service.cached("github")
+                self.assertEqual(newer["status"], "broken")
+                release.set()
+                await older
+                cached = await service.cached("github")
+                self.assertEqual(cached["status"], "broken")
+                self.assertEqual(cached["last_checked"], "new")
+                self.assertTrue(cached["cached"])
+
+    async def test_cancelled_read_cleans_tracking_and_does_not_cache(self):
+        service = WorkspaceService()
+        started = asyncio.Event()
+
+        async def github():
+            started.set()
+            await asyncio.Event().wait()
+
+        service.github = github
+        read = asyncio.create_task(service.cached("github"))
+        await started.wait()
+        read.cancel()
+        with self.assertRaises(asyncio.CancelledError):
+            await read
+        self.assertEqual(service.cache_reads, {})
+        self.assertEqual(service.cache, {})
+
     async def test_project_status_uses_cached_github_snapshot(self):
         requests = []
 

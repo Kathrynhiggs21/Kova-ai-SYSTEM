@@ -81,6 +81,7 @@ class WorkspaceService:
         self.transport = transport
         self.cache = {}
         self.cache_generation = {}
+        self.cache_reads = {}
 
     def projects(self):
         return [
@@ -134,16 +135,26 @@ class WorkspaceService:
         entry = self.cache.get(key)
         if entry and not refresh and time.monotonic() - entry[0] < 60:
             return {**copy.deepcopy(entry[1]), "cached": True}
-        result = await (
-            self.github()
-            if provider == "github"
-            else read_calendar(day or self.today(), self.transport)
-        )
-        if generation == self.cache_generation.get(provider, 0):
-            if len(self.cache) >= 32:
-                self.cache.clear()
-            self.cache[key] = (time.monotonic(), copy.deepcopy(result))
-        return {**result, "cached": False}
+        # Only the latest read for this key may publish evidence, even without refresh.
+        read = object()
+        self.cache_reads[key] = read
+        try:
+            result = await (
+                self.github()
+                if provider == "github"
+                else read_calendar(day or self.today(), self.transport)
+            )
+            if (
+                generation == self.cache_generation.get(provider, 0)
+                and self.cache_reads.get(key) is read
+            ):
+                if len(self.cache) >= 32:
+                    self.cache.clear()
+                self.cache[key] = (time.monotonic(), copy.deepcopy(result))
+            return {**result, "cached": False}
+        finally:
+            if self.cache_reads.get(key) is read:
+                self.cache_reads.pop(key)
 
     async def github(self, project_id=None):
         base = {"source": "github", "last_checked": self.checked(), "projects": []}
