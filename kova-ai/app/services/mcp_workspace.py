@@ -80,6 +80,7 @@ class WorkspaceService:
     def __init__(self, transport=None):
         self.transport = transport
         self.cache = {}
+        self.cache_generation = {}
 
     def projects(self):
         return [
@@ -122,6 +123,14 @@ class WorkspaceService:
 
     async def cached(self, provider, day=None, refresh=False):
         key = (self.fingerprint(), provider, day)
+        if refresh:
+            self.cache_generation[provider] = self.cache_generation.get(provider, 0) + 1
+            self.cache = {
+                cache_key: value
+                for cache_key, value in self.cache.items()
+                if cache_key[1] != provider
+            }
+        generation = self.cache_generation.get(provider, 0)
         entry = self.cache.get(key)
         if entry and not refresh and time.monotonic() - entry[0] < 60:
             return {**copy.deepcopy(entry[1]), "cached": True}
@@ -130,9 +139,10 @@ class WorkspaceService:
             if provider == "github"
             else read_calendar(day or self.today(), self.transport)
         )
-        if len(self.cache) >= 32:
-            self.cache.clear()
-        self.cache[key] = (time.monotonic(), copy.deepcopy(result))
+        if generation == self.cache_generation.get(provider, 0):
+            if len(self.cache) >= 32:
+                self.cache.clear()
+            self.cache[key] = (time.monotonic(), copy.deepcopy(result))
         return {**result, "cached": False}
 
     async def github(self, project_id=None):
@@ -291,7 +301,17 @@ class WorkspaceService:
             project_id = arguments.get("project_id")
             if project_id not in [item["id"] for item in self.projects()]:
                 raise ValueError("Project is not enabled")
-            return await self.github(project_id)
+            snapshot = await self.cached("github")
+            projects = [
+                project
+                for project in snapshot.get("projects", [])
+                if project["id"] == project_id
+            ]
+            return {
+                **snapshot,
+                "projects": projects,
+                "status": projects[0]["status"] if projects else snapshot["status"],
+            }
         if name == "refresh_integration":
             provider = arguments.get("integration")
             if not isinstance(provider, str) or provider not in {
@@ -299,10 +319,6 @@ class WorkspaceService:
                 "google_calendar",
             }:
                 raise ValueError("Unsupported integration")
-            # Invalidate every date for that provider, not just today's snapshot.
-            self.cache = {
-                key: value for key, value in self.cache.items() if key[1] != provider
-            }
             return await self.cached(
                 provider,
                 self.today() if provider == "google_calendar" else None,
@@ -315,6 +331,13 @@ def render_dashboard(data):
     def escape(value):
         return html.escape(str(value), quote=True)
 
+    def event_time(value):
+        if isinstance(value.get("date"), str):
+            return "All day"
+        stamp = datetime.fromisoformat(value["dateTime"].replace("Z", "+00:00"))
+        local = stamp.astimezone(ZoneInfo(data["timezone"]))
+        return local.strftime("%I:%M %p").lstrip("0")
+
     integrations = "".join(
         "<li>"
         + escape(name.replace("_", " "))
@@ -324,7 +347,16 @@ def render_dashboard(data):
         for name, item in data["integrations"].items()
     )
     events = "".join(
-        "<li>" + escape(item["title"]) + "</li>" for item in data["calendar"]["events"]
+        "<li>"
+        + escape(item["title"])
+        + " — "
+        + escape(
+            "All day"
+            if isinstance(item["start"].get("date"), str)
+            else event_time(item["start"]) + "–" + event_time(item["end"])
+        )
+        + "</li>"
+        for item in data["calendar"]["events"]
     )
     if not events:
         events = (

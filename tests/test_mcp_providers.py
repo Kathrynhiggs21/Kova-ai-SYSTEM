@@ -1,5 +1,6 @@
 """Real adapters with synthetic HTTP transport; no provider credentials needed."""
 
+import asyncio
 import os
 import sys
 import unittest
@@ -179,6 +180,25 @@ class CalendarTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(normalize_events([event("a"), event("b")])), 1)
         self.assertEqual(normalize_events([{**event(), "status": "cancelled"}]), [])
 
+    def test_all_day_events_and_moved_recurring_occurrences(self):
+        all_day = {
+            **event("all-day", "all-day"),
+            "start": {"date": "2026-10-29"},
+            "end": {"date": "2026-10-30"},
+        }
+        self.assertEqual(normalize_events([all_day])[0]["start"], {"date": "2026-10-29"})
+
+        moved = event("moved", "series", "2026-10-29T11:00:00-04:00")
+        moved["originalStartTime"] = {"dateTime": "2026-10-29T09:00:00-04:00"}
+        second = {
+            **moved,
+            "id": "second-occurrence",
+            "originalStartTime": {"dateTime": "2026-10-29T10:00:00-04:00"},
+        }
+        duplicate = {**moved, "id": "duplicate"}
+        self.assertEqual(len(normalize_events([moved, second])), 2)
+        self.assertEqual(len(normalize_events([moved, duplicate])), 1)
+
 
 class GithubAndCacheTests(unittest.IsolatedAsyncioTestCase):
     async def test_github_registry_scope_cache_and_refresh(self):
@@ -253,11 +273,80 @@ class GithubAndCacheTests(unittest.IsolatedAsyncioTestCase):
             )
             self.assertNotEqual((await service.cached("github"))["status"], "connected")
 
+    async def test_read_started_before_refresh_cannot_overwrite_refresh_result(self):
+        started = asyncio.Event()
+        release = asyncio.Event()
+        calls = 0
+
+        async def github():
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                started.set()
+                await release.wait()
+                return {"status": "connected", "projects": [], "last_checked": "old"}
+            return {"status": "broken", "projects": [], "last_checked": "new"}
+
+        service = WorkspaceService()
+        service.github = github
+        older_read = asyncio.create_task(service.cached("github"))
+        await started.wait()
+        refreshed = await service.cached("github", refresh=True)
+        self.assertEqual(refreshed["status"], "broken")
+        release.set()
+        await older_read
+        cached = await service.cached("github")
+        self.assertEqual(cached["status"], "broken")
+        self.assertEqual(cached["last_checked"], "new")
+        self.assertTrue(cached["cached"])
+
+    async def test_project_status_uses_cached_github_snapshot(self):
+        requests = []
+
+        def handler(request):
+            requests.append(request)
+            coordinate = request.url.path.removeprefix("/repos/")
+            return httpx.Response(
+                200,
+                json={
+                    "full_name": coordinate,
+                    "default_branch": "main",
+                    "open_issues_count": 0,
+                },
+            )
+
+        with patch.dict(os.environ, {"GITHUB_TOKEN": "synthetic-token"}, clear=True):
+            service = WorkspaceService(httpx.MockTransport(handler))
+            await service.cached("github")
+            request_count = len(requests)
+            result = await service.call(
+                "get_project_status", {"project_id": "Kathrynhiggs21/Kova-ai-SYSTEM"}
+            )
+        self.assertEqual(len(requests), request_count)
+        self.assertTrue(result["cached"])
+        self.assertEqual(
+            [project["id"] for project in result["projects"]],
+            ["Kathrynhiggs21/Kova-ai-SYSTEM"],
+        )
+
     async def test_view_escapes_provider_text(self):
         with patch.dict(os.environ, {}, clear=True):
             data = await WorkspaceService().dashboard()
-        data["calendar"]["events"] = [{"title": "<script>alert(1)</script>"}]
+        data["calendar"]["events"] = [
+            {
+                "title": "<script>alert(1)</script>",
+                "start": {"dateTime": "2026-10-29T09:00:00-04:00"},
+                "end": {"dateTime": "2026-10-29T10:00:00-04:00"},
+            },
+            {
+                "title": "All day",
+                "start": {"date": "2026-10-29"},
+                "end": {"date": "2026-10-30"},
+            },
+        ]
         view = render_dashboard(data)
         self.assertNotIn("<script>", view)
         self.assertIn("&lt;script&gt;", view)
+        self.assertIn("9:00 AM–10:00 AM", view)
+        self.assertIn("All day", view)
         self.assertIn("default-src 'none'", view)
