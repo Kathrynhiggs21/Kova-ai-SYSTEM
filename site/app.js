@@ -102,7 +102,7 @@ const fallbackDashboardData = {
     "No verified production Core-to-site API contract.",
     "No proof-backed end-to-end connector path.",
     "Durable run history, queueing, retries, and connector telemetry remain incomplete.",
-    "The duplicate legacy Core Vercel project still creates configuration-drift risk.",
+    "Legacy Vercel hosting references still create configuration-drift risk during platform transition.",
     "Domain typos and external Manus surfaces still need canonical redirect and migration handling for kovaos.com."
   ],
   "next_actions": [
@@ -110,7 +110,8 @@ const fallbackDashboardData = {
     "Implement and test the versioned Core-to-site API.",
     "Verify one authenticated connector path with audit evidence.",
     "Migrate unique donor features before archiving any repository.",
-    "Inventory Manus-derived pages and map each required feature into kovaos-site routes with evidence."
+    "Inventory Manus-derived pages and map each required feature into kovaos-site routes with evidence.",
+    "Complete non-Vercel Remix hosting cutover and retire legacy Vercel project links."
   ],
   "organization_model": {
     "area": [

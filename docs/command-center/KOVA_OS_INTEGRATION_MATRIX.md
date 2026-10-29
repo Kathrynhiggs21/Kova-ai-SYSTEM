@@ -22,7 +22,7 @@ Configuration alone is never proof of health.
 | OpenAI/model providers | Designed | AI Assistant behind provider-neutral interface | Prove one authenticated provider route with logging |
 | MCP | Implemented in Core; production call unverified | Standard owner-authenticated tool interface | Merge hardening and test initialize/tool call in production |
 | Zapier/Make/n8n | Optional fallback | Cross-app bridge only where direct routes are insufficient | Enable only a named workflow with evidence and bounded scope |
-| Vercel | Builds exist; canonical routing needs verification | Web deployment | Verify the retained Core/app projects and remove duplicates separately |
+| Remix runtime hosting (non-Vercel) | Cutover in progress; legacy Vercel links remain | Web deployment | Verify canonical `kovaos-site` Remix deployment on the non-Vercel host and retire Vercel project links |
 | Google Cloud backend | Blocked by build configuration | Optional backend/container deployment | Correct Dockerfile path and pass health check |
 
 ## Build rule

@@ -27,7 +27,7 @@ Other KOVA repositories are migration sources, experiments, provider adapters, o
 - **GitHub** stores source code and review history.
 - **Google Drive** is the canonical home for KOVA user documents. The KOVA root contains one `KOVA Core` folder.
 - **KOVA AI World** is separate from KOVA Core and contains provider/agent material, provenance, and promotion workflows. Link by stable ID or URL; do not mirror its contents.
-- **Vercel** hosts the canonical web and core deployments.
+- **Non-Vercel hosting** runs the canonical web and core deployments.
 - **The frontend** never becomes an orchestration or document source of truth.
 
 One artifact gets one canonical home. Indexes and dashboards should point to that home instead of copying it.
@@ -90,8 +90,8 @@ The owner should not need to write or debug code for ordinary maintenance. User-
 As reconciled on September 29, 2026:
 
 - the core `main` branch includes the fail-closed Vault live-cutover controls;
-- the canonical core Vercel deployment reports ready;
-- the canonical frontend repository is linked to its Vercel project and assigned `kovaos.com` and `www.kovaos.com`;
+- the canonical core deployment is hosted outside Vercel and reports ready;
+- the canonical frontend repository is linked to a non-Vercel Remix-compatible host and assigned `kovaos.com` and `www.kovaos.com`;
 - anonymous Google Drive editing has been removed from the KOVA and AI World roots; and
 - duplicate/legacy Vercel projects and Manus-derived frontend runtime paths still require controlled review before retirement or replacement.
 

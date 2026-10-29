@@ -63,7 +63,7 @@ Consequential writes require confirmation unless the owner has explicitly approv
 ### Development / data
 - GitHub
 - Supabase
-- Vercel
+- Remix runtime host (non-Vercel)
 - Netlify
 - Replit
 - Lovable
