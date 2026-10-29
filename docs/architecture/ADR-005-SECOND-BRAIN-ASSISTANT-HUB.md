@@ -159,4 +159,4 @@ KOVA must support correction and supersession. Append-only event history does no
 - New connectors must register explicit capabilities rather than adding hidden provider-specific fallback paths.
 - The web application may display memory and capability state but does not become the orchestration authority.
 - Manus remains historical/optional and is not a runtime dependency.
-- Vercel remains retired from active KOVA runtime architecture.
+- Legacy one-click hosting remains retired from active KOVA runtime architecture.

@@ -8,14 +8,14 @@ Reviewed: 2026-10-21. Repository and local-development evidence only; this sessi
 - Authenticated web app: `Kathrynhiggs21/kovaos-site` (React/Vite, Express/tRPC, Drizzle/MySQL).
 - Google Drive owns user documents. AI World remains separate; link by stable reference.
 - Cloudflare edge/static delivery + Railway persistent services is the current hosting target. Core/FastAPI and the web Node backend retain separate contracts.
-- Vercel is retired. Do not restore it as a deployment, fallback, credential requirement, or source of truth.
+- Legacy one-click hosting is retired. Do not restore it as a deployment, fallback, credential requirement, or source of truth.
 
 ## Verified source state
 
 - Current main re-read at `83bb724092344b0eed3a5f1b0182049a246847e6`, merging #145. Continued only the authorized open #153 branch `architecture/second-brain-v1-2026-10-21` from fetched head `289380ea44675c2088a50e86cadcc21a93e5e1c4`; these are dated observations, subject to the handoff selection gate.
 - #153 now preserves the hosting ADR-004 and uses [ADR-005](docs/architecture/ADR-005-SECOND-BRAIN-ASSISTANT-HUB.md) for the existing accepted second-brain decision. Capability schema changes are a pre-merge v1 correction, not a released-contract compatibility claim or live runtime feature.
 
-- Core main inspected at `c7188318a6e2b17b28dfc5311d365f2d0ed6e0de` (#150), including the October 19 Vercel retirement decision and Railway Core configuration.
+- Core main inspected at `c7188318a6e2b17b28dfc5311d365f2d0ed6e0de` (#150), including the October 19 legacy-host retirement decision and Railway Core configuration.
 - [README hosting baseline](README.md#current-production-baseline) records the October 19 Railway backend observation. That supersedes this branch's October 9 staged-only status; it is not a fresh production probe.
 - On 2026-10-21, continuity PR [#145](https://github.com/Kathrynhiggs21/Kova-ai-SYSTEM/pull/145) was the consolidation home; check the current default branch and PR disposition before selecting any continuation branch. Main is incorporated without reverting its hosting or security fixes.
 - `docs/HANDOFF.md` was absent from main and all six audited PR heads. It is now a short navigation entry, not a second backlog.

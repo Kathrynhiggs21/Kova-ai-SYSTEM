@@ -32,7 +32,7 @@ The current canonical names remain authoritative until an atomic rename/migratio
 - `Kova-ai-SYSTEM` -> `kova-core`
 - `kovaos-site` -> `kova-app`
 
-Do not perform those renames piecemeal. Repository URLs, CI, Vercel, domain mappings, agents, docs and automation must move together.
+Do not perform those renames piecemeal. Repository URLs, CI, domain mappings, agents, docs and automation must move together.
 
 ## Ruleset cleanup
 
@@ -54,7 +54,7 @@ The connected GitHub API can read but not mutate repository rulesets, so these s
 
 ## Deployment cleanup
 
-Only canonical runtime repositories should own production KOVA deployments. Suffixed/duplicate Vercel projects and legacy repository deployments are cleanup targets and must not become sources of truth.
+Only canonical runtime repositories should own production KOVA deployments. Suffixed/duplicate legacy-hosting projects and legacy repository deployments are cleanup targets and must not become sources of truth.
 
 ## Archive gate
 

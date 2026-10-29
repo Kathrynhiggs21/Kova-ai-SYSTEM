@@ -88,7 +88,7 @@ Store real values only in Railway's service variables. At minimum, configure:
   engine creation; existing explicit async URLs and encoded credentials are preserved.
 - provider credentials only for the integrations intentionally enabled
 
-Do not copy unused Vercel variables. Rotate a credential if its prior storage or
+Do not copy unused legacy-host variables. Rotate a credential if its prior storage or
 exposure is uncertain.
 
 ## Preview gate

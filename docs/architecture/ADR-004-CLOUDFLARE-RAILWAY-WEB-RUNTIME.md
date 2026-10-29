@@ -3,7 +3,7 @@
 - Status: Accepted migration target
 - Date: 2026-10-09
 - Reviewed: 2026-10-21 against current main; provider observations below remain dated
-- Supersedes: provider-specific web-host assumptions that treat Vercel, Netlify, GitHub Pages, or Manus as the canonical target
+- Supersedes: provider-specific web-host assumptions that treat legacy one-click hosting, Netlify, GitHub Pages, or Manus as the canonical target
 
 ## Decision
 
@@ -13,13 +13,13 @@ The canonical KOVA web application remains sourced from the repository set defin
 2. Requests under **`/api/*`** are proxied by the Cloudflare Worker to the persistent Node/Express backend.
 3. **Railway** runs that persistent Node/Express backend from the canonical web repository.
 4. **KOVA Core/FastAPI** remains a separate control-plane runtime and is not collapsed into the web application's Railway service.
-5. Vercel is retired under the October 19 decision on current main. It is not a deployment or rollback target. Other legacy observations are historical evidence, not authorization to restore an old provider.
+5. Legacy one-click hosting is retired under the October 19 decision on current main. It is not a deployment or rollback target. Other legacy observations are historical evidence, not authorization to restore an old provider.
 
 The browser keeps one public origin and continues using `/api/*`; it does not receive a second public backend hostname as an application contract.
 
 ## Dated provider observations — October 9, 2026
 
-The following resource snapshot explains the original migration work. It is not current provider state. The [README October 19 baseline](../../README.md#current-production-baseline) records a later healthy/sleeping Railway web backend and Vercel retirement. Cloudflare placeholder status and the old zero-live-service count were not reverified on October 21.
+The following resource snapshot explains the original migration work. It is not current provider state. The [README October 19 baseline](../../README.md#current-production-baseline) records a later healthy/sleeping Railway web backend and legacy-host retirement. Cloudflare placeholder status and the old zero-live-service count were not reverified on October 21.
 
 ### Cloudflare
 
@@ -92,7 +92,7 @@ Production DNS/domain changes remain a separate explicit approval after the full
 
 ## Current acceptance boundary
 
-Cloudflare edge/static delivery and Railway persistent services remain the target. Core/FastAPI remains separate from the web Node/Express service. Follow the [canonical web guide](https://github.com/Kathrynhiggs21/kovaos-site/blob/main/docs/deployment/cloudflare-railway.md) and [Core Railway contract](../deployment/railway-core.md). Require health JSON, authenticated login/callback/cookies, anonymous denial, protected routes, logout and persistence on the exact path claimed. A rollback must use reviewed canonical source and the current hosting path; it must not reactivate Vercel.
+Cloudflare edge/static delivery and Railway persistent services remain the target. Core/FastAPI remains separate from the web Node/Express service. Follow the [canonical web guide](https://github.com/Kathrynhiggs21/kovaos-site/blob/main/docs/deployment/cloudflare-railway.md) and [Core Railway contract](../deployment/railway-core.md). Require health JSON, authenticated login/callback/cookies, anonymous denial, protected routes, logout and persistence on the exact path claimed. A rollback must use reviewed canonical source and the current hosting path; it must not reactivate the retired legacy host.
 
 This pass changes source/documentation only: no provider deployment, billing, DNS, secrets, access or production data changes. Source review links, including domain-isolation web #38, are preserved in [the handoff](../HANDOFF.md#preserved-source-links); they do not establish domain ownership or production cutover.
 

@@ -6,7 +6,7 @@ The private owner can ask ChatGPT to open a compact KOVA command center, summari
 
 ## Existing product and architecture
 
-Extend Core's existing owner-authenticated FastAPI `/mcp` endpoint and repository registry in place. Keep Cloudflare + Railway, `kovaos-site` as the canonical website, and Drive as the home for user documents. Do not scaffold a competing Skybridge server, repository, identity store or dashboard database. No Firebase/Descope/Auth0 cutover, Vercel reactivation or live-domain change is included.
+Extend Core's existing owner-authenticated FastAPI `/mcp` endpoint and repository registry in place. Keep Cloudflare + Railway, `kovaos-site` as the canonical website, and Drive as the home for user documents. Do not scaffold a competing Skybridge server, repository, identity store or dashboard database. No Firebase/Descope/Auth0 cutover, legacy-host reactivation or live-domain change is included.
 
 ## Experience
 
