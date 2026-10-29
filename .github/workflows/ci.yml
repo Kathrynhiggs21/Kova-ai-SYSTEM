@@ -91,6 +91,9 @@ jobs:
       - name: Verify health and owner boundary on configured port
         run: docker exec -i kova-core-smoke python - < scripts/smoke_core_container.py
 
+      - name: Verify owner-protected MCP tools and dashboard resource
+        run: docker exec -i kova-core-smoke python - < scripts/smoke_mcp.py
+
       - name: Build and start the documented Compose source mount
         run: |
           cp kova-ai/.env.example kova-ai/.env

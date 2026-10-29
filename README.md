@@ -58,6 +58,10 @@ Never infer a live connection from a document, environment-variable name, mock r
 - Keep destructive or production-critical changes reversible. DNS, domain ownership, authentication ownership, deployment deletion, and live private-data cutover require explicit owner approval.
 - Static Git-tracked evidence cannot authorize live family data. The Vault remains in sample mode until independent server-side authorization and runtime gates exist.
 
+## MCP command center
+
+The existing owner-protected `/mcp` endpoint provides the v0.1 today view, Calendar, GitHub, digest and integration evidence. See [MCP setup and client limits](docs/mcp/README.md) and [SPEC.md](SPEC.md). Source implementation is not a claim of live provider authorization or ChatGPT connection.
+
 ## Local validation
 
 Python 3.11 and Node.js 22 match CI. Install dependencies in an isolated environment, then run the same gates used by GitHub:

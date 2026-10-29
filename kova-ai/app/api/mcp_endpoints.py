@@ -5,11 +5,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
+from app.services.mcp_workspace import (
+    DEFINITIONS,
+    TOOLS as WORKSPACE_TOOLS,
+    VIEW_URI,
+    VIEW_MIME,
+    render_dashboard,
+    workspace,
+)
 
 from app.security.api_key import require_owner_api_key
 from services.multi_repo_sync_service import MultiRepoSyncService
-
 
 router = APIRouter(
     prefix="/mcp",
@@ -25,24 +32,42 @@ TOOLS = [
     {
         "name": "kova_health",
         "description": "Return the health status of the KOVA API.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
     {
         "name": "kova_export_status",
         "description": "Return the status of the published KOVA export archives.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
     {
         "name": "kova_list_repositories",
         "description": "List repositories enabled in the KOVA registry.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
     {
         "name": "kova_repository_status",
         "description": "Return live GitHub metadata for configured KOVA repositories.",
-        "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
     },
 ]
+
+TOOLS.extend(WORKSPACE_TOOLS)
 
 
 def _export_status() -> dict[str, Any]:
@@ -62,6 +87,8 @@ def _export_status() -> dict[str, Any]:
 
 
 async def _call_tool(name: str, arguments: dict[str, Any]) -> Any:
+    if name in DEFINITIONS:
+        return await workspace.call(name, arguments)
     if arguments:
         raise ValueError(f"{name} does not accept arguments")
     if name == "kova_health":
@@ -81,11 +108,15 @@ def _success(request_id: Any, result: Any) -> dict[str, Any]:
 
 
 def _error(request_id: Any, code: int, message: str) -> dict[str, Any]:
-    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+    return {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "error": {"code": code, "message": message},
+    }
 
 
 @router.post("")
-async def mcp_message(message: dict[str, Any]) -> dict[str, Any] | None:
+async def mcp_message(message: dict[str, Any]) -> Any:
     """Handle MCP JSON-RPC messages over Streamable HTTP's JSON transport."""
     request_id = message.get("id")
     if message.get("jsonrpc") != "2.0" or not isinstance(message.get("method"), str):
@@ -97,13 +128,16 @@ async def mcp_message(message: dict[str, Any]) -> dict[str, Any] | None:
         return _error(request_id, -32602, "params must be an object")
 
     if method == "notifications/initialized":
-        return None
+        return Response(status_code=202)
     if method == "initialize":
         return _success(
             request_id,
             {
                 "protocolVersion": "2025-03-26",
-                "capabilities": {"tools": {"listChanged": False}},
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "resources": {"listChanged": False},
+                },
                 "serverInfo": {"name": "kova-ai-system", "version": "2.0.0"},
             },
         )
@@ -111,23 +145,59 @@ async def mcp_message(message: dict[str, Any]) -> dict[str, Any] | None:
         return _success(request_id, {})
     if method == "tools/list":
         return _success(request_id, {"tools": TOOLS})
+    if method == "resources/list":
+        return _success(
+            request_id,
+            {
+                "resources": [
+                    {"uri": VIEW_URI, "name": "KOVA Today", "mimeType": VIEW_MIME}
+                ]
+            },
+        )
+    if method == "resources/read":
+        if params.get("uri") != VIEW_URI or set(params) - {"uri"}:
+            return _error(request_id, -32602, "Unknown resource")
+        try:
+            text = render_dashboard(await workspace.dashboard())
+        except Exception:
+            return _error(request_id, -32603, "Dashboard could not be read")
+        return _success(
+            request_id,
+            {
+                "contents": [
+                    {
+                        "uri": VIEW_URI,
+                        "mimeType": VIEW_MIME,
+                        "text": text,
+                        "_meta": {
+                            "ui": {"csp": {"connectDomains": [], "resourceDomains": []}}
+                        },
+                    }
+                ]
+            },
+        )
     if method != "tools/call":
         return _error(request_id, -32601, f"Method not found: {method}")
 
     name = params.get("name")
-    arguments = params.get("arguments") or {}
+    arguments = params.get("arguments", {})
     if not isinstance(name, str) or not isinstance(arguments, dict):
-        return _error(request_id, -32602, "tools/call requires a name and object arguments")
+        return _error(
+            request_id, -32602, "tools/call requires a name and object arguments"
+        )
     try:
         result = await _call_tool(name, arguments)
     except KeyError:
         return _error(request_id, -32602, f"Unknown tool: {name}")
     except ValueError:
-        return _error(request_id, -32602, "Tool arguments are not supported")
+        return _error(request_id, -32602, "Invalid or unsupported tool arguments")
     except Exception:
         return _error(request_id, -32603, "Tool execution failed")
 
-    return _success(
-        request_id,
-        {"content": [{"type": "text", "text": json.dumps(result, sort_keys=True)}]},
-    )
+    output = {
+        "content": [{"type": "text", "text": json.dumps(result, sort_keys=True)}],
+        "structuredContent": result,
+    }
+    if name == "open_kova_dashboard":
+        output["_meta"] = {"ui": {"resourceUri": VIEW_URI}}
+    return _success(request_id, output)
